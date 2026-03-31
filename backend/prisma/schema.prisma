@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id           Int       @id @default(autoincrement())
+  name         String
+  tradeName    String?
+  cnpj         String?   @unique
+  email        String?
+  phone        String?
+  address      String?
+  neighborhood String?
+  city         String?
+  state        String?
+  zipCode      String?
+  users        User[]
+  roles        Role[]
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  avatar    String?
+  active    Boolean   @default(true)
+  companyId Int
+  company   Company   @relation(fields: [companyId], references: [id])
+  roleId    Int?
+  role      Role?     @relation(fields: [roleId], references: [id])
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Role {
+  id        Int          @id @default(autoincrement())
+  name      String
+  status    Int          @default(1)
+  companyId Int
+  company   Company      @relation(fields: [companyId], references: [id])
+  users     User[]
+  permissions Permission[]
+  deletedAt DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([name, companyId])
+}
+
+model Permission {
+  id        Int      @id @default(autoincrement())
+  roleId    Int
+  module    String
+  action    String
+  allowed   Boolean  @default(false)
+  role      Role     @relation(fields: [roleId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roleId, module, action])
+}
