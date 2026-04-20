@@ -370,7 +370,7 @@ export function LoginPage() {
               <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seuemail@email.com" required />
               <Input label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="*******" required />
               <div className="flex flex-col gap-5">
-                <Button type="submit" disabled={loginLoading} size="lg" className="w-full" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', height: 'auto' }}>
+                <Button type="submit" variant="primary" disabled={loginLoading} size="lg" className="w-full" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', height: 'auto' }}>
                   {loginLoading && <CircleNotch size={18} className="animate-spin" />}
                   Entrar
                 </Button>
@@ -561,7 +561,7 @@ export function LoginPage() {
               <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seuemail@email.com" required />
               <Input label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="*******" required />
               <div className="flex flex-col gap-5">
-                <Button type="submit" disabled={loginLoading} size="lg" className="w-full" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', height: 'auto' }}>
+                <Button type="submit" variant="primary" disabled={loginLoading} size="lg" className="w-full" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', height: 'auto' }}>
                   {loginLoading && <CircleNotch size={18} className="animate-spin" />}
                   Entrar
                 </Button>

@@ -82,7 +82,7 @@ export function SchedulePage() {
 
   const { data: collaboratorsData } = useQuery({
     queryKey: ['collaborators-select'],
-    queryFn: () => collaboratorsService.list({ limit: 200, active: 1 }),
+    queryFn: () => collaboratorsService.select(),
     staleTime: 1000 * 60 * 5,
   })
 
@@ -254,7 +254,7 @@ export function SchedulePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Colaborador</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 12, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
-              {collaboratorsData?.data.find(c => String(c.id) === filterCollaboratorId)?.name ?? 'Colaborador'}
+              {(collaboratorsData ?? []).find(c => String(c.id) === filterCollaboratorId)?.name ?? 'Colaborador'}
               <button onClick={() => setFilterCollaboratorId('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
                 <X size={11} weight="bold" />
               </button>
@@ -287,7 +287,7 @@ export function SchedulePage() {
             onChange={setFilterCollaboratorId}
             options={[
               { value: '', label: 'Todos os colaboradores' },
-              ...(collaboratorsData?.data ?? []).map(c => ({ value: String(c.id), label: c.name })),
+              ...(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name })),
             ]}
             placeholder="Todos os colaboradores"
             className="max-w-[200px]"

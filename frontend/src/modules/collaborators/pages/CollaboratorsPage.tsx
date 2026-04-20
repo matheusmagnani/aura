@@ -194,10 +194,11 @@ function CollaboratorFormModal({
   const [saving, setSaving] = useState(false)
 
   const { data: rolesData } = useQuery({
-    queryKey: ['roles-all'],
-    queryFn: () => roleService.list({ limit: 100, status: 1 }),
+    queryKey: ['roles-select'],
+    queryFn: () => roleService.select(),
+    staleTime: 1000 * 60 * 5,
   })
-  const roles = rolesData?.data ?? []
+  const roles = rolesData ?? []
 
   function clearError(field: string) {
     setErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
@@ -405,8 +406,8 @@ export function CollaboratorsPage() {
   })
 
   const { data: rolesData } = useQuery({
-    queryKey: ['roles-filter'],
-    queryFn: () => roleService.list({ limit: 100, status: 1 }),
+    queryKey: ['roles-select'],
+    queryFn: () => roleService.select(),
     staleTime: 1000 * 60 * 5,
   })
 
@@ -531,7 +532,7 @@ export function CollaboratorsPage() {
                 background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)',
                 color: 'var(--color-app-secondary)',
               }}>
-                {rolesData?.data.find(r => String(r.id) === id)?.name ?? 'Setor'}
+                {(rolesData ?? []).find(r => String(r.id) === id)?.name ?? 'Setor'}
                 <button onClick={() => setRoleIds(roleIds.filter(r => r !== id))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
                   <X size={11} weight="bold" />
                 </button>
@@ -559,7 +560,7 @@ export function CollaboratorsPage() {
             label="Setor"
             values={roleIds}
             onChange={setRoleIds}
-            options={(rolesData?.data ?? []).map(r => ({ label: r.name, value: String(r.id) }))}
+            options={(rolesData ?? []).map(r => ({ label: r.name, value: String(r.id) }))}
             placeholder="Todos os setores"
             noCheckbox
           />

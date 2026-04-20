@@ -41,6 +41,7 @@
     "@types/react-dom": "^18.3.6",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
+    "react-grab": "^0.1.32",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.8.2",
     "vite": "^6.3.1"

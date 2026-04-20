@@ -109,6 +109,7 @@ Após registro bem-sucedido: **não** faz auto-login, retorna à tela de login c
 
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
+| GET | /api/roles/select | Só autenticado | Retorna `[{ id, name }]` de setores ativos — para selects/filtros sem exigir permissão do módulo |
 | GET | /api/roles | Sim | Listar setores (paginação, busca, filtro status) |
 | GET | /api/roles/:id | Sim | Buscar setor por ID |
 | POST | /api/roles | Sim | Criar setor |
@@ -119,6 +120,7 @@ Após registro bem-sucedido: **não** faz auto-login, retorna à tela de login c
 
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
+| GET | /api/collaborators/select | Só autenticado | Retorna `[{ id, name }]` de colaboradores ativos — para selects/filtros sem exigir permissão do módulo |
 | GET | /api/collaborators | Sim | Listar colaboradores (paginação, busca, filtro active, filtro roleId) |
 | GET | /api/collaborators/:id | Sim | Buscar colaborador por ID |
 | POST | /api/collaborators | Sim | Criar colaborador (name, email, password, roleId?) |
@@ -130,6 +132,7 @@ Após registro bem-sucedido: **não** faz auto-login, retorna à tela de login c
 
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
+| GET | /api/clients/select | Só autenticado | Retorna `[{ id, name, phone }]` com busca opcional — para autocomplete sem exigir permissão do módulo |
 | GET | /api/clients | Sim | Listar clientes (paginação, busca por nome/email/telefone, filtro status) |
 | GET | /api/clients/:id | Sim | Buscar cliente por ID |
 | POST | /api/clients | Sim | Criar cliente (name*, phone*, email?, document?, documentType?, endereço?, userId?) |

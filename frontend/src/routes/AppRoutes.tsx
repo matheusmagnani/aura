@@ -70,10 +70,38 @@ export function AppRoutes() {
             </PermissionRoute>
           }
         />
-        <Route path="clients" element={<ClientsPage />} />
-        <Route path="clients/:id" element={<ClientDetailPage />} />
-        <Route path="collaborators" element={<CollaboratorsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        <Route
+          path="clients"
+          element={
+            <PermissionRoute module="clients">
+              <ClientsPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="clients/:id"
+          element={
+            <PermissionRoute module="clients">
+              <ClientDetailPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="collaborators"
+          element={
+            <PermissionRoute module="collaborators">
+              <CollaboratorsPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <PermissionRoute module="settings">
+              <SettingsPage />
+            </PermissionRoute>
+          }
+        />
         <Route
           path="history"
           element={

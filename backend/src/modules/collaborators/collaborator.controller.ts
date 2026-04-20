@@ -9,6 +9,17 @@ import {
   resetCollaboratorPasswordService,
 } from './collaborator.service'
 import { getActorName } from '../logs/log.service'
+import { prisma } from '../../lib/prisma'
+
+export async function listCollaboratorsSelectController(request: FastifyRequest, reply: FastifyReply) {
+  const { companyId } = request.user as { companyId: number }
+  const data = await prisma.user.findMany({
+    where: { companyId, deletedAt: null, active: true },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  })
+  return reply.send(data)
+}
 
 export async function listCollaboratorsController(request: FastifyRequest, reply: FastifyReply) {
   const schema = z.object({
