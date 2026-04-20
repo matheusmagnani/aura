@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma'
+import { createLog, getActorName, getCompanyName } from '../logs/log.service'
 
 interface ListRolesQuery {
   page: number
@@ -61,7 +62,11 @@ export async function getRoleByIdService(id: number, companyId: number) {
   return role
 }
 
-export async function createRoleService(data: CreateRoleInput, companyId: number) {
+export async function createRoleService(
+  data: CreateRoleInput,
+  companyId: number,
+  actor: { userId: number },
+) {
   const existing = await prisma.role.findFirst({
     where: { name: data.name, companyId, deletedAt: null },
   })
@@ -74,19 +79,32 @@ export async function createRoleService(data: CreateRoleInput, companyId: number
     where: { name: data.name, companyId, deletedAt: { not: null } },
   })
 
-  if (deleted) {
-    return prisma.role.update({
-      where: { id: deleted.id },
-      data: { name: data.name, status: data.status ?? 1, deletedAt: null },
-    })
-  }
+  const role = deleted
+    ? await prisma.role.update({
+        where: { id: deleted.id },
+        data: { name: data.name, status: data.status ?? 1, deletedAt: null },
+      })
+    : await prisma.role.create({
+        data: { name: data.name, status: data.status ?? 1, companyId },
+      })
 
-  return prisma.role.create({
-    data: { name: data.name, status: data.status ?? 1, companyId },
+  const [userName, companyName] = await Promise.all([getActorName(actor.userId), getCompanyName(companyId)])
+  await createLog({
+    companyId, userId: actor.userId, userName,
+    module: 'roles', action: 'create',
+    entityId: companyId, entityName: companyName,
+    description: `Setor "${role.name}" criado`,
   })
+
+  return role
 }
 
-export async function updateRoleService(id: number, data: UpdateRoleInput, companyId: number) {
+export async function updateRoleService(
+  id: number,
+  data: UpdateRoleInput,
+  companyId: number,
+  actor: { userId: number },
+) {
   const role = await prisma.role.findFirst({
     where: { id, companyId, deletedAt: null },
   })
@@ -104,13 +122,30 @@ export async function updateRoleService(id: number, data: UpdateRoleInput, compa
     }
   }
 
-  return prisma.role.update({
-    where: { id },
-    data,
-  })
+  const updated = await prisma.role.update({ where: { id }, data })
+
+  const prev: Record<string, unknown> = {}
+  const changed: Record<string, unknown> = {}
+  const nameKey = `Nome do setor "${role.name}"`
+  const statusKey = `Status do setor "${role.name}"`
+  if (data.name && data.name !== role.name) { prev[nameKey] = role.name; changed[nameKey] = data.name }
+  if (data.status !== undefined && data.status !== role.status) { prev[statusKey] = role.status; changed[statusKey] = data.status }
+
+  if (Object.keys(changed).length > 0) {
+    const [userName, companyName] = await Promise.all([getActorName(actor.userId), getCompanyName(companyId)])
+    await createLog({
+      companyId, userId: actor.userId, userName,
+      module: 'roles', action: 'edit',
+      entityId: companyId, entityName: companyName,
+      description: `Setor "${updated.name}" atualizado`,
+      metadata: { before: prev, after: changed },
+    })
+  }
+
+  return updated
 }
 
-export async function deleteRoleService(id: number, companyId: number) {
+export async function deleteRoleService(id: number, companyId: number, actor: { userId: number }) {
   const role = await prisma.role.findFirst({
     where: { id, companyId, deletedAt: null },
   })
@@ -130,5 +165,13 @@ export async function deleteRoleService(id: number, companyId: number) {
   await prisma.role.update({
     where: { id },
     data: { deletedAt: new Date(), status: 0 },
+  })
+
+  const [userName, companyName] = await Promise.all([getActorName(actor.userId), getCompanyName(companyId)])
+  await createLog({
+    companyId, userId: actor.userId, userName,
+    module: 'roles', action: 'delete',
+    entityId: companyId, entityName: companyName,
+    description: `Setor "${role.name}" excluído`,
   })
 }

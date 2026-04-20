@@ -4,6 +4,7 @@ dist/
 *.log
 uploads/
 .DS_Store
+CLAUDE.md
 
 backend/package-lock.json
 frontend/package-lock.json

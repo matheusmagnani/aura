@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { authenticate } from '../../middlewares/auth'
+import { requirePermission } from '../../middlewares/permission'
 import {
   listRolesController,
   getRoleByIdController,
@@ -11,9 +12,9 @@ import {
 export async function roleRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)
 
-  app.get('/', listRolesController)
-  app.get('/:id', getRoleByIdController)
-  app.post('/', createRoleController)
-  app.put('/:id', updateRoleController)
-  app.delete('/:id', deleteRoleController)
+  app.get('/', { preHandler: [requirePermission('settings', 'read')] }, listRolesController)
+  app.get('/:id', { preHandler: [requirePermission('settings', 'read')] }, getRoleByIdController)
+  app.post('/', { preHandler: [requirePermission('settings', 'create')] }, createRoleController)
+  app.put('/:id', { preHandler: [requirePermission('settings', 'edit')] }, updateRoleController)
+  app.delete('/:id', { preHandler: [requirePermission('settings', 'delete')] }, deleteRoleController)
 }

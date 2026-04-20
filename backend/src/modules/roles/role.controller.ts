@@ -13,7 +13,7 @@ export async function listRolesController(
   reply: FastifyReply,
 ) {
   const schema = z.object({
-    page: z.coerce.number().default(1),
+    page: z.coerce.number().min(1).default(1),
     limit: z.coerce.number().default(20),
     search: z.string().optional(),
     status: z.coerce.number().optional(),
@@ -54,10 +54,10 @@ export async function createRoleController(
   })
 
   const data = schema.parse(request.body)
-  const { companyId } = request.user as { companyId: number }
+  const { companyId, userId } = request.user as { companyId: number; userId: number }
 
   try {
-    const role = await createRoleService(data, companyId)
+    const role = await createRoleService(data, companyId, { userId })
     return reply.status(201).send(role)
   } catch (error: any) {
     if (error.statusCode) {
@@ -78,10 +78,10 @@ export async function updateRoleController(
   })
 
   const data = schema.parse(request.body)
-  const { companyId } = request.user as { companyId: number }
+  const { companyId, userId } = request.user as { companyId: number; userId: number }
 
   try {
-    const role = await updateRoleService(id, data, companyId)
+    const role = await updateRoleService(id, data, companyId, { userId })
     return reply.send(role)
   } catch (error: any) {
     if (error.statusCode) {
@@ -96,10 +96,10 @@ export async function deleteRoleController(
   reply: FastifyReply,
 ) {
   const { id } = z.object({ id: z.coerce.number() }).parse(request.params)
-  const { companyId } = request.user as { companyId: number }
+  const { companyId, userId } = request.user as { companyId: number; userId: number }
 
   try {
-    await deleteRoleService(id, companyId)
+    await deleteRoleService(id, companyId, { userId })
     return reply.status(204).send()
   } catch (error: any) {
     if (error.statusCode) {

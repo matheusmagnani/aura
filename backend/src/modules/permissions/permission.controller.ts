@@ -5,7 +5,7 @@ import {
   updatePermissionsByRoleIdService,
 } from './permission.service'
 
-const MODULES = ['schedule', 'clients', 'settings'] as const
+const MODULES = ['schedule', 'clients', 'collaborators', 'settings', 'history'] as const
 const ACTIONS = ['read', 'create', 'edit', 'delete'] as const
 
 export async function getPermissionsByRoleIdController(
@@ -45,10 +45,10 @@ export async function updatePermissionsByRoleIdController(
   )
 
   const permissions = schema.parse(request.body)
-  const { companyId } = request.user as { companyId: number }
+  const { companyId, userId } = request.user as { companyId: number; userId: number }
 
   try {
-    const result = await updatePermissionsByRoleIdService(roleId, companyId, permissions)
+    const result = await updatePermissionsByRoleIdService(roleId, companyId, permissions, { userId })
     return reply.send(result)
   } catch (error: any) {
     if (error.statusCode) {

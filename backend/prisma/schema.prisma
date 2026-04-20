@@ -14,13 +14,20 @@ model Company {
   cnpj         String?   @unique
   email        String?
   phone        String?
-  address      String?
-  neighborhood String?
-  city         String?
-  state        String?
-  zipCode      String?
+  address           String?
+  addressNumber     String?
+  addressComplement String?
+  neighborhood      String?
+  city              String?
+  state             String?
+  zipCode           String?
+  department        String?
   users        User[]
   roles        Role[]
+  clients      Client[]
+  clientStatuses ClientStatus[]
+  appointments Appointment[]
+  logs         Log[]
   deletedAt    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -37,6 +44,8 @@ model User {
   company   Company   @relation(fields: [companyId], references: [id])
   roleId    Int?
   role      Role?     @relation(fields: [roleId], references: [id])
+  clients   Client[]
+  appointmentsAsCollaborator Appointment[] @relation("AppointmentCollaborator")
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -57,6 +66,61 @@ model Role {
   @@unique([name, companyId])
 }
 
+model Client {
+  id                Int           @id @default(autoincrement())
+  name              String
+  email             String?
+  phone             String
+  document          String?
+  documentType      String?
+  address           String?
+  addressNumber     String?
+  addressComplement String?
+  neighborhood      String?
+  city              String?
+  state             String?
+  zipCode           String?
+  companyId         Int
+  company           Company       @relation(fields: [companyId], references: [id])
+  userId            Int?
+  user              User?         @relation(fields: [userId], references: [id])
+  statusId          Int?
+  clientStatus      ClientStatus? @relation(fields: [statusId], references: [id])
+  appointments      Appointment[]
+  deletedAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model ClientStatus {
+  id        Int       @id @default(autoincrement())
+  name      String
+  color     String    @default("#6AA6C1")
+  companyId Int
+  company   Company   @relation(fields: [companyId], references: [id])
+  clients   Client[]
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([name, companyId])
+}
+
+model Log {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id])
+  userId      Int?
+  userName    String
+  module      String
+  action      String
+  entityId    Int?
+  entityName  String?
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
+
 model Permission {
   id        Int      @id @default(autoincrement())
   roleId    Int
@@ -68,4 +132,20 @@ model Permission {
   updatedAt DateTime @updatedAt
 
   @@unique([roleId, module, action])
+}
+
+model Appointment {
+  id             Int       @id @default(autoincrement())
+  title          String
+  description    String?
+  startAt        DateTime
+  companyId      Int
+  company        Company   @relation(fields: [companyId], references: [id])
+  clientId       Int?
+  client         Client?   @relation(fields: [clientId], references: [id])
+  collaboratorId Int?
+  collaborator   User?     @relation("AppointmentCollaborator", fields: [collaboratorId], references: [id])
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }

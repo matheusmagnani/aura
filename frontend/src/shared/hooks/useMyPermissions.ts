@@ -5,7 +5,9 @@ import { permissionService, type Permission } from '../services/permissionServic
 export const PATH_TO_MODULE: Record<string, string> = {
   '/schedule': 'schedule',
   '/clients': 'clients',
+  '/collaborators': 'collaborators',
   '/settings': 'settings',
+  '/history': 'history',
 }
 
 export function useMyPermissions() {
@@ -16,6 +18,7 @@ export function useMyPermissions() {
     queryKey: ['my-permissions', roleId],
     queryFn: () => permissionService.getByRoleId(roleId!),
     enabled: roleId !== null,
+    staleTime: 1000 * 60 * 5,
   })
 
   return {
