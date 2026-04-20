@@ -16,7 +16,6 @@ interface AppointmentModalProps {
   prefilledClient?: { id: number; name: string }
   onClose: () => void
   onSaved: () => void
-  canDelete?: boolean
 }
 
 interface FormData {
@@ -28,11 +27,10 @@ interface FormData {
   collaboratorId: string
 }
 
-export function AppointmentModal({ appointment, prefilledDate, prefilledClient, onClose, onSaved, canDelete }: AppointmentModalProps) {
+export function AppointmentModal({ appointment, prefilledDate, prefilledClient, onClose, onSaved }: AppointmentModalProps) {
   const { addToast } = useToast()
   const currentUser = useAuthStore(s => s.user)
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
 
   const initialDate = appointment
@@ -116,22 +114,7 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
     }
   }
 
-  async function handleDelete() {
-    if (!appointment) return
-    setDeleting(true)
-    try {
-      await scheduleService.delete(appointment.id)
-      addToast('Agendamento excluído!', 'success')
-      onSaved()
-      onClose()
-    } catch (err: any) {
-      addToast(err.message ?? 'Erro ao excluir agendamento', 'danger')
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  return (
+return (
     <Modal isOpen onClose={onClose} title={
       appointment ? 'Editar Agendamento'
         : prefilledClient ? `Agendar — ${prefilledClient.name}`
@@ -230,27 +213,7 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
         />
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-          {appointment && canDelete ? (
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              style={{
-                padding: '8px 16px',
-                borderRadius: 10,
-                background: 'rgba(239,68,68,0.15)',
-                border: '1px solid rgba(239,68,68,0.3)',
-                color: '#f87171',
-                fontSize: 14,
-                cursor: 'pointer',
-              }}
-            >
-              {deleting ? 'Excluindo...' : 'Excluir'}
-            </button>
-          ) : (
-            <div />
-          )}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               type="button"
