@@ -68,6 +68,30 @@ Regras:
 - **Soft delete SEMPRE inativa**: ao excluir, setar `deletedAt = new Date()` + `status = 0` (ou `active = false` para User)
 - **Criação com restauração**: ao criar, se já existe registro soft-deleted com mesma chave única, **restaurar** (setar `deletedAt = null`, atualizar campos, reativar) em vez de criar novo. Fluxo: verificar ativo (conflito) → verificar deletado (restaurar) → criar novo
 
+## Regra obrigatória: Logs de auditoria em toda operação mutante
+
+**Todo create/edit/delete em qualquer módulo DEVE chamar `createLog`** no service, passando actor (userId + userName).
+
+- Se o módulo for novo, perguntar ao usuário se deve criar log antes de implementar — por padrão, **sim**
+- Módulo `auth` é exceção: **não** gera logs (login, edição de perfil, troca de senha)
+- Log de `edit` só deve ser criado se houver campos **realmente alterados** (comparar antes vs depois)
+- Para settings (roles, client-statuses, empresa): a entidade do log é a **empresa** (`entityId = companyId`, `entityName = companyName`)
+- Metadata de `edit` deve usar **chaves descritivas** (ex: `"Nome do setor \"Financeiro\""`) em vez de nomes de campo técnicos, para que o histórico seja legível sem mapeamento no frontend
+- `createLog` é fire-and-forget — nunca deve bloquear a operação principal
+
+## Regra obrigatória: Campos numéricos SEMPRE sem formatação no banco
+
+**NUNCA salvar campos numéricos com máscara no banco de dados.** Isso inclui:
+
+- **Telefone** (`phone`) — salvar apenas dígitos: `55119999999`
+- **CPF** (`document` quando documentType = CPF) — salvar apenas dígitos: `12345678901`
+- **CNPJ** (`document` quando documentType = CNPJ, ou campo `cnpj`) — salvar apenas dígitos: `12345678000190`
+- **CEP** (`zipCode`) — salvar apenas dígitos: `01310100`
+
+**No backend:** sempre aplicar `.replace(/\D/g, '')` antes de salvar e antes de comparar (para detectar mudanças reais em logs de edição).
+
+**No frontend:** exibir sempre formatado usando os utilitários de `shared/utils/formatters.ts` (`formatPhone`, `formatCPF`, `formatCNPJ`, `formatZipCode`). Nunca exibir o valor cru do banco diretamente.
+
 ## Regra obrigatória: Permissões em toda feature nova
 
 Ao criar qualquer **novo módulo, página ou rota** no projeto, você **DEVE** aplicar o sistema de permissões:

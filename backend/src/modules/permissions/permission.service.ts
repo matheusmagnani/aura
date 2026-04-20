@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma'
+import { createLog, getActorName, getCompanyName } from '../logs/log.service'
 
 interface UpdatePermissionItem {
   module: string
@@ -25,6 +26,7 @@ export async function updatePermissionsByRoleIdService(
   roleId: number,
   companyId: number,
   permissions: UpdatePermissionItem[],
+  actor: { userId: number },
 ) {
   const role = await prisma.role.findFirst({
     where: { id: roleId, companyId, deletedAt: null },
@@ -54,6 +56,14 @@ export async function updatePermissionsByRoleIdService(
       }),
     ),
   )
+
+  const [userName, companyName] = await Promise.all([getActorName(actor.userId), getCompanyName(companyId)])
+  await createLog({
+    companyId, userId: actor.userId, userName,
+    module: 'permissoes', action: 'edit',
+    entityId: companyId, entityName: companyName,
+    description: `Permissões do setor "${role.name}" atualizadas`,
+  })
 
   return results
 }

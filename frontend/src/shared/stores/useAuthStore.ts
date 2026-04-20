@@ -16,6 +16,7 @@ interface AuthState {
   token: string | null
   user: User | null
   setAuth: (token: string, user: User) => void
+  updateUser: (partial: Partial<User>) => void
   logout: () => void
   isAuthenticated: () => boolean
 }
@@ -27,6 +28,11 @@ export const useAuthStore = create<AuthState>()(
       user: null,
 
       setAuth: (token, user) => set({ token, user }),
+
+      updateUser: (partial) => {
+        const current = get().user
+        if (current) set({ user: { ...current, ...partial } })
+      },
 
       logout: () => set({ token: null, user: null }),
 

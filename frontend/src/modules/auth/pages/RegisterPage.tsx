@@ -19,7 +19,7 @@ export function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
-  const showToast = useToast((s) => s.show)
+  const { addToast: showToast } = useToast()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

@@ -1,34 +1,70 @@
-import { useToast } from '../hooks/useToast'
+import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle, XCircle, Warning, X } from '@phosphor-icons/react'
+import { useToast, type ToastType } from '../hooks/useToast'
 
-const icons = {
-  success: <CheckCircle size={20} weight="fill" className="text-green-400" />,
-  danger: <XCircle size={20} weight="fill" className="text-red-400" />,
-  warning: <Warning size={20} weight="fill" className="text-yellow-400" />,
-}
-
-const bgColors = {
-  success: 'bg-green-900/80 border-green-700',
-  danger: 'bg-red-900/80 border-red-700',
-  warning: 'bg-yellow-900/80 border-yellow-700',
+const config: Record<ToastType, { icon: React.ReactNode; bg: string; border: string; iconColor: string }> = {
+  success: {
+    icon: <CheckCircle size={20} weight="fill" />,
+    bg: '#14532d',
+    border: '#166534',
+    iconColor: '#86efac',
+  },
+  danger: {
+    icon: <XCircle size={20} weight="fill" />,
+    bg: '#450a0a',
+    border: '#991b1b',
+    iconColor: '#fca5a5',
+  },
+  warning: {
+    icon: <Warning size={20} weight="fill" />,
+    bg: '#431407',
+    border: '#92400e',
+    iconColor: '#fcd34d',
+  },
 }
 
 export function Toast() {
-  const { message, type, visible, hide } = useToast()
-
-  if (!visible) return null
+  const { toasts, removeToast } = useToast()
 
   return (
-    <div className="fixed top-4 right-4 z-50 animate-fade-in">
-      <div
-        className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${bgColors[type]} shadow-lg`}
-      >
-        {icons[type]}
-        <span className="text-sm text-white">{message}</span>
-        <button onClick={hide} className="ml-2 text-white/60 hover:text-white">
-          <X size={16} />
-        </button>
-      </div>
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 toast-container">
+      <AnimatePresence>
+        {toasts.map((toast) => {
+          const { icon, bg, border, iconColor } = config[toast.type]
+          return (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 60 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 60 }}
+              transition={{ duration: 0.25 }}
+              className="toast-item"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: `1px solid ${border}`,
+                background: bg,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+                color: iconColor,
+              }}
+            >
+              {icon}
+              <span style={{ flex: 1, fontSize: 'inherit', color: '#fff' }}>{toast.message}</span>
+              <button
+                onClick={() => removeToast(toast.id)}
+                style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
+              >
+                <X size={16} weight="bold" />
+              </button>
+            </motion.div>
+          )
+        })}
+      </AnimatePresence>
     </div>
   )
 }
