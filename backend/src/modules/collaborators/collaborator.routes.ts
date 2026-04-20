@@ -3,6 +3,7 @@ import { authenticate } from '../../middlewares/auth'
 import { requirePermission } from '../../middlewares/permission'
 import {
   listCollaboratorsController,
+  listCollaboratorsSelectController,
   getCollaboratorByIdController,
   createCollaboratorController,
   updateCollaboratorController,
@@ -13,6 +14,7 @@ import {
 export async function collaboratorRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)
 
+  app.get('/select', listCollaboratorsSelectController)
   app.get('/', { preHandler: [requirePermission('collaborators', 'read')] }, listCollaboratorsController)
   app.get('/:id', { preHandler: [requirePermission('collaborators', 'read')] }, getCollaboratorByIdController)
   app.post('/', { preHandler: [requirePermission('collaborators', 'create')] }, createCollaboratorController)

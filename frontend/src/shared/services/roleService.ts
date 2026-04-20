@@ -13,7 +13,17 @@ export interface RolesResponse {
   meta: { total: number; page: number; limit: number; totalPages: number }
 }
 
+export interface RoleSelectItem {
+  id: number
+  name: string
+}
+
 export const roleService = {
+  async select(): Promise<RoleSelectItem[]> {
+    const response = await api.get('/roles/select')
+    return response.data
+  },
+
   async list(params?: { page?: number; limit?: number; search?: string; status?: number }): Promise<RolesResponse> {
     const response = await api.get('/roles', { params })
     return response.data

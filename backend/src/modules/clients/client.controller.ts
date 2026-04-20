@@ -8,6 +8,28 @@ import {
   deleteClientService,
 } from './client.service'
 import { getActorName } from '../logs/log.service'
+import { prisma } from '../../lib/prisma'
+
+export async function listClientsSelectController(request: FastifyRequest, reply: FastifyReply) {
+  const { search } = z.object({ search: z.string().optional() }).parse(request.query)
+  const { companyId } = request.user as { companyId: number }
+  const data = await prisma.client.findMany({
+    where: {
+      companyId,
+      deletedAt: null,
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { phone: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }),
+    },
+    select: { id: true, name: true, phone: true },
+    orderBy: { name: 'asc' },
+    take: 10,
+  })
+  return reply.send(data)
+}
 
 export async function listClientsController(request: FastifyRequest, reply: FastifyReply) {
   const schema = z.object({

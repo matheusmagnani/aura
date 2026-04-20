@@ -205,8 +205,8 @@ export function ClientsPage() {
   })
 
   const { data: collaboratorsData } = useQuery({
-    queryKey: ['collaborators-all'],
-    queryFn: () => collaboratorsService.list({ limit: 200, active: 1 }),
+    queryKey: ['collaborators-select'],
+    queryFn: () => collaboratorsService.select(),
     staleTime: 1000 * 60 * 5,
   })
 
@@ -302,7 +302,7 @@ export function ClientsPage() {
                 background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)',
                 color: 'var(--color-app-secondary)',
               }}>
-                {collaboratorsData?.data.find(c => String(c.id) === uid)?.name ?? 'Colaborador'}
+                {(collaboratorsData ?? []).find(c => String(c.id) === uid)?.name ?? 'Colaborador'}
                 <button onClick={() => setFilterUserIds(filterUserIds.filter(v => v !== uid))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
                   <X size={11} weight="bold" />
                 </button>
@@ -350,7 +350,7 @@ export function ClientsPage() {
             label="Colaborador"
             values={filterUserIds}
             onChange={setFilterUserIds}
-            options={(collaboratorsData?.data ?? []).map(c => ({ value: String(c.id), label: c.name }))}
+            options={(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name }))}
             placeholder="Todos os colaboradores"
             noCheckbox
           />

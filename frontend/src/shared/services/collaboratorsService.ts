@@ -32,7 +32,17 @@ export interface UpdateCollaboratorPayload {
   active?: boolean
 }
 
+export interface CollaboratorSelectItem {
+  id: number
+  name: string
+}
+
 export const collaboratorsService = {
+  async select(): Promise<CollaboratorSelectItem[]> {
+    const response = await api.get('/collaborators/select')
+    return response.data
+  },
+
   async list(params: {
     page?: number
     limit?: number

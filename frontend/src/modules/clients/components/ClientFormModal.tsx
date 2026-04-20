@@ -48,7 +48,8 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
 
   const { data: collaboratorsData } = useQuery({
     queryKey: ['collaborators-select'],
-    queryFn: () => collaboratorsService.list({ limit: 200, active: 1 }),
+    queryFn: () => collaboratorsService.select(),
+    staleTime: 1000 * 60 * 5,
   })
 
   const { data: statusesData = [] } = useQuery({
@@ -64,10 +65,7 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
 
   const collaboratorOptions = [
     { value: '', label: 'Nenhum' },
-    ...(collaboratorsData?.data ?? []).map(c => ({
-      value: String(c.id),
-      label: c.role ? `${c.name} — ${c.role.name}` : c.name,
-    })),
+    ...(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name })),
   ]
 
   const [form, setForm] = useState<FormData>({

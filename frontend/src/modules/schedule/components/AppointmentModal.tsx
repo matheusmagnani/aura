@@ -56,13 +56,13 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
 
   const { data: collaboratorsData } = useQuery({
     queryKey: ['collaborators-select'],
-    queryFn: () => collaboratorsService.list({ limit: 200, active: 1 }),
+    queryFn: () => collaboratorsService.select(),
     staleTime: 1000 * 60 * 5,
   })
 
   const collaboratorOptions = [
     { value: '', label: 'Nenhum' },
-    ...(collaboratorsData?.data ?? []).map((c) => ({ value: String(c.id), label: c.name })),
+    ...(collaboratorsData ?? []).map((c) => ({ value: String(c.id), label: c.name })),
   ]
 
   function set(field: keyof FormData, value: string) {

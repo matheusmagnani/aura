@@ -21,7 +21,7 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
 
   const { data, isFetching } = useQuery({
     queryKey: ['clients-autocomplete', search],
-    queryFn: () => clientService.list({ search, limit: 10, searchFields: 'nameOrDocument' }),
+    queryFn: () => clientService.select(search),
     enabled: search.length >= 1,
     staleTime: 1000 * 30,
   })
@@ -70,7 +70,7 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
     inputRef.current?.focus()
   }
 
-  const options = data?.data ?? []
+  const options = data ?? []
 
   return (
     <div ref={wrapperRef} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

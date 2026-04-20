@@ -45,7 +45,18 @@ export interface ClientPayload {
   userId?: number | null
 }
 
+export interface ClientSelectItem {
+  id: number
+  name: string
+  phone: string
+}
+
 export const clientService = {
+  async select(search?: string): Promise<ClientSelectItem[]> {
+    const response = await api.get('/clients/select', { params: search ? { search } : undefined })
+    return response.data
+  },
+
   async list(params: { page?: number; limit?: number; search?: string; searchFields?: 'nameOrDocument'; statusIds?: number[]; userIds?: number[]; dateFrom?: string; dateTo?: string }): Promise<ClientsResponse> {
     const { statusIds, userIds, ...rest } = params
     const response = await api.get('/clients', {

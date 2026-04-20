@@ -7,6 +7,17 @@ import {
   updateRoleService,
   deleteRoleService,
 } from './role.service'
+import { prisma } from '../../lib/prisma'
+
+export async function listRolesSelectController(request: FastifyRequest, reply: FastifyReply) {
+  const { companyId } = request.user as { companyId: number }
+  const data = await prisma.role.findMany({
+    where: { companyId, deletedAt: null, status: 1 },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  })
+  return reply.send(data)
+}
 
 export async function listRolesController(
   request: FastifyRequest,

@@ -241,14 +241,14 @@ export function HistoryPage() {
   const [showFilterModal, setShowFilterModal] = useState(false)
 
   const { data: collaboratorsData } = useQuery({
-    queryKey: ['collaborators-all'],
-    queryFn: () => collaboratorsService.list({ limit: 200, active: 1 }),
+    queryKey: ['collaborators-select'],
+    queryFn: () => collaboratorsService.select(),
     staleTime: 1000 * 60 * 5,
   })
 
   const userOptions = [
     { label: 'Todos os colaboradores', value: '' },
-    ...(collaboratorsData?.data ?? []).map(c => ({ label: c.name, value: String(c.id) })),
+    ...(collaboratorsData ?? []).map(c => ({ label: c.name, value: String(c.id) })),
   ]
 
   const { data, isLoading } = useQuery({
@@ -347,7 +347,7 @@ export function HistoryPage() {
               label="Colaborador"
               values={userIds}
               onChange={(v) => { setUserIds(v); setPage(1) }}
-              options={(collaboratorsData?.data ?? []).map(c => ({ value: String(c.id), label: c.name }))}
+              options={(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name }))}
               placeholder="Todos os colaboradores"
               noCheckbox
             />
