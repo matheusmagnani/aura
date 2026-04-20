@@ -237,6 +237,9 @@ export function LoginPage() {
   // ── Shared input style for raw inputs (step 2 grid fields)
   const inputPad = { paddingTop: '0.5rem', paddingBottom: '0.5rem', paddingLeft: '0.75rem', paddingRight: '0.75rem' }
   const inputCls = 'w-full bg-white/5 border border-white/20 rounded-xl text-white placeholder:text-app-gray outline-none transition-all duration-300 focus:border-white hover:border-white/40'
+  const selectCls = (field: string) => `${inputCls}${errors[field] ? ' border-red-400' : ''}`
+  const ErrMsg = ({ field }: { field: string }) =>
+    errors[field] ? <p className="text-red-400 text-xs mt-1">{errors[field]}</p> : null
 
   const DEPARTMENT_OPTIONS = DEPARTMENTS.map(d => ({ value: d, label: d }))
   const UF_OPTIONS_SELECT = UF_OPTIONS.map(uf => ({ value: uf, label: uf }))
