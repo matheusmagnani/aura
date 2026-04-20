@@ -6,6 +6,7 @@ import { cn } from '../../utils/cn'
 export interface SelectOption {
   value: string
   label: string
+  badge?: string
 }
 
 interface SelectProps {
@@ -17,6 +18,7 @@ interface SelectProps {
   error?: string
   disabled?: boolean
   variant?: 'default' | 'accent'
+  dropdownAlign?: 'start' | 'center'
   className?: string
 }
 
@@ -29,6 +31,7 @@ export function Select({
   error,
   disabled,
   variant = 'default',
+  dropdownAlign = 'start',
   className,
 }: SelectProps) {
   const [isOpen, setIsOpen] = React.useState(false)
@@ -73,10 +76,18 @@ export function Select({
       const spaceBelow = window.innerHeight - rect.bottom
       const dropdownHeight = 220
       const openUp = spaceBelow < dropdownHeight + 8
-      setDropdownStyle(openUp
-        ? { position: 'fixed', bottom: window.innerHeight - rect.top + 6, left: rect.left, width: rect.width, zIndex: 9999 }
-        : { position: 'fixed', top: rect.bottom + 6, left: rect.left, width: rect.width, zIndex: 9999 }
-      )
+      if (dropdownAlign === 'center') {
+        const centerX = rect.left + rect.width / 2
+        setDropdownStyle(openUp
+          ? { position: 'fixed', bottom: window.innerHeight - rect.top + 6, left: centerX, transform: 'translateX(-50%)', minWidth: rect.width, zIndex: 9999 }
+          : { position: 'fixed', top: rect.bottom + 6, left: centerX, transform: 'translateX(-50%)', minWidth: rect.width, zIndex: 9999 }
+        )
+      } else {
+        setDropdownStyle(openUp
+          ? { position: 'fixed', bottom: window.innerHeight - rect.top + 6, left: rect.left, width: rect.width, zIndex: 9999 }
+          : { position: 'fixed', top: rect.bottom + 6, left: rect.left, width: rect.width, zIndex: 9999 }
+        )
+      }
     }
     setIsOpen(prev => !prev)
   }
@@ -118,7 +129,14 @@ export function Select({
                         : 'text-white/80 hover:bg-white/5'
                   )}
                 >
-                  <span>{option.label}</span>
+                  <span className="flex items-center gap-2">
+                    {option.label}
+                    {option.badge && (
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(230,194,132,0.2)', color: 'var(--color-app-secondary)', flexShrink: 0, lineHeight: 1 }}>
+                        {option.badge}
+                      </span>
+                    )}
+                  </span>
                   {isSelected && (
                     <Check
                       size={13}
@@ -156,13 +174,18 @@ export function Select({
         >
           <span
             className={cn(
-              'text-sm truncate',
+              'text-sm truncate flex items-center gap-2',
               isEmptyValue
                 ? isAccent ? 'text-app-accent/50' : 'text-app-gray'
                 : isAccent ? 'text-app-accent' : 'text-white'
             )}
           >
             {selectedOption ? selectedOption.label : placeholder}
+            {selectedOption?.badge && (
+              <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(230,194,132,0.2)', color: 'var(--color-app-secondary)', flexShrink: 0, lineHeight: 1 }}>
+                {selectedOption.badge}
+              </span>
+            )}
           </span>
           <CaretDown
             size={14}

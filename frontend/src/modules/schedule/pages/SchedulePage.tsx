@@ -22,6 +22,7 @@ import { YearView } from '../components/YearView'
 import { AppointmentModal } from '../components/AppointmentModal'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
 import { useToast } from '../../../shared/hooks/useToast'
+import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
 const MODULE = 'schedule'
 
@@ -73,6 +74,7 @@ export function SchedulePage() {
   const canDelete = useCanAccess(MODULE, 'delete')
   const { addToast } = useToast()
   const queryClient = useQueryClient()
+  const currentUser = useAuthStore(s => s.user)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>()
@@ -287,10 +289,15 @@ export function SchedulePage() {
             onChange={setFilterCollaboratorId}
             options={[
               { value: '', label: 'Todos os colaboradores' },
-              ...(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name })),
+              ...(collaboratorsData ?? []).map(c => ({
+                value: String(c.id),
+                label: c.name,
+                badge: c.id === currentUser?.id ? 'Você' : undefined,
+              })),
             ]}
             placeholder="Todos os colaboradores"
             className="max-w-[200px]"
+            dropdownAlign="center"
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button

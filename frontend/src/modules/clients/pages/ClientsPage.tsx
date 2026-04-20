@@ -20,6 +20,7 @@ import { EntityHistoryModal } from '../../../shared/components/EntityHistoryModa
 import { useToast } from '../../../shared/hooks/useToast'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
 import { formatPhone } from '../../../shared/utils/formatters'
+import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
 const MODULE = 'clients'
 const DESKTOP_COLS = '44px minmax(0,0.8fr) minmax(0,1fr) minmax(0,130px) 60px'
@@ -153,6 +154,7 @@ export function ClientsPage() {
   const navigate = useNavigate()
   const { addToast } = useToast()
   const queryClient = useQueryClient()
+  const currentUser = useAuthStore(s => s.user)
   const canCreate = useCanAccess(MODULE, 'create')
   const canEdit = useCanAccess(MODULE, 'edit')
   const canDelete = useCanAccess(MODULE, 'delete')
@@ -350,7 +352,11 @@ export function ClientsPage() {
             label="Colaborador"
             values={filterUserIds}
             onChange={setFilterUserIds}
-            options={(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name }))}
+            options={(collaboratorsData ?? []).map(c => ({
+              value: String(c.id),
+              label: c.name,
+              badge: c.id === currentUser?.id ? 'Você' : undefined,
+            }))}
             placeholder="Todos os colaboradores"
             noCheckbox
           />

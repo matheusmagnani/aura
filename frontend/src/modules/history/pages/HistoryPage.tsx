@@ -6,6 +6,7 @@ import { format, startOfDay, endOfDay } from 'date-fns'
 import { DateRangePicker, type DateRange } from '../../../shared/components/DateRangePicker'
 import { logService, type Log } from '../../../shared/services/logService'
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
+import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { PageHeader } from '../../../shared/components/PageHeader'
 import { Pagination } from '../../../shared/components/Pagination'
 import { Modal } from '../../../shared/components/Modal'
@@ -239,6 +240,7 @@ export function HistoryPage() {
   const [userIds, setUserIds] = useState<string[]>([])
   const [dateRange, setDateRange] = useState<DateRange>({})
   const [showFilterModal, setShowFilterModal] = useState(false)
+  const currentUser = useAuthStore(s => s.user)
 
   const { data: collaboratorsData } = useQuery({
     queryKey: ['collaborators-select'],
@@ -347,7 +349,11 @@ export function HistoryPage() {
               label="Colaborador"
               values={userIds}
               onChange={(v) => { setUserIds(v); setPage(1) }}
-              options={(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name }))}
+              options={(collaboratorsData ?? []).map(c => ({
+                value: String(c.id),
+                label: c.name,
+                badge: c.id === currentUser?.id ? 'Você' : undefined,
+              }))}
               placeholder="Todos os colaboradores"
               noCheckbox
             />
