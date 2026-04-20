@@ -8,6 +8,7 @@ import { AutocompleteClient } from '../../../shared/components/AutocompleteClien
 import { scheduleService, type Appointment } from '../../../shared/services/scheduleService'
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { useToast } from '../../../shared/hooks/useToast'
+import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
 interface AppointmentModalProps {
   appointment?: Appointment
@@ -29,6 +30,7 @@ interface FormData {
 
 export function AppointmentModal({ appointment, prefilledDate, prefilledClient, onClose, onSaved, canDelete }: AppointmentModalProps) {
   const { addToast } = useToast()
+  const currentUser = useAuthStore(s => s.user)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
@@ -62,7 +64,11 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
 
   const collaboratorOptions = [
     { value: '', label: 'Nenhum' },
-    ...(collaboratorsData ?? []).map((c) => ({ value: String(c.id), label: c.name })),
+    ...(collaboratorsData ?? []).map((c) => ({
+      value: String(c.id),
+      label: c.name,
+      badge: c.id === currentUser?.id ? 'Você' : undefined,
+    })),
   ]
 
   function set(field: keyof FormData, value: string) {

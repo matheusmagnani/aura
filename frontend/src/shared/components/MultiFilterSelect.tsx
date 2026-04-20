@@ -6,7 +6,7 @@ interface MultiFilterSelectProps {
   label: string
   values: string[]
   onChange: (v: string[]) => void
-  options: { label: string; value: string; color?: string }[]
+  options: { label: string; value: string; color?: string; badge?: string }[]
   placeholder?: string
   noCheckbox?: boolean
 }
@@ -33,7 +33,8 @@ export function MultiFilterSelect({ label, values, onChange, options, placeholde
       setDropdownStyle({
         position: 'fixed',
         top: rect.bottom + 4,
-        left: rect.left,
+        left: rect.left + rect.width / 2,
+        transform: 'translateX(-50%)',
         minWidth: rect.width, maxWidth: 220,
         zIndex: 9999,
       })
@@ -94,6 +95,11 @@ export function MultiFilterSelect({ label, values, onChange, options, placeholde
             )}
             {opt.color && <span style={{ width: 8, height: 8, borderRadius: '50%', background: opt.color, flexShrink: 0 }} />}
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.label}</span>
+            {opt.badge && (
+              <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(230,194,132,0.2)', color: 'var(--color-app-secondary)', flexShrink: 0, lineHeight: 1 }}>
+                {opt.badge}
+              </span>
+            )}
           </button>
         )
       })}

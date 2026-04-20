@@ -7,6 +7,7 @@ import { clientService, type Client } from '../../../shared/services/clientServi
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { clientStatusService } from '../../../shared/services/clientStatusService'
 import { useToast } from '../../../shared/hooks/useToast'
+import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { useCepSearch } from '../../../shared/hooks/useCepSearch'
 import { formatPhone, formatZipCode, formatCPF, formatCNPJ } from '../../../shared/utils/formatters'
 import { validateCPF, validateCNPJ } from '../../../shared/utils/validateDocuments'
@@ -42,6 +43,7 @@ interface ClientFormModalProps {
 
 export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalProps) {
   const { addToast } = useToast()
+  const currentUser = useAuthStore(s => s.user)
   const { fetchAddress, isLoading: isLoadingCep } = useCepSearch()
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
@@ -65,7 +67,11 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
 
   const collaboratorOptions = [
     { value: '', label: 'Nenhum' },
-    ...(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name })),
+    ...(collaboratorsData ?? []).map(c => ({
+      value: String(c.id),
+      label: c.name,
+      badge: c.id === currentUser?.id ? 'Você' : undefined,
+    })),
   ]
 
   const [form, setForm] = useState<FormData>({
