@@ -20,6 +20,7 @@ import { WeekView } from '../components/WeekView'
 import { MonthView } from '../components/MonthView'
 import { YearView } from '../components/YearView'
 import { AppointmentModal } from '../components/AppointmentModal'
+import { AppointmentDetailModal } from '../components/AppointmentDetailModal'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
@@ -79,6 +80,8 @@ export function SchedulePage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>()
   const [prefilledDate, setPrefilledDate] = useState<Date | undefined>()
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [detailAppointment, setDetailAppointment] = useState<Appointment | undefined>()
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [filterCollaboratorId, setFilterCollaboratorId] = useState<string>('')
 
@@ -107,8 +110,14 @@ export function SchedulePage() {
     setModalOpen(true)
   }
 
-  function openEdit(a: Appointment) {
-    setEditingAppointment(a)
+  function openDetail(a: Appointment) {
+    setDetailAppointment(a)
+    setDetailModalOpen(true)
+  }
+
+  function openEditFromDetail() {
+    setDetailModalOpen(false)
+    setEditingAppointment(detailAppointment)
     setPrefilledDate(undefined)
     setModalOpen(true)
   }
@@ -268,15 +277,15 @@ export function SchedulePage() {
       {/* ── Conteúdo da view ────────────────────────────────── */}
       {/* Desktop: flex 1 + overflow hidden para a grade fixa */}
       <div className="hidden md:flex md:flex-col md:overflow-hidden" style={{ flex: 1, padding: view === 'week' ? 0 : '12px 16px 0' }}>
-        {view === 'week' && <WeekView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openEdit} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
-        {view === 'month' && <MonthView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openEdit} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
+        {view === 'week' && <WeekView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
+        {view === 'month' && <MonthView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
         {view === 'year' && <YearView currentDate={currentDate} appointments={appointments} onMonthClick={handleMonthClick} />}
       </div>
 
       {/* Mobile: scroll natural */}
       <div className="flex md:hidden flex-col" style={{ padding: view === 'week' ? '8px 0' : '8px 16px' }}>
-        {view === 'week' && <WeekView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openEdit} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
-        {view === 'month' && <MonthView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openEdit} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
+        {view === 'week' && <WeekView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
+        {view === 'month' && <MonthView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
         {view === 'year' && <YearView currentDate={currentDate} appointments={appointments} onMonthClick={handleMonthClick} />}
       </div>
 
@@ -310,13 +319,23 @@ export function SchedulePage() {
         </div>
       </Modal>
 
+      {detailModalOpen && detailAppointment && (
+        <AppointmentDetailModal
+          appointment={detailAppointment}
+          onClose={() => setDetailModalOpen(false)}
+          onEdit={openEditFromDetail}
+          onDeleted={handleSaved}
+          canEdit={canEdit}
+          canDelete={canDelete}
+        />
+      )}
+
       {modalOpen && (
         <AppointmentModal
           appointment={editingAppointment}
           prefilledDate={prefilledDate}
           onClose={() => setModalOpen(false)}
           onSaved={handleSaved}
-          canDelete={canDelete}
         />
       )}
     </div>
