@@ -9,9 +9,10 @@ interface AutocompleteClientProps {
   onChange: (id: string, name: string) => void
   placeholder?: string
   initialName?: string
+  error?: string
 }
 
-export function AutocompleteClient({ label, value, onChange, placeholder = 'Buscar cliente...', initialName }: AutocompleteClientProps) {
+export function AutocompleteClient({ label, value, onChange, placeholder = 'Buscar cliente...', initialName, error }: AutocompleteClientProps) {
   const [inputValue, setInputValue] = useState(initialName ?? '')
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
@@ -79,7 +80,7 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.2)',
+          border: error ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.2)',
           borderRadius: 12,
           padding: '8px 12px',
           transition: 'border-color 0.2s',
@@ -151,6 +152,7 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
           </div>
         )}
       </div>
+      {error && <span style={{ fontSize: 12, color: '#f87171' }}>{error}</span>}
     </div>
   )
 }

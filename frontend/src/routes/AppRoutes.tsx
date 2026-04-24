@@ -8,6 +8,7 @@ import { CollaboratorsPage } from '../modules/collaborators/pages/CollaboratorsP
 import { SettingsPage } from '../modules/settings/pages/SettingsPage'
 import { HistoryPage } from '../modules/history/pages/HistoryPage'
 import { SchedulePage } from '../modules/schedule/pages/SchedulePage'
+import { ProposalsPage } from '../modules/proposals/pages/ProposalsPage'
 import { Layout } from '../shared/components/Layout'
 import { useAuthStore } from '../shared/stores/useAuthStore'
 import { useMyPermissions } from '../shared/hooks/useMyPermissions'
@@ -107,6 +108,14 @@ export function AppRoutes() {
           element={
             <PermissionRoute module="history">
               <HistoryPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="proposals"
+          element={
+            <PermissionRoute module="proposals">
+              <ProposalsPage />
             </PermissionRoute>
           }
         />

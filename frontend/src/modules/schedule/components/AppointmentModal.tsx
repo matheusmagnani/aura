@@ -60,14 +60,11 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
     staleTime: 1000 * 60 * 5,
   })
 
-  const collaboratorOptions = [
-    { value: '', label: 'Nenhum' },
-    ...(collaboratorsData ?? []).map((c) => ({
-      value: String(c.id),
-      label: c.name,
-      badge: c.id === currentUser?.id ? 'Você' : undefined,
-    })),
-  ]
+  const collaboratorOptions = (collaboratorsData ?? []).map((c) => ({
+    value: String(c.id),
+    label: c.name,
+    badge: c.id === currentUser?.id ? 'Você' : undefined,
+  }))
 
   function set(field: keyof FormData, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -79,20 +76,22 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
     if (!form.title.trim()) errs.title = 'Título é obrigatório'
     if (!form.date) errs.date = 'Data é obrigatória'
     if (!form.time) errs.time = 'Hora é obrigatória'
+    if (!form.clientId) errs.clientId = 'Cliente é obrigatório'
+    if (!form.collaboratorId) errs.collaboratorId = 'Colaborador é obrigatório'
     return errs
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const errs = validate()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) { setErrors(errs); addToast('Preencha os campos obrigatórios corretamente.', 'danger'); return }
 
     const startAt = new Date(`${form.date}T${form.time}:00`).toISOString()
     const payload = {
       title: form.title.trim(),
       description: form.description.trim() || null,
       startAt,
-      clientId: form.clientId ? Number(form.clientId) : null,
+      ...(appointment ? {} : { clientId: Number(form.clientId) }),
       collaboratorId: form.collaboratorId ? Number(form.collaboratorId) : null,
     }
 
@@ -191,25 +190,51 @@ return (
           />
         </div>
 
-        {!prefilledClient && (
+        {appointment ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 14, fontWeight: 500, color: 'white' }}>Cliente</label>
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12,
+              padding: '8px 12px',
+              color: 'rgba(255,255,255,0.5)',
+              fontSize: 14,
+            }}>
+              {appointment.client?.name ?? '—'}
+            </div>
+          </div>
+        ) : prefilledClient ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 14, fontWeight: 500, color: 'white' }}>Cliente</label>
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12,
+              padding: '8px 12px',
+              color: 'rgba(255,255,255,0.5)',
+              fontSize: 14,
+            }}>
+              {prefilledClient.name}
+            </div>
+          </div>
+        ) : (
           <AutocompleteClient
-            label="Cliente"
+            label="Cliente *"
             value={form.clientId}
-            onChange={(id) => {
-              set('clientId', id)
-              if (!id) setForm(prev => ({ ...prev, clientId: '' }))
-            }}
+            onChange={(id) => set('clientId', id)}
             placeholder="Buscar cliente..."
-            initialName={appointment?.client?.name}
+            error={errors.clientId}
           />
         )}
 
         <Select
-          label="Colaborador"
+          label="Colaborador *"
           value={form.collaboratorId}
           onChange={(v) => set('collaboratorId', v)}
           options={collaboratorOptions}
           placeholder="Selecionar colaborador"
+          error={errors.collaboratorId}
         />
 
         {/* Footer */}

@@ -10,6 +10,8 @@ import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { PageHeader } from '../../../shared/components/PageHeader'
 import { Pagination } from '../../../shared/components/Pagination'
 import { Modal } from '../../../shared/components/Modal'
+import { AutocompleteClient } from '../../../shared/components/AutocompleteClient'
+import { Select } from '../../../shared/components/ui/Select'
 import { formatPhone, formatCPF, formatCNPJ, formatZipCode } from '../../../shared/utils/formatters'
 
 const MODULE_LABELS: Record<string, string> = {
@@ -20,6 +22,7 @@ const MODULE_LABELS: Record<string, string> = {
   'client-statuses': 'Status de Clientes',
   roles: 'Setores',
   schedule: 'Agenda',
+  proposals: 'Propostas',
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -61,20 +64,37 @@ const FIELD_LABELS: Record<string, string> = {
   zipCode: 'CEP',
   status: 'Status',
   active: 'Status',
-  color: 'Cor Status de Cliente',
+  color: 'Cor "status do cliente"',
   tradeName: 'Nome fantasia',
   cnpj: 'CNPJ',
   department: 'Departamento',
   roleId: 'Setor',
   notes: 'Observações',
+  startAt: 'Início do agendamento',
+  title: 'Título',
+  description: 'Descrição',
+  collaboratorId: 'Colaborador',
+  value: 'Valor',
+  clientObservation: 'Observação',
 }
+
+const PROPOSAL_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendente',
+  sent: 'Enviada',
+  accepted: 'Aceita',
+  refused: 'Recusada',
+}
+
+const HIDDEN_KEYS = new Set(['statusChangedAt'])
 
 function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return ''
   if (typeof value === 'boolean') return value ? 'Ativo' : 'Inativo'
-  if (key === 'status' || key.startsWith('Status ')) {
-    if (value === 1 || value === 0 || value === '1' || value === '0' || typeof value === 'boolean')
-      return value === 1 || value === '1' || value === true ? 'Ativo' : 'Inativo'
+  if (key === 'status') {
+    if (value === 1 || value === 0 || value === '1' || value === '0')
+      return value === 1 || value === '1' ? 'Ativo' : 'Inativo'
+    if (typeof value === 'string' && PROPOSAL_STATUS_LABELS[value])
+      return PROPOSAL_STATUS_LABELS[value]
   }
   if (key === 'active') return value === true || value === 1 || value === '1' ? 'Ativo' : 'Inativo'
   return String(value)
@@ -98,11 +118,29 @@ function applyNumericFormat(key: string, value: unknown): string | null {
   return null
 }
 
-function ValueDisplay({ fieldKey, value }: { fieldKey: string; value: unknown }) {
+function formatISODate(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(value)) return null
+  return new Date(value).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+function ValueDisplay({ fieldKey, value, collaboratorsMap }: { fieldKey: string; value: unknown; collaboratorsMap?: Record<number, string> }) {
+  if (fieldKey === 'collaboratorId' && collaboratorsMap) {
+    const id = typeof value === 'number' ? value : Number(value)
+    return <>{collaboratorsMap[id] ?? (value === null || value === undefined ? '—' : String(value))}</>
+  }
+  if (fieldKey === 'value') {
+    return <>{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</>
+  }
   const text = formatValue(fieldKey, value)
   if (isHexColor(value)) {
     return <span style={{ width: 12, height: 12, borderRadius: '50%', background: value, display: 'inline-block', border: '1px solid rgba(255,255,255,0.2)' }} />
   }
+  const isoFormatted = formatISODate(value)
+  if (isoFormatted) return <>{isoFormatted}</>
   const formatted = applyNumericFormat(fieldKey, value)
   return <>{formatted ?? text}</>
 }
@@ -115,15 +153,17 @@ const MODULE_FIELD_SUFFIX: Record<string, string> = {
   empresa: 'da empresa',
 }
 
-function ChangesTable({ metadata, module }: { metadata: Record<string, unknown>; module?: string }) {
+function ChangesTable({ metadata, module, collaboratorsMap }: { metadata: Record<string, unknown>; module?: string; collaboratorsMap?: Record<number, string> }) {
   const before = metadata.before as Record<string, unknown> | undefined
   const after = metadata.after as Record<string, unknown> | undefined
   if (!before || !after) return null
 
-  const keys = Object.keys(after)
+  const keys = Object.keys(after).filter(k => !HIDDEN_KEYS.has(k))
   if (keys.length === 0) return null
 
-  const suffix = module ? MODULE_FIELD_SUFFIX[module] : undefined
+  const isAppointmentChange = keys.some(k => k === 'startAt' || k === 'title')
+  const isProposalChange = keys.some(k => k === 'value' || k === 'clientObservation')
+  const suffix = isAppointmentChange ? 'do agendamento' : isProposalChange ? 'da proposta' : (module ? MODULE_FIELD_SUFFIX[module] : undefined)
 
   return (
     <div style={{
@@ -140,14 +180,14 @@ function ChangesTable({ metadata, module }: { metadata: Record<string, unknown>;
       {keys.map((k) => (
         <>
           <span key={`label-${k}`} style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {FIELD_LABELS[k] ?? k}{suffix ? ` ${suffix}` : ''}
+            {FIELD_LABELS[k] ?? k}{suffix && FIELD_LABELS[k] && k !== 'startAt' && k !== 'color' ? ` ${suffix}` : ''}
           </span>
           <span key={`before-${k}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
-            <ValueDisplay fieldKey={k} value={before[k]} />
+            <ValueDisplay fieldKey={k} value={before[k]} collaboratorsMap={collaboratorsMap} />
           </span>
           <span key={`arrow-${k}`} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' as const }}>→</span>
           <span key={`after-${k}`} style={{ fontSize: 12, color: 'var(--color-app-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
-            <ValueDisplay fieldKey={k} value={after[k]} />
+            <ValueDisplay fieldKey={k} value={after[k]} collaboratorsMap={collaboratorsMap} />
           </span>
         </>
       ))}
@@ -155,7 +195,7 @@ function ChangesTable({ metadata, module }: { metadata: Record<string, unknown>;
   )
 }
 
-function LogCard({ log }: { log: Log }) {
+function LogCard({ log, collaboratorsMap }: { log: Log; collaboratorsMap?: Record<number, string> }) {
   const color = ACTION_COLORS[log.action] ?? 'rgba(255,255,255,0.5)'
   const actionLabel = ACTION_LABELS[log.action] ?? log.action
   const moduleLabel = MODULE_LABELS[log.module] ?? log.module
@@ -183,14 +223,14 @@ function LogCard({ log }: { log: Log }) {
         flexDirection: 'column',
         gap: 6,
       }}>
-        {/* Nome da entidade + data */}
+        {/* Colaborador + data */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <span style={{
             fontSize: 14, fontWeight: 600,
             color: '#6AA6C1',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            {log.entityName || '—'}
+            {log.userName}
           </span>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap', flexShrink: 0 }}>
             {formatDate(log.createdAt)}
@@ -201,11 +241,11 @@ function LogCard({ log }: { log: Log }) {
         {!hasChanges && log.description && (
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{log.description}</span>
         )}
-        {hasChanges && log.metadata ? <ChangesTable metadata={log.metadata as Record<string, unknown>} module={log.module} /> : null}
+        {hasChanges && log.metadata ? <ChangesTable metadata={log.metadata as Record<string, unknown>} module={log.module} collaboratorsMap={collaboratorsMap} /> : null}
 
-        {/* Autor + Módulo */}
+        {/* Cliente + Módulo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>por {log.userName}</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{log.entityName ? `${log.action === 'create' ? 'para' : 'de'} ${log.entityName}` : '—'}</span>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{moduleLabel}</span>
         </div>
       </div>
@@ -239,6 +279,15 @@ export function HistoryPage() {
   const [actions, setActions] = useState<string[]>([])
   const [userIds, setUserIds] = useState<string[]>([])
   const [dateRange, setDateRange] = useState<DateRange>({})
+  const [entityId, setEntityId] = useState<number | null>(null)
+  const [entityName, setEntityName] = useState<string>('')
+
+  function handleModulesChange(v: string[]) {
+    setModules(v)
+    setEntityId(null)
+    setEntityName('')
+    setPage(1)
+  }
   const [showFilterModal, setShowFilterModal] = useState(false)
   const currentUser = useAuthStore(s => s.user)
 
@@ -253,8 +302,10 @@ export function HistoryPage() {
     ...(collaboratorsData ?? []).map(c => ({ label: c.name, value: String(c.id) })),
   ]
 
+  const collaboratorsMap = Object.fromEntries((collaboratorsData ?? []).map(c => [c.id, c.name])) as Record<number, string>
+
   const { data, isLoading } = useQuery({
-    queryKey: ['logs', page, search, modules, actions, userIds, dateRange],
+    queryKey: ['logs', page, search, modules, actions, userIds, dateRange, entityId],
     queryFn: () =>
       logService.list({
         page,
@@ -265,6 +316,8 @@ export function HistoryPage() {
         userIds: userIds.length > 0 ? userIds.map(Number) : undefined,
         dateFrom: dateRange.from ? startOfDay(dateRange.from).toISOString() : undefined,
         dateTo: dateRange.to ? endOfDay(dateRange.to).toISOString() : (dateRange.from ? endOfDay(dateRange.from).toISOString() : undefined),
+        entityId: entityId ?? undefined,
+        entityModule: entityId && modules.length === 1 ? modules[0] : undefined,
       }),
   })
 
@@ -276,7 +329,7 @@ export function HistoryPage() {
     setPage(1)
   }
 
-  const filterActive = !!(modules.length || actions.length || userIds.length || (dateRange.from && dateRange.to))
+  const filterActive = !!(modules.length || actions.length || userIds.length || (dateRange.from && dateRange.to) || entityId)
   const activeDateLabel = dateRange.from && dateRange.to
     ? `${format(dateRange.from, 'dd/MM/yy')} – ${format(dateRange.to, 'dd/MM/yy')}`
     : null
@@ -310,12 +363,25 @@ export function HistoryPage() {
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Módulo</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 12, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
                 {MODULE_OPTIONS.find(o => o.value === m)?.label ?? m}
-                <button onClick={() => { setModules(modules.filter(v => v !== m)); setPage(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
+                <button onClick={() => { handleModulesChange(modules.filter(v => v !== m)) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
                   <X size={11} weight="bold" />
                 </button>
               </span>
             </div>
           ))}
+          {entityId && entityName && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>
+                {modules[0] === 'clients' ? 'Cliente' : 'Colaborador'}
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 12, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
+                {entityName}
+                <button onClick={() => { setEntityId(null); setEntityName(''); setPage(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
+                  <X size={11} weight="bold" />
+                </button>
+              </span>
+            </div>
+          )}
           {actions.map(a => (
             <div key={a} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Ação</span>
@@ -367,11 +433,35 @@ export function HistoryPage() {
             <MultiFilterSelect
               label="Módulo"
               values={modules}
-              onChange={(v) => { setModules(v); setPage(1) }}
+              onChange={handleModulesChange}
               options={MODULE_OPTIONS.filter(o => o.value !== '')}
               placeholder="Todos os módulos"
               noCheckbox
             />
+            {modules.length === 1 && modules[0] === 'clients' && (
+              <AutocompleteClient
+                label="Cliente específico"
+                value={entityId ? String(entityId) : ''}
+                onChange={(id, name) => { setEntityId(id ? Number(id) : null); setEntityName(name); setPage(1) }}
+                placeholder="Todos os clientes"
+              />
+            )}
+            {modules.length === 1 && modules[0] === 'collaborators' && (
+              <Select
+                label="Colaborador específico"
+                value={entityId ? String(entityId) : ''}
+                onChange={(v) => {
+                  const found = (collaboratorsData ?? []).find(c => String(c.id) === v)
+                  setEntityId(v ? Number(v) : null)
+                  setEntityName(found?.name ?? '')
+                  setPage(1)
+                }}
+                options={[
+                  { value: '', label: 'Todos os colaboradores' },
+                  ...(collaboratorsData ?? []).map(c => ({ value: String(c.id), label: c.name })),
+                ]}
+              />
+            )}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
             <MultiFilterSelect
               label="Ação"
@@ -410,7 +500,7 @@ export function HistoryPage() {
       {!isLoading && logs.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {logs.map((log) => (
-            <LogCard key={log.id} log={log} />
+            <LogCard key={log.id} log={log} collaboratorsMap={collaboratorsMap} />
           ))}
         </div>
       )}

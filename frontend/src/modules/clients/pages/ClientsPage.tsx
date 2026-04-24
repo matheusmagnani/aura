@@ -3,7 +3,7 @@ import { useClientsFilterStore } from '../stores/useClientsFilterStore'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { UsersThree, PencilSimple, Trash, List, X, Tag, TrashSimple, ClockCounterClockwise } from '@phosphor-icons/react'
+import { UsersThree, PencilSimple, Trash, List, X, Tag, TrashSimple, ClockCounterClockwise, CalendarBlank } from '@phosphor-icons/react'
 import { PageHeader } from '../../../shared/components/PageHeader'
 import { MultiFilterSelect } from '../../../shared/components/MultiFilterSelect'
 import { DateRangePicker, type DateRange } from '../../../shared/components/DateRangePicker'
@@ -165,6 +165,7 @@ export function ClientsPage() {
     filterStatusIds, setFilterStatusIds,
     filterUserIds, setFilterUserIds,
     filterDateRange, setFilterDateRange,
+    filterAppointmentDateRange, setFilterAppointmentDateRange,
   } = useClientsFilterStore()
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [selected, setSelected] = useState<number[]>([])
@@ -178,7 +179,7 @@ export function ClientsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Client | undefined>(undefined)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['clients', page, search, filterStatusIds, filterUserIds, filterDateRange],
+    queryKey: ['clients', page, search, filterStatusIds, filterUserIds, filterDateRange, filterAppointmentDateRange],
     queryFn: () => clientService.list({
       page, limit: 20,
       search: search || undefined,
@@ -186,6 +187,8 @@ export function ClientsPage() {
       userIds: filterUserIds.length > 0 ? filterUserIds.map(Number) : undefined,
       dateFrom: filterDateRange.from ? startOfDay(filterDateRange.from).toISOString() : undefined,
       dateTo: filterDateRange.to ? endOfDay(filterDateRange.to).toISOString() : (filterDateRange.from ? endOfDay(filterDateRange.from).toISOString() : undefined),
+      appointmentDateFrom: filterAppointmentDateRange.from ? startOfDay(filterAppointmentDateRange.from).toISOString() : undefined,
+      appointmentDateTo: filterAppointmentDateRange.to ? endOfDay(filterAppointmentDateRange.to).toISOString() : (filterAppointmentDateRange.from ? endOfDay(filterAppointmentDateRange.from).toISOString() : undefined),
     }),
   })
 
@@ -290,10 +293,10 @@ export function ClientsPage() {
         canCreate={canCreate}
         onAdd={() => { setEditingClient(undefined); setShowForm(true) }}
         onFilterToggle={() => setShowFilterModal(true)}
-        filterActive={!!(filterStatusIds.length || filterUserIds.length || filterDateRange.from)}
+        filterActive={!!(filterStatusIds.length || filterUserIds.length || filterDateRange.from || filterAppointmentDateRange.from)}
       />
 
-      {(filterStatusIds.length > 0 || filterUserIds.length > 0 || filterDateRange.from) && (
+      {(filterStatusIds.length > 0 || filterUserIds.length > 0 || filterDateRange.from || filterAppointmentDateRange.from) && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
           {filterUserIds.map(uid => (
             <div key={uid} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -329,7 +332,7 @@ export function ClientsPage() {
           ))}
           {filterDateRange.from && filterDateRange.to && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Período</span>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Período de cadastro</span>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '4px 10px', borderRadius: 999, fontSize: 12,
@@ -338,6 +341,23 @@ export function ClientsPage() {
               }}>
                 {format(filterDateRange.from, 'dd/MM/yy')} – {format(filterDateRange.to, 'dd/MM/yy')}
                 <button onClick={() => setFilterDateRange({})} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
+                  <X size={11} weight="bold" />
+                </button>
+              </span>
+            </div>
+          )}
+          {filterAppointmentDateRange.from && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Período de agendamento</span>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '4px 10px', borderRadius: 999, fontSize: 12,
+                background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)',
+                color: 'var(--color-app-secondary)',
+              }}>
+                <CalendarBlank size={11} weight="bold" />
+                {format(filterAppointmentDateRange.from, 'dd/MM/yy')}{filterAppointmentDateRange.to ? ` – ${format(filterAppointmentDateRange.to, 'dd/MM/yy')}` : ''}
+                <button onClick={() => setFilterAppointmentDateRange({})} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
                   <X size={11} weight="bold" />
                 </button>
               </span>
@@ -374,6 +394,12 @@ export function ClientsPage() {
             label="Período de cadastro"
             value={filterDateRange}
             onChange={(v) => { setFilterDateRange(v); setPage(1) }}
+          />
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+          <DateRangePicker
+            label="Período de agendamento"
+            value={filterAppointmentDateRange}
+            onChange={(v) => { setFilterAppointmentDateRange(v); setPage(1) }}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
@@ -617,7 +643,6 @@ export function ClientsPage() {
         <EntityHistoryModal
           isOpen
           onClose={() => setHistoryTarget(undefined)}
-          module="clients"
           entityId={historyTarget.id}
           entityName={historyTarget.name}
         />

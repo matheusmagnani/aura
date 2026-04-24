@@ -37,13 +37,12 @@ export function AppointmentDetailModal({
 }: AppointmentDetailModalProps) {
   const { addToast } = useToast()
   const [deleting, setDeleting] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isDeleteConfirm, setIsDeleteConfirm] = useState(false)
 
   const date = format(parseISO(appointment.startAt), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
   const time = format(parseISO(appointment.startAt), 'HH:mm')
 
   async function handleDelete() {
-    if (!confirmDelete) { setConfirmDelete(true); return }
     setDeleting(true)
     try {
       await scheduleService.delete(appointment.id)
@@ -52,12 +51,14 @@ export function AppointmentDetailModal({
       onClose()
     } catch (err: any) {
       addToast(err.message ?? 'Erro ao excluir agendamento', 'danger')
+      setIsDeleteConfirm(false)
     } finally {
       setDeleting(false)
     }
   }
 
   return (
+    <>
     <Modal isOpen onClose={onClose} title="Detalhes do Agendamento">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
@@ -91,12 +92,11 @@ export function AppointmentDetailModal({
           {canDelete ? (
             <button
               type="button"
-              onClick={handleDelete}
-              disabled={deleting}
+              onClick={() => setIsDeleteConfirm(true)}
               style={{
                 padding: '8px 16px',
                 borderRadius: 10,
-                background: confirmDelete ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.1)',
+                background: 'rgba(239,68,68,0.1)',
                 border: '1px solid rgba(239,68,68,0.3)',
                 color: '#f87171',
                 fontSize: 14,
@@ -104,11 +104,10 @@ export function AppointmentDetailModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                transition: 'background 0.2s',
               }}
             >
               <Trash size={15} />
-              {deleting ? 'Excluindo...' : confirmDelete ? 'Confirmar exclusão' : 'Excluir'}
+              Excluir
             </button>
           ) : (
             <div />
@@ -141,5 +140,35 @@ export function AppointmentDetailModal({
         </div>
       </div>
     </Modal>
+
+    <Modal isOpen={isDeleteConfirm} onClose={() => setIsDeleteConfirm(false)} title="Excluir Agendamento">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+          Tem certeza que deseja excluir{' '}
+          <strong style={{ color: '#fff' }}>{appointment.title}</strong>?
+          <br />Esta ação não pode ser desfeita.
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <button
+            type="button"
+            onClick={() => setIsDeleteConfirm(false)}
+            style={{ padding: '8px 20px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 14, borderRadius: 8 }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{ padding: '8px 20px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, cursor: 'pointer', color: '#f87171', fontSize: 14, fontWeight: 500, opacity: deleting ? 0.6 : 1 }}
+          >
+            {deleting ? 'Excluindo...' : 'Excluir'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+    </>
   )
 }

@@ -57,7 +57,7 @@ export const clientService = {
     return response.data
   },
 
-  async list(params: { page?: number; limit?: number; search?: string; searchFields?: 'nameOrDocument'; statusIds?: number[]; userIds?: number[]; dateFrom?: string; dateTo?: string }): Promise<ClientsResponse> {
+  async list(params: { page?: number; limit?: number; search?: string; searchFields?: 'nameOrDocument'; statusIds?: number[]; userIds?: number[]; dateFrom?: string; dateTo?: string; appointmentDateFrom?: string; appointmentDateTo?: string }): Promise<ClientsResponse> {
     const { statusIds, userIds, ...rest } = params
     const response = await api.get('/clients', {
       params: {

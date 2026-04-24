@@ -17,6 +17,7 @@ import { settingsRoutes } from './modules/settings/settings.routes'
 import { clientStatusRoutes } from './modules/client-statuses/client-status.routes'
 import { logRoutes } from './modules/logs/log.routes'
 import { scheduleRoutes } from './modules/schedule/schedule.routes'
+import { proposalRoutes } from './modules/proposals/proposal.routes'
 
 export const app = fastify()
 
@@ -79,3 +80,4 @@ app.register(settingsRoutes, { prefix: '/api/settings' })
 app.register(clientStatusRoutes, { prefix: '/api/client-statuses' })
 app.register(logRoutes, { prefix: '/api/logs' })
 app.register(scheduleRoutes, { prefix: '/api/schedule' })
+app.register(proposalRoutes, { prefix: '/api/proposals' })

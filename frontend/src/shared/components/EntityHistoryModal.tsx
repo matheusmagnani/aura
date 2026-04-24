@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ClockCounterClockwise } from '@phosphor-icons/react'
 import { Modal } from './Modal'
 import { logService, type Log } from '../services/logService'
+import { collaboratorsService } from '../services/collaboratorsService'
 import { formatPhone, formatCPF, formatCNPJ, formatZipCode } from '../utils/formatters'
 
 const ACTION_LABELS: Record<string, string> = {
@@ -44,20 +45,48 @@ const FIELD_LABELS: Record<string, string> = {
   zipCode: 'CEP',
   status: 'Status',
   active: 'Status',
-  color: 'Cor',
+  color: 'Cor "status do cliente"',
   tradeName: 'Nome fantasia',
   cnpj: 'CNPJ',
   department: 'Departamento',
   roleId: 'Setor',
   notes: 'Observações',
+  startAt: 'Início do agendamento',
+  title: 'Título',
+  description: 'Descrição',
+  collaboratorId: 'Colaborador',
+  value: 'Valor',
+  clientObservation: 'Observação',
 }
+
+const PROPOSAL_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendente',
+  sent: 'Enviada',
+  accepted: 'Aceita',
+  refused: 'Recusada',
+}
+
+const MODULE_FIELD_SUFFIX: Record<string, string> = {
+  collaborators: 'do colaborador',
+  clients: 'do cliente',
+  roles: 'do setor',
+  'client-statuses': 'do status',
+  empresa: 'da empresa',
+}
+
+const SUFFIX_EXCLUDED_KEYS = new Set(['startAt', 'color'])
+const APPOINTMENT_ONLY_KEYS = new Set(['title', 'startAt'])
+const PROPOSAL_ONLY_KEYS = new Set(['value', 'clientObservation'])
+const HIDDEN_KEYS = new Set(['statusChangedAt'])
 
 function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return ''
   if (typeof value === 'boolean') return value ? 'Ativo' : 'Inativo'
-  if (key === 'status' || key.startsWith('Status ')) {
-    if (value === 1 || value === 0 || value === '1' || value === '0' || typeof value === 'boolean')
-      return value === 1 || value === '1' || value === true ? 'Ativo' : 'Inativo'
+  if (key === 'status') {
+    if (value === 1 || value === 0 || value === '1' || value === '0')
+      return value === 1 || value === '1' ? 'Ativo' : 'Inativo'
+    if (typeof value === 'string' && PROPOSAL_STATUS_LABELS[value])
+      return PROPOSAL_STATUS_LABELS[value]
   }
   if (key === 'active') return value === true || value === 1 || value === '1' ? 'Ativo' : 'Inativo'
   return String(value)
@@ -81,32 +110,44 @@ function applyNumericFormat(key: string, value: unknown): string | null {
   return null
 }
 
-function ValueDisplay({ fieldKey, value }: { fieldKey: string; value: unknown }) {
+function formatISODate(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(value)) return null
+  return new Date(value).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+function ValueDisplay({ fieldKey, value, collaboratorsMap }: { fieldKey: string; value: unknown; collaboratorsMap?: Record<number, string> }) {
+  if (fieldKey === 'collaboratorId' && collaboratorsMap) {
+    const id = typeof value === 'number' ? value : Number(value)
+    return <>{collaboratorsMap[id] ?? (value === null || value === undefined ? '—' : String(value))}</>
+  }
+  if (fieldKey === 'value') {
+    return <>{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</>
+  }
   const text = formatValue(fieldKey, value)
   if (isHexColor(value)) {
     return <span style={{ width: 12, height: 12, borderRadius: '50%', background: value, display: 'inline-block', border: '1px solid rgba(255,255,255,0.2)' }} />
   }
+  const isoFormatted = formatISODate(value)
+  if (isoFormatted) return <>{isoFormatted}</>
   const formatted = applyNumericFormat(fieldKey, value)
   return <>{formatted ?? text}</>
 }
 
-const MODULE_FIELD_SUFFIX: Record<string, string> = {
-  collaborators: 'do colaborador',
-  clients: 'do cliente',
-  roles: 'do setor',
-  'client-statuses': 'do status',
-  empresa: 'da empresa',
-}
-
-function ChangesTable({ metadata, module }: { metadata: Record<string, unknown>; module?: string }) {
+function ChangesTable({ metadata, module, collaboratorsMap }: { metadata: Record<string, unknown>; module?: string; collaboratorsMap?: Record<number, string> }) {
   const before = metadata.before as Record<string, unknown> | undefined
   const after = metadata.after as Record<string, unknown> | undefined
   if (!before || !after) return null
 
-  const keys = Object.keys(after)
+  const keys = Object.keys(after).filter(k => !HIDDEN_KEYS.has(k))
   if (keys.length === 0) return null
 
-  const suffix = module ? MODULE_FIELD_SUFFIX[module] : undefined
+  const isAppointmentChange = keys.some(k => APPOINTMENT_ONLY_KEYS.has(k))
+  const isProposalChange = keys.some(k => PROPOSAL_ONLY_KEYS.has(k))
+  const suffix = isAppointmentChange ? 'do agendamento' : isProposalChange ? 'da proposta' : (module ? MODULE_FIELD_SUFFIX[module] : undefined)
 
   return (
     <div style={{
@@ -123,14 +164,14 @@ function ChangesTable({ metadata, module }: { metadata: Record<string, unknown>;
       {keys.map((k) => (
         <>
           <span key={`label-${k}`} style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {FIELD_LABELS[k] ?? k}{suffix ? ` ${suffix}` : ''}
+            {FIELD_LABELS[k] ?? k}{suffix && FIELD_LABELS[k] && !SUFFIX_EXCLUDED_KEYS.has(k) ? ` ${suffix}` : ''}
           </span>
           <span key={`before-${k}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
-            <ValueDisplay fieldKey={k} value={before[k]} />
+            <ValueDisplay fieldKey={k} value={before[k]} collaboratorsMap={collaboratorsMap} />
           </span>
           <span key={`arrow-${k}`} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' as const }}>→</span>
           <span key={`after-${k}`} style={{ fontSize: 12, color: 'var(--color-app-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
-            <ValueDisplay fieldKey={k} value={after[k]} />
+            <ValueDisplay fieldKey={k} value={after[k]} collaboratorsMap={collaboratorsMap} />
           </span>
         </>
       ))}
@@ -138,7 +179,7 @@ function ChangesTable({ metadata, module }: { metadata: Record<string, unknown>;
   )
 }
 
-function LogRow({ log }: { log: Log }) {
+function LogRow({ log, collaboratorsMap }: { log: Log; collaboratorsMap?: Record<number, string> }) {
   const color = ACTION_COLORS[log.action] ?? 'rgba(255,255,255,0.5)'
   const label = ACTION_LABELS[log.action] ?? log.action
   const hasChanges = log.action === 'edit' && log.metadata?.before && log.metadata?.after
@@ -169,25 +210,10 @@ function LogRow({ log }: { log: Log }) {
           {formatDate(log.createdAt)}
         </span>
       </div>
-      {log.action !== 'create' && !(log.action === 'edit' && log.metadata?.before) && (
-        log.action === 'edit' ? (
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            borderRadius: 6,
-            padding: '5px 8px',
-            fontSize: 13,
-            color: 'rgba(255,255,255,0.4)',
-            marginTop: 6,
-          }}>
-            {log.description}
-          </div>
-        ) : (
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{log.description}</span>
-        )
+      {!hasChanges && log.description && (
+        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{log.description}</span>
       )}
-      {hasChanges && log.metadata ? <ChangesTable metadata={log.metadata as Record<string, unknown>} module={log.module} /> : null}
+      {hasChanges && log.metadata ? <ChangesTable metadata={log.metadata as Record<string, unknown>} module={log.module} collaboratorsMap={collaboratorsMap} /> : null}
       <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>por {log.userName}</span>
     </div>
   )
@@ -196,7 +222,7 @@ function LogRow({ log }: { log: Log }) {
 interface EntityHistoryModalProps {
   isOpen: boolean
   onClose: () => void
-  module: string
+  module?: string
   entityId: number
   entityName?: string
 }
@@ -205,10 +231,18 @@ export function EntityHistoryModal({ isOpen, onClose, module, entityId, entityNa
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['logs', module, entityId, page],
-    queryFn: () => logService.listByEntity(module, entityId, page),
+    queryKey: ['logs', module ?? 'all', entityId, page],
+    queryFn: () => logService.listByEntity(entityId, page, module),
     enabled: isOpen,
   })
+
+  const { data: collaboratorsData } = useQuery({
+    queryKey: ['collaborators-select'],
+    queryFn: () => collaboratorsService.select(),
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const collaboratorsMap = Object.fromEntries((collaboratorsData ?? []).map(c => [c.id, c.name])) as Record<number, string>
 
   const logs = data?.data ?? []
   const meta = data?.meta
@@ -249,7 +283,7 @@ export function EntityHistoryModal({ isOpen, onClose, module, entityId, entityNa
         {!isLoading && logs.length > 0 && (
           <div>
             {logs.map((log) => (
-              <LogRow key={log.id} log={log} />
+              <LogRow key={log.id} log={log} collaboratorsMap={collaboratorsMap} />
             ))}
           </div>
         )}

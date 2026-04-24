@@ -37,11 +37,13 @@
 - **permissions** — Gerenciamento de permissões por setor (GET/PUT por roleId)
 - **collaborators** — CRUD de usuários da empresa (excluindo o usuário logado); inclui redefinição de senha pelo admin
 - **schedule** — CRUD de agendamentos por empresa; filtros por range de datas, clientId, collaboratorId; soft delete; logs de auditoria
+- **proposals** — CRUD de propostas por empresa; vinculadas a cliente (obrigatório) e colaborador (opcional); status: pending, sent, accepted, refused; filtros por status, clientId, collaboratorId; soft delete; logs de auditoria
 
 ### Models (Prisma)
 
-- Company, User, Role, Permission, Client, Appointment
+- Company, User, Role, Permission, Client, Appointment, Proposal
 - **Appointment** possui campos: `title` (obrigatório), `description?`, `startAt` (DateTime), `companyId`, `clientId?` (relação com Client), `collaboratorId?` (relação com User via "AppointmentCollaborator"), `deletedAt?`
+- **Proposal** possui campos: `value` (Decimal, obrigatório), `description?`, `clientObservation?`, `status` (String: `"pending"` | `"sent"` | `"accepted"` | `"refused"`, default `"pending"`), `companyId`, `clientId` (obrigatório, relação com Client), `collaboratorId?` (relação com User via "ProposalCollaborator"), `deletedAt?`
 - Client possui campos: `name` (obrigatório), `phone` (obrigatório), `email?`, `document?` (CPF ou CNPJ sem máscara), `documentType?` (String: `"CPF"` ou `"CNPJ"`), e campos de endereço: `address?`, `addressNumber?`, `addressComplement?`, `neighborhood?`, `city?`, `state?`, `zipCode?`. Também possui `userId?` (relação opcional com User — colaborador responsável).
 - User possui campo `avatar` (String?) — caminho relativo do arquivo
 - User possui campo `roleId` (Int?) — setor do usuário (relação com Role)
@@ -64,9 +66,9 @@
 
 ### Sistema de Permissões
 
-- Módulos: `schedule`, `clients`, `collaborators`, `settings`, `history`
+- Módulos: `schedule`, `clients`, `collaborators`, `settings`, `history`, `proposals`
 - Ações: `read`, `create`, `edit`, `delete`
-- 5 módulos × 4 ações = 20 permissões por role
+- 6 módulos × 4 ações = 24 permissões por role
 - Ao registrar empresa, cria role "Administrativo" com todas as 20 permissões allowed
 - User com `roleId = null` → admin (acesso total)
 - User com `roleId` → permissões definidas pela role
@@ -148,6 +150,16 @@ Após registro bem-sucedido: **não** faz auto-login, retorna à tela de login c
 | POST | /api/schedule | Sim | Criar agendamento (title*, description?, startAt*, clientId?, collaboratorId?) |
 | PUT | /api/schedule/:id | Sim | Atualizar agendamento (reagendar via startAt gera log especial) |
 | DELETE | /api/schedule/:id | Sim | Excluir agendamento (soft delete) |
+
+### Endpoints de Proposals
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| GET | /api/proposals | Sim | Listar propostas (paginação, busca, filtros: status, clientId, collaboratorId) |
+| GET | /api/proposals/:id | Sim | Buscar proposta por ID |
+| POST | /api/proposals | Sim | Criar proposta (value*, clientId*, description?, clientObservation?, status?, collaboratorId?) |
+| PUT | /api/proposals/:id | Sim | Atualizar proposta (value, description, clientObservation, status, collaboratorId) |
+| DELETE | /api/proposals/:id | Sim | Excluir proposta (soft delete) |
 
 ### Endpoints de Logs (Histórico)
 
@@ -237,10 +249,11 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - `/collaborators` → `collaborators`
 - `/settings` → `settings`
 - `/history` → `history`
+- `/proposals` → `proposals`
 
 ### Utilitários Compartilhados (shared/utils/)
 
-- **formatters.ts** — `formatPhone(phone)`, `formatZipCode(zip)`, `formatDate(dateStr)`, `formatCPF(value)`, `formatCNPJ(value)` — formatação de exibição
+- **formatters.ts** — `formatPhone(phone)`, `formatZipCode(zip)`, `formatDate(dateStr)`, `formatCPF(value)`, `formatCNPJ(value)`, `formatCurrency(value)` — formatação de exibição
 - **validateDocuments.ts** — `validateCPF(value: string): boolean` e `validateCNPJ(value: string): boolean`
   - Remove máscara antes de validar (mantém só dígitos)
   - Algoritmo completo de dígitos verificadores para ambos
@@ -282,6 +295,13 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 
 - **logService.ts** — `list(params)`, `listByEntity(module, entityId, page?)`. Interface `Log` com todos os campos.
 
+### Proposal Service (proposalService.ts)
+
+- `list(params)`, `getById(id)`, `create(data)`, `update(id, data)`, `delete(id)`
+- Interface `Proposal` com client e collaborator aninhados
+- Parâmetros de listagem: `page`, `limit`, `search`, `clientId`, `collaboratorId`, `status`
+- Status: `pending` | `sent` | `accepted` | `refused`
+
 ### Schedule Service (scheduleService.ts)
 
 - `list(params)`, `getById(id)`, `create(data)`, `update(id, data)`, `delete(id)`
@@ -301,9 +321,10 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - **LoginPage** — login + cadastro em 2 etapas (usuário e empresa) na mesma página, com animação de transição no mobile. Desktop: split layout; Mobile: coluna única + barra inferior animada
 - **DashboardPage** — placeholder pós-login
 - **ClientsPage** — lista paginada de clientes com busca (nome/email/telefone), filtro de status, ações (editar, inativar, excluir). Clicar no nome/contato navega para `/clients/:id`
-- **ClientDetailPage** — detalhe do cliente com card header (nome, status, telefone, email, data de cadastro com copy), card de endereço (condicional), ações de editar, toggle status (ToggleLeft/Right) e excluir com confirmação. Botão "Histórico" abre `EntityHistoryModal`
+- **ClientDetailPage** — detalhe do cliente com card header (nome, status, telefone, email, data de cadastro com copy), card de endereço (condicional), ações de editar, toggle status (ToggleLeft/Right) e excluir com confirmação. Botão "Histórico" abre `EntityHistoryModal`. Cards de agendamentos e propostas em linha (desktop) ou empilhados (mobile): agendamentos via query `client-appointments` | propostas via query `client-proposals` — ambos com carousel 143×143px; clicar abre `AppointmentDetailModal` / `ProposalDetailModal` com opções de editar/excluir respeitando permissões. Propostas mostram valor (formatCurrency), badge de status colorido, colaborador
 - **CollaboratorsPage** — lista paginada de colaboradores (usuários da empresa) com avatar, badge "Você", filtro de status, setor (role), ações (editar, inativar, excluir, redefinir senha, histórico). Usa `ListCard` no mobile e tabela div no desktop
 - **HistoryPage** — página somente leitura do histórico global da empresa. Filtros por módulo e ação, busca por texto, paginação. Acesso controlado por permissão `history/read`
+- **ProposalsPage** — lista paginada de propostas com busca, filtros por status e colaborador, ações (visualizar, editar, excluir, histórico). Visualizar abre `ProposalDetailModal`. Clicar no nome do cliente abre detalhe. Bulk delete de selecionados
 
 ### Rotas
 
@@ -314,6 +335,7 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - `/clients/:id` — ClientDetailPage (privada, module: clients)
 - `/collaborators` — CollaboratorsPage (privada, module: collaborators)
 - `/history` — HistoryPage (privada, PermissionRoute module: history)
+- `/proposals` — ProposalsPage (privada, PermissionRoute module: proposals)
 - `/` — redireciona para /dashboard
 
 ### Sistema de Logs (Audit Trail)

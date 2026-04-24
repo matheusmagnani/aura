@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ChartPieSlice, CalendarBlank, Users, UsersThree, Gear, ClockCounterClockwise, AlignLeft, AlignTopSimple, type Icon, type IconWeight } from '@phosphor-icons/react'
+import { ChartPieSlice, CalendarBlank, Users, UsersThree, Gear, ClockCounterClockwise, AlignLeft, AlignTopSimple, FileText, type Icon, type IconWeight } from '@phosphor-icons/react'
 import { Link, useLocation } from 'react-router-dom'
 import logoImg from '../../assets/logo.png'
 import { useMyPermissions, PATH_TO_MODULE } from '../hooks/useMyPermissions'
@@ -14,6 +14,7 @@ const menuItems: MenuItem[] = [
   { label: 'Dashboard', icon: ChartPieSlice, path: '/dashboard' },
   { label: 'Clientes', icon: UsersThree, path: '/clients' },
   { label: 'Agenda', icon: CalendarBlank, path: '/schedule' },
+  { label: 'Propostas', icon: FileText, path: '/proposals' },
   { label: 'Colaboradores', icon: Users, path: '/collaborators' },
   { label: 'Histórico', icon: ClockCounterClockwise, path: '/history' },
   { label: 'Configurações', icon: Gear, path: '/settings' },
