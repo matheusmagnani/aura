@@ -41,6 +41,8 @@ export async function listClientsController(request: FastifyRequest, reply: Fast
     userIds: z.string().optional().transform((v) => v ? v.split(',').map(Number) : undefined),
     dateFrom: z.string().optional(),
     dateTo: z.string().optional(),
+    appointmentDateFrom: z.string().optional(),
+    appointmentDateTo: z.string().optional(),
   })
 
   const query = schema.parse(request.query)

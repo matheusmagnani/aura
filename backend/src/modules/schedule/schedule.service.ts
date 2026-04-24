@@ -12,7 +12,7 @@ interface AppointmentInput {
   title: string
   description?: string | null
   startAt: string
-  clientId?: number | null
+  clientId?: number
   collaboratorId?: number | null
 }
 
@@ -76,10 +76,10 @@ export async function createAppointmentService(data: AppointmentInput, companyId
     companyId,
     userId: actor.userId,
     userName: actor.userName,
-    module: 'schedule',
+    module: 'clients',
     action: 'create',
-    entityId: appointment.id,
-    entityName: appointment.title,
+    entityId: appointment.client!.id,
+    entityName: appointment.client!.name,
     description: `Criou o agendamento "${appointment.title}"`,
     metadata: { title: appointment.title, startAt: appointment.startAt },
   }).catch(() => {})
@@ -105,7 +105,6 @@ export async function updateAppointmentService(
   if (data.title !== undefined) updateData.title = data.title
   if (data.description !== undefined) updateData.description = data.description ?? null
   if (data.startAt !== undefined) updateData.startAt = new Date(data.startAt)
-  if (data.clientId !== undefined) updateData.clientId = data.clientId ?? null
   if (data.collaboratorId !== undefined) updateData.collaboratorId = data.collaboratorId ?? null
 
   const updated = await prisma.appointment.update({
@@ -137,10 +136,10 @@ export async function updateAppointmentService(
       companyId,
       userId: actor.userId,
       userName: actor.userName,
-      module: 'schedule',
+      module: 'clients',
       action: 'edit',
-      entityId: updated.id,
-      entityName: updated.title,
+      entityId: updated.client!.id,
+      entityName: updated.client!.name,
       description,
       metadata: { before, after },
     }).catch(() => {})
@@ -152,6 +151,7 @@ export async function updateAppointmentService(
 export async function deleteAppointmentService(id: number, companyId: number, actor: LogActor) {
   const appointment = await prisma.appointment.findFirst({
     where: { id, companyId, deletedAt: null },
+    include: appointmentInclude,
   })
 
   if (!appointment) {
@@ -167,10 +167,10 @@ export async function deleteAppointmentService(id: number, companyId: number, ac
     companyId,
     userId: actor.userId,
     userName: actor.userName,
-    module: 'schedule',
+    module: 'clients',
     action: 'delete',
-    entityId: appointment.id,
-    entityName: appointment.title,
+    entityId: appointment.client!.id,
+    entityName: appointment.client!.name,
     description: `Excluiu o agendamento "${appointment.title}"`,
   }).catch(() => {})
 }

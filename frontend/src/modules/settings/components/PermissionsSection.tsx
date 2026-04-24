@@ -7,7 +7,7 @@ import { useRoles } from '../hooks/useRoles'
 import { usePermissions, useUpdatePermissions } from '../hooks/usePermissions'
 import { useToast } from '../../../shared/hooks/useToast'
 
-const MODULES = ['schedule', 'clients', 'collaborators', 'settings', 'history'] as const
+const MODULES = ['schedule', 'clients', 'collaborators', 'settings', 'history', 'proposals'] as const
 const ACTIONS = ['read', 'create', 'edit', 'delete'] as const
 
 const MODULE_LABELS: Record<string, string> = {
@@ -16,6 +16,7 @@ const MODULE_LABELS: Record<string, string> = {
   collaborators: 'Colaboradores',
   settings: 'Configurações',
   history: 'Histórico',
+  proposals: 'Propostas',
 }
 
 const ACTION_LABELS: Record<string, string> = {

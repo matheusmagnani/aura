@@ -21,6 +21,8 @@ interface ListClientsQuery {
   userIds?: number[]
   dateFrom?: string
   dateTo?: string
+  appointmentDateFrom?: string
+  appointmentDateTo?: string
 }
 
 interface ClientInput {
@@ -41,7 +43,7 @@ interface ClientInput {
 }
 
 export async function listClientsService(query: ListClientsQuery, companyId: number) {
-  const { page, limit, search, searchFields, statusIds, userIds, dateFrom, dateTo } = query
+  const { page, limit, search, searchFields, statusIds, userIds, dateFrom, dateTo, appointmentDateFrom, appointmentDateTo } = query
   const skip = (page - 1) * limit
 
   const strippedSearch = search ? search.replace(/\D/g, '') : ''
@@ -70,6 +72,17 @@ export async function listClientsService(query: ListClientsQuery, companyId: num
       createdAt: {
         ...(dateFrom && { gte: new Date(dateFrom) }),
         ...(dateTo && { lte: new Date(dateTo) }),
+      },
+    }),
+    ...((appointmentDateFrom || appointmentDateTo) && {
+      appointments: {
+        some: {
+          deletedAt: null,
+          startAt: {
+            ...(appointmentDateFrom && { gte: new Date(appointmentDateFrom) }),
+            ...(appointmentDateTo && { lte: new Date(appointmentDateTo) }),
+          },
+        },
       },
     }),
   }

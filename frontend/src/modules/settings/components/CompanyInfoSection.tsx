@@ -134,7 +134,7 @@ export function CompanyInfoSection({ isExpanded: isExpandedProp, onToggle: onTog
   }
 
   const handleSave = async () => {
-    if (!validate()) return
+    if (!validate()) { addToast('Preencha os campos obrigatórios corretamente.', 'danger'); return }
     try {
       await updateCompanyInfo.mutateAsync({
         companyName: formData.name,

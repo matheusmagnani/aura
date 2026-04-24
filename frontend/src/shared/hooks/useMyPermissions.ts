@@ -8,6 +8,7 @@ export const PATH_TO_MODULE: Record<string, string> = {
   '/collaborators': 'collaborators',
   '/settings': 'settings',
   '/history': 'history',
+  '/proposals': 'proposals',
 }
 
 export function useMyPermissions() {

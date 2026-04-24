@@ -27,6 +27,7 @@ model Company {
   clients      Client[]
   clientStatuses ClientStatus[]
   appointments Appointment[]
+  proposals    Proposal[]
   logs         Log[]
   deletedAt    DateTime?
   createdAt    DateTime  @default(now())
@@ -46,6 +47,7 @@ model User {
   role      Role?     @relation(fields: [roleId], references: [id])
   clients   Client[]
   appointmentsAsCollaborator Appointment[] @relation("AppointmentCollaborator")
+  proposalsAsCollaborator    Proposal[]    @relation("ProposalCollaborator")
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -87,6 +89,7 @@ model Client {
   statusId          Int?
   clientStatus      ClientStatus? @relation(fields: [statusId], references: [id])
   appointments      Appointment[]
+  proposals         Proposal[]
   deletedAt         DateTime?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -148,4 +151,22 @@ model Appointment {
   deletedAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+model Proposal {
+  id                Int       @id @default(autoincrement())
+  value             Decimal
+  description       String?
+  clientObservation String?
+  status            String    @default("pending")
+  statusChangedAt   DateTime?
+  companyId         Int
+  company           Company   @relation(fields: [companyId], references: [id])
+  clientId          Int
+  client            Client    @relation(fields: [clientId], references: [id])
+  collaboratorId    Int?
+  collaborator      User?     @relation("ProposalCollaborator", fields: [collaboratorId], references: [id])
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }

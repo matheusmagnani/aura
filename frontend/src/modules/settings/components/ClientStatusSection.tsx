@@ -115,7 +115,7 @@ export function ClientStatusSection({ isExpanded: isExpandedProp, onToggle: onTo
   }
 
   function handleSave() {
-    if (!name.trim()) { setNameError('Nome é obrigatório'); return }
+    if (!name.trim()) { setNameError('Nome é obrigatório'); addToast('Preencha os campos obrigatórios corretamente.', 'danger'); return }
     if (editingStatus) updateMutation.mutate()
     else createMutation.mutate()
   }

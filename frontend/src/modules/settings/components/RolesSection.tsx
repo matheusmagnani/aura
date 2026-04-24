@@ -74,8 +74,8 @@ export function RolesSection({ isExpanded: isExpandedProp, onToggle: onTogglePro
   }
 
   const handleSave = async () => {
-    if (!roleName.trim()) { setNameError('Nome do setor é obrigatório'); return }
-    if (roleName.trim().length < 2) { setNameError('Nome deve ter pelo menos 2 caracteres'); return }
+    if (!roleName.trim()) { setNameError('Nome do setor é obrigatório'); addToast('Preencha os campos obrigatórios corretamente.', 'danger'); return }
+    if (roleName.trim().length < 2) { setNameError('Nome deve ter pelo menos 2 caracteres'); addToast('Preencha os campos obrigatórios corretamente.', 'danger'); return }
     try {
       if (editingRole) {
         await updateRole.mutateAsync({ id: editingRole.id, data: { name: roleName.trim() } })
