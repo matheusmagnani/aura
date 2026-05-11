@@ -18,8 +18,11 @@ const STATUS_OPTIONS = [
 interface ProposalModalProps {
   proposal?: Proposal
   prefilledClient?: { id: number; name: string }
+  defaultCollaboratorId?: number
   onClose: () => void
   onSaved: () => void
+  createFn?: (data: any) => Promise<Proposal>
+  updateFn?: (id: number, data: any) => Promise<Proposal>
 }
 
 interface FormData {
@@ -42,7 +45,7 @@ function maskCurrency(value: string): string {
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export function ProposalModal({ proposal, prefilledClient, onClose, onSaved }: ProposalModalProps) {
+export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId, onClose, onSaved, createFn, updateFn }: ProposalModalProps) {
   const { addToast } = useToast()
   const currentUser = useAuthStore(s => s.user)
   const [saving, setSaving] = useState(false)
@@ -54,7 +57,7 @@ export function ProposalModal({ proposal, prefilledClient, onClose, onSaved }: P
     clientId: proposal?.clientId.toString() ?? prefilledClient?.id.toString() ?? '',
     value: initialValue,
     description: proposal?.description ?? '',
-    collaboratorId: proposal?.collaboratorId?.toString() ?? '',
+    collaboratorId: proposal?.collaboratorId?.toString() ?? (defaultCollaboratorId ? String(defaultCollaboratorId) : ''),
     status: proposal?.status ?? 'pending',
     clientObservation: proposal?.clientObservation ?? '',
   })
@@ -107,10 +110,10 @@ export function ProposalModal({ proposal, prefilledClient, onClose, onSaved }: P
     setSaving(true)
     try {
       if (proposal) {
-        await proposalService.update(proposal.id, payload)
+        await (updateFn ?? proposalService.update)(proposal.id, payload)
         addToast('Proposta atualizada!', 'success')
       } else {
-        await proposalService.create(payload)
+        await (createFn ?? proposalService.create)(payload)
         addToast('Proposta criada!', 'success')
       }
       onSaved()
@@ -210,16 +213,18 @@ export function ProposalModal({ proposal, prefilledClient, onClose, onSaved }: P
 
         {/* Colaborador + Status */}
         <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 12 }}>
-          <div className="md:col-span-2">
-            <Select
-              label="Colaborador responsável *"
-              value={form.collaboratorId}
-              onChange={(v) => set('collaboratorId', v)}
-              options={collaboratorOptions}
-              placeholder="Selecionar colaborador"
-              error={errors.collaboratorId}
-            />
-          </div>
+          {!defaultCollaboratorId && (
+            <div className="md:col-span-2">
+              <Select
+                label="Colaborador responsável *"
+                value={form.collaboratorId}
+                onChange={(v) => set('collaboratorId', v)}
+                options={collaboratorOptions}
+                placeholder="Selecionar colaborador"
+                error={errors.collaboratorId}
+              />
+            </div>
+          )}
           <Select
             label="Status"
             value={form.status}

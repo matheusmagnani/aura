@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { DoorOpen, PencilSimple, CaretUp, Key } from '@phosphor-icons/react'
+import logoBeets from '../../assets/logo_beets.png'
+import iconBeets from '../../assets/icon_beets.png'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -8,6 +10,7 @@ import { useAuthStore } from '../stores/useAuthStore'
 import { useToast } from '../hooks/useToast'
 import { Modal } from './Modal'
 import { Input } from './ui/Input'
+import { queryClient } from '../../main'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333'
 
@@ -39,6 +42,7 @@ export function Header() {
   const [expandedHeight, setExpandedHeight] = useState(0)
   const [headerBarHeight, setHeaderBarHeight] = useState(0)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [closeBtnLeft, setCloseBtnLeft] = useState(window.innerWidth / 2)
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const headerBarRef = useRef<HTMLDivElement>(null)
@@ -57,6 +61,10 @@ export function Header() {
       setHeaderBarHeight(barH)
       setExpandedHeight(window.innerHeight - barH)
       setIsMobile(window.innerWidth < 768)
+      if (wrapperRef.current) {
+        const rect = wrapperRef.current.getBoundingClientRect()
+        setCloseBtnLeft(rect.left + rect.width / 2)
+      }
     }
     calc()
     window.addEventListener('resize', calc)
@@ -92,6 +100,7 @@ export function Header() {
 
   function handleLogout() {
     logout()
+    queryClient.clear()
     navigate('/login')
   }
 
@@ -176,6 +185,8 @@ export function Header() {
 
           <motion.div
             className="flex items-center justify-between"
+            onClick={() => { if (!editing && !expanded) setExpanded(true) }}
+            style={{ cursor: !expanded ? 'pointer' : 'default' }}
             initial={{ paddingTop: 14, paddingBottom: 14, paddingLeft: 16, paddingRight: 16 }}
             animate={{
               paddingTop: expanded ? (isMobile ? 24 : 48) : (isMobile ? 32 : 14),
@@ -254,9 +265,8 @@ export function Header() {
             </div>
 
             <div className="relative flex-shrink-0">
-              <motion.button
-                onClick={() => { if (!editing && !expanded) setExpanded(true) }}
-                className={`rounded-full flex items-center justify-center overflow-hidden cursor-pointer border-0 outline-none p-0 ${avatarUrl ? 'bg-transparent' : 'bg-app-secondary'}`}
+              <motion.div
+                className={`rounded-full flex items-center justify-center overflow-hidden border-0 outline-none p-0 ${avatarUrl ? 'bg-transparent' : 'bg-app-secondary'}`}
                 initial={{ width: 36, height: 36 }}
                 animate={{ width: expanded ? (isMobile ? 56 : 80) : 36, height: expanded ? (isMobile ? 56 : 80) : 36 }}
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
@@ -273,11 +283,11 @@ export function Header() {
                     {initials}
                   </motion.span>
                 )}
-              </motion.button>
+              </motion.div>
 
               {expanded && editing && (
                 <button
-                  onClick={() => setAvatarMenuOpen((v) => !v)}
+                  onClick={(e) => { e.stopPropagation(); setAvatarMenuOpen((v) => !v) }}
                   className="absolute bottom-0 right-0 w-7 h-7 bg-app-secondary rounded-full flex items-center justify-center cursor-pointer border-0 shadow-md"
                 >
                   <PencilSimple className="w-3.5 h-3.5 text-app-primary" weight="bold" />
@@ -391,10 +401,16 @@ export function Header() {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: isMobile ? '1.5rem' : '3rem', paddingRight: isMobile ? '0' : '3rem' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: isMobile ? '1.5rem' : '3rem', paddingRight: isMobile ? '0' : '3rem' }}>
+                  {/* Beets branding — centrado */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <img src={iconBeets} alt="Beets" style={{ height: isMobile ? 24 : 30, width: 'auto', objectFit: 'contain' }} />
+                    <img src={logoBeets} alt="Beets" style={{ height: isMobile ? 16 : 20, width: 'auto', objectFit: 'contain' }} />
+                  </div>
+                  {/* Sair — absoluto à direita */}
                   <button
                     onClick={handleLogout}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: isMobile ? '0.875rem' : '1rem', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
+                    style={{ position: 'absolute', right: isMobile ? 0 : '3rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: isMobile ? '0.875rem' : '1rem', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
                   >
                     <DoorOpen size={isMobile ? 16 : 20} />
                     Sair
@@ -403,8 +419,8 @@ export function Header() {
 
               </div>
 
-              {/* Botão fechar — fixo no fundo da tela */}
-              <div style={{ position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 60 }}>
+              {/* Botão fechar — fixed, centralizado no header (não na tela toda) */}
+              <div style={{ position: 'fixed', bottom: '1.5rem', left: closeBtnLeft, transform: 'translateX(-50%)', zIndex: 60 }}>
                 <button
                   onClick={() => { setExpanded(false); setEditing(false); setAvatarMenuOpen(false) }}
                   style={{ padding: '0.75rem', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', outline: 'none' }}

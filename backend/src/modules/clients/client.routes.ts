@@ -5,6 +5,7 @@ import {
   listClientsController,
   listClientsSelectController,
   getClientByIdController,
+  getClientStatusStatsController,
   createClientController,
   updateClientController,
   deleteClientController,
@@ -14,6 +15,7 @@ export async function clientRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)
 
   app.get('/select', listClientsSelectController)
+  app.get('/stats', { preHandler: [requirePermission('clients', 'read')] }, getClientStatusStatsController)
   app.get('/', { preHandler: [requirePermission('clients', 'read')] }, listClientsController)
   app.get('/:id', { preHandler: [requirePermission('clients', 'read')] }, getClientByIdController)
   app.post('/', { preHandler: [requirePermission('clients', 'create')] }, createClientController)

@@ -113,6 +113,10 @@ export async function updateRoleService(
     throw { statusCode: 404, message: 'Setor não encontrado.' }
   }
 
+  if (role.name === 'Administrativo') {
+    throw { statusCode: 403, message: 'O setor Administrativo não pode ser alterado.' }
+  }
+
   if (data.name && data.name !== role.name) {
     const existing = await prisma.role.findFirst({
       where: { name: data.name, companyId, deletedAt: null },
@@ -152,6 +156,10 @@ export async function deleteRoleService(id: number, companyId: number, actor: { 
 
   if (!role) {
     throw { statusCode: 404, message: 'Setor não encontrado.' }
+  }
+
+  if (role.name === 'Administrativo') {
+    throw { statusCode: 403, message: 'O setor Administrativo não pode ser excluído.' }
   }
 
   const usersCount = await prisma.user.count({

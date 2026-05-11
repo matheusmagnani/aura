@@ -4,6 +4,7 @@ import { requirePermission } from '../../middlewares/permission'
 import {
   listProposalsController,
   getProposalByIdController,
+  getProposalStatusStatsController,
   createProposalController,
   updateProposalController,
   deleteProposalController,
@@ -12,6 +13,7 @@ import {
 export async function proposalRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)
 
+  app.get('/stats', { preHandler: [requirePermission('proposals', 'read')] }, getProposalStatusStatsController)
   app.get('/', { preHandler: [requirePermission('proposals', 'read')] }, listProposalsController)
   app.get('/:id', { preHandler: [requirePermission('proposals', 'read')] }, getProposalByIdController)
   app.post('/', { preHandler: [requirePermission('proposals', 'create')] }, createProposalController)

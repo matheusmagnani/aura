@@ -31,6 +31,12 @@ export interface ProposalPayload {
   collaboratorId?: number | null
 }
 
+export interface ProposalStatusStat {
+  status: 'pending' | 'sent' | 'accepted' | 'refused'
+  count: number
+  totalValue: number
+}
+
 export const proposalService = {
   async list(params: {
     page?: number
@@ -39,8 +45,19 @@ export const proposalService = {
     clientId?: number
     collaboratorId?: number
     status?: string
+    statuses?: string[]
+    dateFrom?: string
+    dateTo?: string
+    statusChangedFrom?: string
+    statusChangedTo?: string
   }): Promise<ProposalsResponse> {
-    const response = await api.get('/proposals', { params })
+    const { statuses, ...rest } = params
+    const response = await api.get('/proposals', {
+      params: {
+        ...rest,
+        ...(statuses && statuses.length > 0 && { statuses: statuses.join(',') }),
+      },
+    })
     return response.data
   },
 
@@ -61,5 +78,10 @@ export const proposalService = {
 
   async delete(id: number): Promise<void> {
     await api.delete(`/proposals/${id}`)
+  },
+
+  async stats(params?: { collaboratorId?: number; dateFrom?: string; dateTo?: string; statusChangedFrom?: string; statusChangedTo?: string }): Promise<ProposalStatusStat[]> {
+    const response = await api.get('/proposals/stats', { params })
+    return response.data
   },
 }

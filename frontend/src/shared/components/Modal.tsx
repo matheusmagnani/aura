@@ -25,16 +25,15 @@ export function Modal({ isOpen, onClose, children, title, className }: ModalProp
         onClick={onClose}
       />
       <div
-        className={cn('relative z-10 rounded-2xl animate-modalIn shadow-2xl w-full max-w-md max-h-[90vh] overflow-auto', className)}
+        className={cn('relative z-10 rounded-2xl animate-modalIn shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden', className)}
         style={{
           background: 'var(--color-app-primary)',
           border: '1px solid var(--color-app-accent)',
-          padding: '1.5rem',
           margin: '0 0.35rem',
         }}
       >
         {title && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', paddingBottom: '1.25rem', borderBottom: '1px solid rgba(106,166,193,0.3)' }}>
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.5rem 1.5rem 1.25rem', borderBottom: '1px solid rgba(106,166,193,0.3)' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-app-accent)' }}>{title}</h2>
             <button
               onClick={onClose}
@@ -52,7 +51,7 @@ export function Modal({ isOpen, onClose, children, title, className }: ModalProp
             <X size={18} color="var(--color-app-accent)" weight="bold" />
           </button>
         )}
-        <div>{children}</div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>{children}</div>
       </div>
 
       <style>{`

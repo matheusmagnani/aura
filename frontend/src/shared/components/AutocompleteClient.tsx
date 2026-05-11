@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { MagnifyingGlass, X } from '@phosphor-icons/react'
 import { clientService } from '../services/clientService'
@@ -16,7 +17,9 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
   const [inputValue, setInputValue] = useState(initialName ?? '')
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
@@ -27,17 +30,35 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
     staleTime: 1000 * 30,
   })
 
+  function updateDropdownPos() {
+    const rect = wrapperRef.current?.getBoundingClientRect()
+    if (rect) setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+  }
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      const insideWrapper = wrapperRef.current?.contains(target)
+      const insideDropdown = dropdownRef.current?.contains(target)
+      if (!insideWrapper && !insideDropdown) {
         setOpen(false)
-        // Se saiu sem selecionar e havia um valor, restaura o nome do selecionado
         if (!value) setInputValue('')
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [value])
+
+  useEffect(() => {
+    if (!open) return
+    updateDropdownPos()
+    window.addEventListener('scroll', updateDropdownPos, true)
+    window.addEventListener('resize', updateDropdownPos)
+    return () => {
+      window.removeEventListener('scroll', updateDropdownPos, true)
+      window.removeEventListener('resize', updateDropdownPos)
+    }
+  }, [open])
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value
@@ -49,6 +70,7 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
       debounceRef.current = setTimeout(() => {
         setSearch(v.trim())
         setOpen(true)
+        updateDropdownPos()
       }, 250)
     } else {
       setSearch('')
@@ -93,7 +115,7 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
             type="text"
             value={inputValue}
             onChange={handleInputChange}
-            onFocus={() => { if (search && options.length > 0) setOpen(true) }}
+            onFocus={() => { if (search && options.length > 0) { setOpen(true); updateDropdownPos() } }}
             placeholder={placeholder}
             style={{
               flex: 1, background: 'none', border: 'none', outline: 'none',
@@ -111,14 +133,17 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
           )}
         </div>
 
-        {open && (
-          <div style={{
-            position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
+        {open && dropdownPos && createPortal(
+          <div ref={dropdownRef} style={{
+            position: 'fixed',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            zIndex: 9999,
             background: 'var(--color-app-primary)',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 10,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-            overflow: 'hidden',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
             maxHeight: 220, overflowY: 'auto',
           }}>
             {isFetching && (
@@ -149,7 +174,8 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
                 {c.phone && <span style={{ fontSize: 11, color: 'var(--color-app-gray)' }}>{c.phone}</span>}
               </button>
             ))}
-          </div>
+          </div>,
+          document.body,
         )}
       </div>
       {error && <span style={{ fontSize: 12, color: '#f87171' }}>{error}</span>}

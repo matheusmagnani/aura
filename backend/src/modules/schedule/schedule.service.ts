@@ -80,7 +80,7 @@ export async function createAppointmentService(data: AppointmentInput, companyId
     action: 'create',
     entityId: appointment.client!.id,
     entityName: appointment.client!.name,
-    description: `Criou o agendamento "${appointment.title}"`,
+    description: `Criou o agendamento "${appointment.title}" para ${appointment.client!.name}`,
     metadata: { title: appointment.title, startAt: appointment.startAt },
   }).catch(() => {})
 

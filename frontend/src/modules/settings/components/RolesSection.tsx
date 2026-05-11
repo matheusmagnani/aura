@@ -179,12 +179,14 @@ export function RolesSection({ isExpanded: isExpandedProp, onToggle: onTogglePro
                 </div>
 
                 <div style={{ position: 'relative' }}>
+                  {role.name !== 'Administrativo' && (
                   <button
                     onClick={(e) => handleOpenMenu(role.id, e.currentTarget)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', color: 'rgba(230,194,132,0.7)' }}
                   >
                     <List size={22} weight="bold" />
                   </button>
+                  )}
 
                   {openMenuId === role.id && createPortal(
                     <div

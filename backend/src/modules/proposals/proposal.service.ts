@@ -8,6 +8,11 @@ interface ListProposalsQuery {
   clientId?: number
   collaboratorId?: number
   status?: string
+  statuses?: string[]
+  dateFrom?: string
+  dateTo?: string
+  statusChangedFrom?: string
+  statusChangedTo?: string
 }
 
 interface ProposalInput {
@@ -24,16 +29,78 @@ const proposalInclude = {
   collaborator: { select: { id: true, name: true, avatar: true } },
 }
 
+const PROPOSAL_STATUSES = ['pending', 'sent', 'accepted', 'refused'] as const
+
+export async function getProposalStatusStatsService(
+  query: {
+    collaboratorId?: number
+    dateFrom?: string
+    dateTo?: string
+    statusChangedFrom?: string
+    statusChangedTo?: string
+  },
+  companyId: number,
+) {
+  const { collaboratorId, dateFrom, dateTo, statusChangedFrom, statusChangedTo } = query
+  const where = {
+    companyId,
+    deletedAt: null,
+    ...(collaboratorId && { collaboratorId }),
+    ...((dateFrom || dateTo) && {
+      createdAt: {
+        ...(dateFrom && { gte: new Date(dateFrom) }),
+        ...(dateTo && { lte: new Date(dateTo) }),
+      },
+    }),
+    ...((statusChangedFrom || statusChangedTo) && {
+      statusChangedAt: {
+        ...(statusChangedFrom && { gte: new Date(statusChangedFrom) }),
+        ...(statusChangedTo && { lte: new Date(statusChangedTo) }),
+      },
+    }),
+  }
+
+  const grouped = await prisma.proposal.groupBy({
+    by: ['status'],
+    where,
+    _count: { id: true },
+    _sum: { value: true },
+  })
+
+  return PROPOSAL_STATUSES.map(status => {
+    const row = grouped.find(g => g.status === status)
+    return {
+      status,
+      count: row?._count.id ?? 0,
+      totalValue: Number(row?._sum.value ?? 0),
+    }
+  })
+}
+
 export async function listProposalsService(query: ListProposalsQuery, companyId: number) {
-  const { page, limit, search, clientId, collaboratorId, status } = query
+  const { page, limit, search, clientId, collaboratorId, status, statuses, dateFrom, dateTo, statusChangedFrom, statusChangedTo } = query
   const skip = (page - 1) * limit
+
+  const activeStatuses = statuses && statuses.length > 0 ? statuses : status ? [status] : undefined
 
   const where: Record<string, unknown> = {
     companyId,
     deletedAt: null,
     ...(clientId && { clientId }),
     ...(collaboratorId && { collaboratorId }),
-    ...(status && { status }),
+    ...(activeStatuses && { status: activeStatuses.length === 1 ? activeStatuses[0] : { in: activeStatuses } }),
+    ...((dateFrom || dateTo) && {
+      createdAt: {
+        ...(dateFrom && { gte: new Date(dateFrom) }),
+        ...(dateTo && { lte: new Date(dateTo) }),
+      },
+    }),
+    ...((statusChangedFrom || statusChangedTo) && {
+      statusChangedAt: {
+        ...(statusChangedFrom && { gte: new Date(statusChangedFrom) }),
+        ...(statusChangedTo && { lte: new Date(statusChangedTo) }),
+      },
+    }),
     ...(search && {
       OR: [
         { description: { contains: search, mode: 'insensitive' } },
@@ -95,7 +162,7 @@ export async function createProposalService(data: ProposalInput, companyId: numb
     action: 'create',
     entityId: proposal.client.id,
     entityName: proposal.client.name,
-    description: `Criou proposta de ${Number(proposal.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+    description: `Criou proposta de ${Number(proposal.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} para ${proposal.client.name}`,
     metadata: { value: Number(proposal.value), status: proposal.status, clientId: proposal.clientId },
   }).catch(() => {})
 

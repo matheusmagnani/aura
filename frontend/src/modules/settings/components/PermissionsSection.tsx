@@ -55,6 +55,8 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
   const { addToast } = useToast()
 
   const activeRoles = (rolesData?.data ?? []).filter((r) => r.status === 1)
+  const selectedRole = activeRoles.find((r) => r.id === selectedRoleId)
+  const isAdminRole = selectedRole?.name === 'Administrativo'
 
   useEffect(() => {
     if (permissions) {
@@ -197,17 +199,31 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
             </div>
           ) : (
             <>
+              {isAdminRole && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
+                  borderRadius: 10, background: 'rgba(230,194,132,0.07)',
+                  border: '1px solid rgba(230,194,132,0.2)',
+                  fontSize: 13, color: 'rgba(230,194,132,0.7)',
+                }}>
+                  <ShieldCheck size={16} weight="fill" style={{ flexShrink: 0 }} />
+                  O setor Administrativo sempre possui todas as permissões e não pode ser editado.
+                </div>
+              )}
+
               {/* Select all */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: 16,
                 borderRadius: 12, background: 'rgba(106,166,193,0.05)',
                 border: '1px solid rgba(106,166,193,0.3)',
+                opacity: isAdminRole ? 0.5 : 1,
               }}>
                 <Checkbox
                   size="sm"
                   checked={isAllChecked}
                   data-indeterminate={isSomeChecked || undefined}
-                  onCheckedChange={handleToggleAll}
+                  onCheckedChange={isAdminRole ? undefined : handleToggleAll}
+                  disabled={isAdminRole}
                 />
                 <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-app-accent)' }}>
                   Ativar todas as permissões
@@ -225,6 +241,7 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
                         borderRadius: 12, overflow: 'hidden',
                         background: 'rgba(255,255,255,0.02)',
                         border: '1px solid rgba(230,194,132,0.1)',
+                        opacity: isAdminRole ? 0.5 : 1,
                       }}
                     >
                       <div
@@ -234,7 +251,8 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleModuleExpanded(module) }}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 16, width: '100%',
-                          padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                          padding: '12px 16px', background: 'none', border: 'none',
+                          cursor: isAdminRole ? 'default' : 'pointer',
                         }}
                       >
                         <div onClick={(e) => e.stopPropagation()}>
@@ -242,7 +260,8 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
                             size="sm"
                             checked={isModuleAllChecked(module)}
                             data-indeterminate={isModuleSomeChecked(module) || undefined}
-                            onCheckedChange={() => handleToggleModule(module)}
+                            onCheckedChange={isAdminRole ? undefined : () => handleToggleModule(module)}
+                            disabled={isAdminRole}
                           />
                         </div>
                         <span style={{ flex: 1, textAlign: 'left', fontSize: 14, fontWeight: 500, color: 'var(--color-app-accent)' }}>
@@ -264,12 +283,13 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
                           {ACTIONS.map((action) => (
                             <label
                               key={action}
-                              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: isAdminRole ? 'default' : 'pointer' }}
                             >
                               <Checkbox
                                 size="sm"
                                 checked={localPermissions[module]?.[action] ?? false}
-                                onCheckedChange={() => handleToggle(module, action)}
+                                onCheckedChange={isAdminRole ? undefined : () => handleToggle(module, action)}
+                                disabled={isAdminRole}
                               />
                               <span style={{ fontSize: 13, color: 'rgba(230,194,132,0.6)' }}>
                                 {ACTION_LABELS[action]}
@@ -284,19 +304,21 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
               </div>
 
               {/* Save button */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleSave}
-                  disabled={!hasChanges || updatePermissions.isPending}
-                  style={{
-                    padding: '8px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                    background: 'rgba(106,166,193,0.15)', color: 'var(--color-app-accent)',
-                    fontSize: 14, fontWeight: 500, opacity: (!hasChanges || updatePermissions.isPending) ? 0.4 : 1,
-                  }}
-                >
-                  {updatePermissions.isPending ? 'Salvando...' : 'Salvar'}
-                </button>
-              </div>
+              {!isAdminRole && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={handleSave}
+                    disabled={!hasChanges || updatePermissions.isPending}
+                    style={{
+                      padding: '8px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                      background: 'rgba(106,166,193,0.15)', color: 'var(--color-app-accent)',
+                      fontSize: 14, fontWeight: 500, opacity: (!hasChanges || updatePermissions.isPending) ? 0.4 : 1,
+                    }}
+                  >
+                    {updatePermissions.isPending ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
+              )}
             </>
           )
         )}

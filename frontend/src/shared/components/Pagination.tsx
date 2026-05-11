@@ -1,12 +1,15 @@
+import { CaretLeft, CaretRight } from '@phosphor-icons/react'
+
 interface PaginationProps {
   page: number
   totalPages: number
   total: number
   onPageChange: (page: number) => void
   itemLabel?: string
+  compact?: boolean
 }
 
-export function Pagination({ page, totalPages, total, onPageChange, itemLabel = 'registro' }: PaginationProps) {
+export function Pagination({ page, totalPages, total, onPageChange, itemLabel = 'registro', compact }: PaginationProps) {
   const itemLabelPlural = itemLabel === 'registro' ? 'registros'
     : itemLabel === 'cliente' ? 'clientes'
     : itemLabel === 'colaborador' ? 'colaboradores'
@@ -15,6 +18,47 @@ export function Pagination({ page, totalPages, total, onPageChange, itemLabel = 
   const safeTotalPages = Math.max(1, totalPages)
   const disablePrev = page <= 1
   const disableNext = page >= safeTotalPages
+
+  if (compact) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '4px 0' }}>
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+          {total} {total === 1 ? itemLabel : itemLabelPlural}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button
+            onClick={() => onPageChange(Math.max(1, page - 1))}
+            disabled={disablePrev}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, borderRadius: 6,
+              border: '1px solid rgba(106,166,193,0.25)',
+              background: 'none', cursor: disablePrev ? 'not-allowed' : 'pointer',
+              color: disablePrev ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)',
+            }}
+          >
+            <CaretLeft size={11} weight="bold" />
+          </button>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', minWidth: 32, textAlign: 'center' }}>
+            {page} / {safeTotalPages}
+          </span>
+          <button
+            onClick={() => onPageChange(Math.min(safeTotalPages, page + 1))}
+            disabled={disableNext}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, borderRadius: 6,
+              border: '1px solid rgba(106,166,193,0.25)',
+              background: 'none', cursor: disableNext ? 'not-allowed' : 'pointer',
+              color: disableNext ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)',
+            }}
+          >
+            <CaretRight size={11} weight="bold" />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 8, paddingBottom: 16 }}>

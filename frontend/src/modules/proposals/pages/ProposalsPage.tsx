@@ -1,19 +1,23 @@
 import { useState, useRef, useEffect } from 'react'
+import { startOfDay, endOfDay, format } from 'date-fns'
 import { useProposalsFilterStore } from '../stores/useProposalsFilterStore'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText, List, Trash, PencilSimple, ClockCounterClockwise, X, TrashSimple, Eye, Tag } from '@phosphor-icons/react'
 import { PageHeader } from '../../../shared/components/PageHeader'
 import { MultiFilterSelect } from '../../../shared/components/MultiFilterSelect'
+import { DateRangePicker } from '../../../shared/components/DateRangePicker'
 import { Select } from '../../../shared/components/ui/Select'
 import { Pagination } from '../../../shared/components/Pagination'
 import { ListCard } from '../../../shared/components/ListCard'
 import { Modal } from '../../../shared/components/Modal'
 import { EntityHistoryModal } from '../../../shared/components/EntityHistoryModal'
-import { proposalService, type Proposal } from '../../../shared/services/proposalService'
+import { proposalService, type Proposal, type ProposalStatusStat } from '../../../shared/services/proposalService'
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { ProposalModal } from '../components/ProposalModal'
 import { ProposalDetailModal } from '../components/ProposalDetailModal'
+import { PROPOSAL_COLORS, PROPOSAL_LABELS } from '../../../shared/constants/proposalStatus'
+import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
 import { formatCurrency } from '../../../shared/utils/formatters'
@@ -21,20 +25,6 @@ import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
 const MODULE = 'proposals'
 const DESKTOP_COLS = '44px minmax(0,130px) minmax(0,1fr) minmax(0,160px) minmax(0,130px) 60px'
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pendente',
-  sent: 'Enviada',
-  accepted: 'Aceita',
-  refused: 'Recusada',
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: '#F59E0B',
-  sent: '#6AA6C1',
-  accepted: '#4ADE80',
-  refused: '#F87171',
-}
 
 const STATUS_FILTER_OPTIONS = [
   { value: 'pending', label: 'Pendente', color: '#F59E0B' },
@@ -44,8 +34,8 @@ const STATUS_FILTER_OPTIONS = [
 ]
 
 function StatusBadge({ status }: { status: string }) {
-  const color = STATUS_COLORS[status] ?? '#8A919C'
-  const label = STATUS_LABELS[status] ?? status
+  const color = PROPOSAL_COLORS[status] ?? '#8A919C'
+  const label = PROPOSAL_LABELS[status] ?? status
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -165,7 +155,7 @@ export function ProposalsPage() {
   const canEdit = useCanAccess(MODULE, 'edit')
   const canDelete = useCanAccess(MODULE, 'delete')
 
-  const { search, setSearch, page, setPage, filterStatus, setFilterStatus, filterCollaboratorIds, setFilterCollaboratorIds } = useProposalsFilterStore()
+  const { search, setSearch, page, setPage, filterStatus, setFilterStatus, filterCollaboratorIds, setFilterCollaboratorIds, filterDateRange, setFilterDateRange, filterStatusChangedRange, setFilterStatusChangedRange } = useProposalsFilterStore()
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [selected, setSelected] = useState<number[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -181,13 +171,29 @@ export function ProposalsPage() {
   const [bulkUpdating, setBulkUpdating] = useState(false)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['proposals', page, search, filterStatus, filterCollaboratorIds],
+    queryKey: ['proposals', page, search, filterStatus, filterCollaboratorIds, filterDateRange, filterStatusChangedRange],
     queryFn: () => proposalService.list({
       page, limit: 20,
       search: search || undefined,
-      status: filterStatus.length === 1 ? filterStatus[0] : undefined,
+      statuses: filterStatus.length > 0 ? filterStatus : undefined,
       collaboratorId: filterCollaboratorIds.length === 1 ? Number(filterCollaboratorIds[0]) : undefined,
+      dateFrom: filterDateRange.from ? startOfDay(filterDateRange.from).toISOString() : undefined,
+      dateTo: filterDateRange.to ? endOfDay(filterDateRange.to).toISOString() : filterDateRange.from ? endOfDay(filterDateRange.from).toISOString() : undefined,
+      statusChangedFrom: filterStatusChangedRange.from ? startOfDay(filterStatusChangedRange.from).toISOString() : undefined,
+      statusChangedTo: filterStatusChangedRange.to ? endOfDay(filterStatusChangedRange.to).toISOString() : filterStatusChangedRange.from ? endOfDay(filterStatusChangedRange.from).toISOString() : undefined,
     }),
+  })
+
+  const { data: statusStats = [] } = useQuery<ProposalStatusStat[]>({
+    queryKey: ['proposal-status-stats', filterCollaboratorIds, filterDateRange, filterStatusChangedRange],
+    queryFn: () => proposalService.stats({
+      collaboratorId: filterCollaboratorIds.length === 1 ? Number(filterCollaboratorIds[0]) : undefined,
+      dateFrom: filterDateRange.from ? startOfDay(filterDateRange.from).toISOString() : undefined,
+      dateTo: filterDateRange.to ? endOfDay(filterDateRange.to).toISOString() : filterDateRange.from ? endOfDay(filterDateRange.from).toISOString() : undefined,
+      statusChangedFrom: filterStatusChangedRange.from ? startOfDay(filterStatusChangedRange.from).toISOString() : undefined,
+      statusChangedTo: filterStatusChangedRange.to ? endOfDay(filterStatusChangedRange.to).toISOString() : filterStatusChangedRange.from ? endOfDay(filterStatusChangedRange.from).toISOString() : undefined,
+    }),
+    staleTime: 1000 * 60 * 2,
   })
 
   const { data: collaboratorsData } = useQuery({
@@ -196,11 +202,16 @@ export function ProposalsPage() {
     staleTime: 1000 * 60 * 5,
   })
 
+  function invalidateStats() {
+    queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
+  }
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => proposalService.delete(id),
     onSuccess: () => {
       addToast('Proposta excluída!', 'success')
       queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      invalidateStats()
       setSelected([])
       setDeleteTarget(undefined)
     },
@@ -224,6 +235,7 @@ export function ProposalsPage() {
     setEditingProposal(undefined)
     setIsEditFromDetail(false)
     queryClient.invalidateQueries({ queryKey: ['proposals'] })
+    invalidateStats()
   }
 
   async function handleBulkDelete() {
@@ -232,6 +244,7 @@ export function ProposalsPage() {
       await Promise.all(selected.map(id => proposalService.delete(id)))
       addToast(`${selected.length} ${selected.length === 1 ? 'proposta excluída' : 'propostas excluídas'}!`, 'success')
       queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      invalidateStats()
       setShowBulkDelete(false)
       setSelected([])
     } catch {
@@ -247,6 +260,7 @@ export function ProposalsPage() {
       await Promise.all(selected.map(id => proposalService.update(id, { status: bulkStatusValue as Proposal['status'] })))
       addToast('Status atualizado!', 'success')
       queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      invalidateStats()
       setShowBulkStatus(false)
       setBulkStatusValue('')
       setSelected([])
@@ -258,7 +272,7 @@ export function ProposalsPage() {
   }
 
   const allSelected = proposals.length > 0 && selected.length === proposals.length
-  const filterActive = filterStatus.length > 0 || filterCollaboratorIds.length > 0
+  const filterActive = filterStatus.length > 0 || filterCollaboratorIds.length > 0 || !!filterDateRange.from || !!filterStatusChangedRange.from
 
   return (
     <div style={{ paddingBottom: selected.length > 0 ? 64 : 0, transition: 'padding-bottom 0.3s ease' }}>
@@ -280,7 +294,7 @@ export function ProposalsPage() {
             <div key={s} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Status</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 12, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
-                {STATUS_LABELS[s] ?? s}
+                {PROPOSAL_LABELS[s] ?? s}
                 <button onClick={() => setFilterStatus(filterStatus.filter(v => v !== s))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
                   <X size={11} weight="bold" />
                 </button>
@@ -298,6 +312,43 @@ export function ProposalsPage() {
               </span>
             </div>
           ))}
+          {filterDateRange.from && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Criação</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 12, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
+                {format(filterDateRange.from, 'dd/MM/yy')}{filterDateRange.to && filterDateRange.to !== filterDateRange.from ? ` – ${format(filterDateRange.to, 'dd/MM/yy')}` : ''}
+                <button onClick={() => setFilterDateRange({ from: null, to: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
+                  <X size={11} weight="bold" />
+                </button>
+              </span>
+            </div>
+          )}
+          {filterStatusChangedRange.from && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Mudança de status</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 12, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
+                {format(filterStatusChangedRange.from, 'dd/MM/yy')}{filterStatusChangedRange.to && filterStatusChangedRange.to !== filterStatusChangedRange.from ? ` – ${format(filterStatusChangedRange.to, 'dd/MM/yy')}` : ''}
+                <button onClick={() => setFilterStatusChangedRange({ from: null, to: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
+                  <X size={11} weight="bold" />
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {statusStats.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <StatisticsStatusCards
+            items={statusStats.map(s => ({ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }))}
+            activeIds={filterStatus}
+            onToggle={(s) => {
+              setFilterStatus(filterStatus.includes(s) ? filterStatus.filter(x => x !== s) : [...filterStatus, s])
+              setPage(1)
+            }}
+            layout="row"
+            mobileColumns={2}
+          />
         </div>
       )}
 
@@ -323,6 +374,18 @@ export function ProposalsPage() {
             }))}
             placeholder="Todos os colaboradores"
             noCheckbox
+          />
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+          <DateRangePicker
+            label="Período de criação"
+            value={filterDateRange}
+            onChange={setFilterDateRange}
+          />
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+          <DateRangePicker
+            label="Período de mudança de status"
+            value={filterStatusChangedRange}
+            onChange={setFilterStatusChangedRange}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
@@ -440,7 +503,7 @@ export function ProposalsPage() {
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_COLORS[proposal.status] ?? '#8A919C', flexShrink: 0 }} />
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: PROPOSAL_COLORS[proposal.status] ?? '#8A919C', flexShrink: 0 }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ActionMenu
@@ -536,6 +599,7 @@ export function ProposalsPage() {
           onDeleted={() => {
             setViewingProposal(undefined)
             queryClient.invalidateQueries({ queryKey: ['proposals'] })
+            invalidateStats()
           }}
           canEdit={canEdit}
           canDelete={canDelete}

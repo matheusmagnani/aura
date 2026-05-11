@@ -5,7 +5,7 @@ import {
   updatePermissionsByRoleIdService,
 } from './permission.service'
 
-const MODULES = ['schedule', 'clients', 'collaborators', 'settings', 'history'] as const
+const MODULES = ['schedule', 'clients', 'collaborators', 'settings', 'history', 'proposals'] as const
 const ACTIONS = ['read', 'create', 'edit', 'delete'] as const
 
 export async function getPermissionsByRoleIdController(

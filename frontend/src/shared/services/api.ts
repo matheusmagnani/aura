@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/useAuthStore'
+import { queryClient } from '../../main'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333'
 
@@ -57,6 +58,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout()
+      queryClient.clear()
       if (window.location.pathname !== '/login') window.location.href = '/login'
     }
     const data = error.response?.data

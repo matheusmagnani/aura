@@ -3,11 +3,25 @@ import { z } from 'zod'
 import {
   listProposalsService,
   getProposalByIdService,
+  getProposalStatusStatsService,
   createProposalService,
   updateProposalService,
   deleteProposalService,
 } from './proposal.service'
 import { getActorName } from '../logs/log.service'
+
+export async function getProposalStatusStatsController(request: FastifyRequest, reply: FastifyReply) {
+  const query = z.object({
+    collaboratorId: z.coerce.number().optional(),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
+    statusChangedFrom: z.string().optional(),
+    statusChangedTo: z.string().optional(),
+  }).parse(request.query)
+  const { companyId } = request.user as { companyId: number }
+  const stats = await getProposalStatusStatsService(query, companyId)
+  return reply.send(stats)
+}
 
 export async function listProposalsController(request: FastifyRequest, reply: FastifyReply) {
   const schema = z.object({
@@ -17,6 +31,11 @@ export async function listProposalsController(request: FastifyRequest, reply: Fa
     clientId: z.coerce.number().optional(),
     collaboratorId: z.coerce.number().optional(),
     status: z.string().optional(),
+    statuses: z.string().optional().transform(v => v ? v.split(',') : undefined),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
+    statusChangedFrom: z.string().optional(),
+    statusChangedTo: z.string().optional(),
   })
 
   const query = schema.parse(request.query)

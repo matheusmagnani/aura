@@ -46,7 +46,7 @@ export function Sidebar() {
 
   return (
     <div
-      className={`desktop-sidebar h-screen bg-app-primary overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] relative flex-shrink-0 ${isCollapsed ? 'w-[68px]' : 'w-[260px]'}`}
+      className={`desktop-sidebar h-screen bg-app-primary overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] relative flex-shrink-0 flex flex-col pb-8 ${isCollapsed ? 'w-[68px]' : 'w-[260px]'}`}
     >
       {/* Toggle */}
       <button
@@ -118,7 +118,7 @@ export function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="flex-shrink-0 pb-4 flex justify-center">
+      <div className="flex-shrink-0 flex justify-center">
         <span
           className={`text-xs text-app-secondary/50 font-light transition-all duration-500 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}
         >
