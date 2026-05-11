@@ -7,6 +7,7 @@ import { ArrowLeft, PencilSimple, Trash, Phone, Envelope, IdentificationCard, Cl
 import { clientService } from '../../../shared/services/clientService'
 import { scheduleService, type Appointment } from '../../../shared/services/scheduleService'
 import { proposalService, type Proposal } from '../../../shared/services/proposalService'
+import { dashboardService } from '../../../shared/services/dashboardService'
 import { ClientFormModal } from '../components/ClientFormModal'
 import { AppointmentModal } from '../../schedule/components/AppointmentModal'
 import { AppointmentDetailModal } from '../../schedule/components/AppointmentDetailModal'
@@ -16,6 +17,7 @@ import { CopyText } from '../../../shared/components/CopyText'
 import { Modal } from '../../../shared/components/Modal'
 import { EntityHistoryModal } from '../../../shared/components/EntityHistoryModal'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
+import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { StatusDot } from '../../../shared/components/StatusDot'
 import { useToast } from '../../../shared/hooks/useToast'
 import { formatPhone, formatZipCode, formatCPF, formatCNPJ, formatCurrency } from '../../../shared/utils/formatters'
@@ -54,20 +56,32 @@ const cardStyle: React.CSSProperties = {
   padding: '24px',
 }
 
-export function ClientDetailPage() {
+export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: boolean }) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { addToast } = useToast()
+  const currentUserId = useAuthStore(s => s.user?.id)
 
-  const canEdit = useCanAccess(MODULE, 'edit')
-  const canDelete = useCanAccess(MODULE, 'delete')
-  const canSchedule = useCanAccess('schedule', 'create')
-  const canEditSchedule = useCanAccess('schedule', 'edit')
-  const canDeleteSchedule = useCanAccess('schedule', 'delete')
-  const canCreateProposal = useCanAccess('proposals', 'create')
-  const canEditProposal = useCanAccess('proposals', 'edit')
-  const canDeleteProposal = useCanAccess('proposals', 'delete')
+  const _canEdit = useCanAccess(MODULE, 'edit')
+  const _canDelete = useCanAccess(MODULE, 'delete')
+  const _canSchedule = useCanAccess('schedule', 'create')
+  const _canEditSchedule = useCanAccess('schedule', 'edit')
+  const _canDeleteSchedule = useCanAccess('schedule', 'delete')
+  const _canCreateProposal = useCanAccess('proposals', 'create')
+  const _canEditProposal = useCanAccess('proposals', 'edit')
+  const _canDeleteProposal = useCanAccess('proposals', 'delete')
+
+  const canEdit = fromDashboard || _canEdit
+  const canDelete = fromDashboard || _canDelete
+  const canSchedule = fromDashboard || _canSchedule
+  const canEditSchedule = fromDashboard || _canEditSchedule
+  const canDeleteSchedule = fromDashboard || _canDeleteSchedule
+  const canCreateProposal = fromDashboard || _canCreateProposal
+  const canEditProposal = fromDashboard || _canEditProposal
+  const canDeleteProposal = fromDashboard || _canDeleteProposal
+
+  const backPath = fromDashboard ? '/dashboard' : '/clients'
 
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteConfirm, setIsDeleteConfirm] = useState(false)
@@ -88,30 +102,38 @@ export function ClientDetailPage() {
   }, [])
 
   const { data: client, isLoading } = useQuery({
-    queryKey: ['client', Number(id)],
-    queryFn: () => clientService.getById(Number(id)),
+    queryKey: ['client', Number(id), fromDashboard],
+    queryFn: () => fromDashboard
+      ? dashboardService.getClientById(Number(id))
+      : clientService.getById(Number(id)),
     enabled: !!id,
   })
 
   const { data: appointments = [], isLoading: isLoadingAppointments } = useQuery({
-    queryKey: ['client-appointments', Number(id)],
-    queryFn: () => scheduleService.list({ clientId: Number(id) }),
+    queryKey: ['client-appointments', Number(id), fromDashboard],
+    queryFn: () => fromDashboard
+      ? dashboardService.appointments({ clientId: Number(id), collaboratorId: currentUserId })
+      : scheduleService.list({ clientId: Number(id) }),
     enabled: !!id,
   })
 
   const { data: proposalsData, isLoading: isLoadingProposals } = useQuery({
-    queryKey: ['client-proposals', Number(id)],
-    queryFn: () => proposalService.list({ clientId: Number(id), limit: 50 }),
+    queryKey: ['client-proposals', Number(id), fromDashboard],
+    queryFn: () => fromDashboard
+      ? dashboardService.proposals({ clientId: Number(id), collaboratorId: currentUserId, limit: 50 })
+      : proposalService.list({ clientId: Number(id), limit: 50 }),
     enabled: !!id,
   })
   const proposals = proposalsData?.data ?? []
 
   const deleteMutation = useMutation({
-    mutationFn: () => clientService.delete(Number(id)),
+    mutationFn: () => fromDashboard
+      ? dashboardService.deleteClient(Number(id))
+      : clientService.delete(Number(id)),
     onSuccess: () => {
       addToast('Cliente excluído!', 'success')
       queryClient.invalidateQueries({ queryKey: ['clients'] })
-      navigate('/clients')
+      navigate(backPath)
     },
     onError: () => {
       addToast('Erro ao excluir cliente', 'danger')
@@ -132,7 +154,7 @@ export function ClientDetailPage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16 }}>
         <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>Cliente não encontrado</span>
         <button
-          onClick={() => navigate('/clients')}
+          onClick={() => navigate(backPath)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-app-accent)', fontSize: 14, textDecoration: 'underline' }}
         >
           Voltar para listagem
@@ -155,7 +177,7 @@ export function ClientDetailPage() {
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12 }}>
         <button
-          onClick={() => navigate('/clients')}
+          onClick={() => navigate(-1)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: 8, color: '#fff', display: 'flex', alignItems: 'center' }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -550,6 +572,8 @@ export function ClientDetailPage() {
             queryClient.invalidateQueries({ queryKey: ['client', Number(id)] })
             queryClient.invalidateQueries({ queryKey: ['clients'] })
           }}
+          updateFn={fromDashboard ? dashboardService.updateClient : undefined}
+          defaultCollaboratorId={fromDashboard ? currentUserId : undefined}
         />
       )}
 
@@ -559,6 +583,8 @@ export function ClientDetailPage() {
         onClose={() => setIsHistoryOpen(false)}
         entityId={Number(id)}
         entityName={client.name}
+        fetchFn={fromDashboard ? (entityId, page) => dashboardService.clientLogs(entityId, page) : undefined}
+        collaboratorsFetchFn={fromDashboard ? () => dashboardService.collaboratorsSelect() : undefined}
       />
 
       {/* Schedule Modal */}
@@ -570,6 +596,8 @@ export function ClientDetailPage() {
             setIsScheduleOpen(false)
             queryClient.invalidateQueries({ queryKey: ['client-appointments', Number(id)] })
           }}
+          createFn={fromDashboard ? dashboardService.createAppointment : undefined}
+          defaultCollaboratorId={fromDashboard ? currentUserId : undefined}
         />
       )}
 
@@ -585,6 +613,7 @@ export function ClientDetailPage() {
           }}
           canEdit={canEditSchedule}
           canDelete={canDeleteSchedule}
+          deleteFn={fromDashboard ? dashboardService.deleteAppointment : undefined}
         />
       )}
 
@@ -598,6 +627,8 @@ export function ClientDetailPage() {
             setSelectedAppointment(null)
             queryClient.invalidateQueries({ queryKey: ['client-appointments', Number(id)] })
           }}
+          updateFn={fromDashboard ? dashboardService.updateAppointment : undefined}
+          defaultCollaboratorId={fromDashboard ? currentUserId : undefined}
         />
       )}
 
@@ -609,7 +640,10 @@ export function ClientDetailPage() {
           onSaved={() => {
             setIsProposalOpen(false)
             queryClient.invalidateQueries({ queryKey: ['client-proposals', Number(id)] })
+            queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
           }}
+          createFn={fromDashboard ? dashboardService.createProposal : undefined}
+          defaultCollaboratorId={fromDashboard ? currentUserId : undefined}
         />
       )}
 
@@ -622,9 +656,11 @@ export function ClientDetailPage() {
           onDeleted={() => {
             setSelectedProposal(null)
             queryClient.invalidateQueries({ queryKey: ['client-proposals', Number(id)] })
+            queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
           }}
           canEdit={canEditProposal}
           canDelete={canDeleteProposal}
+          deleteFn={fromDashboard ? dashboardService.deleteProposal : undefined}
         />
       )}
 
@@ -637,7 +673,10 @@ export function ClientDetailPage() {
             setIsEditProposalOpen(false)
             setSelectedProposal(null)
             queryClient.invalidateQueries({ queryKey: ['client-proposals', Number(id)] })
+            queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
           }}
+          updateFn={fromDashboard ? dashboardService.updateProposal : undefined}
+          defaultCollaboratorId={fromDashboard ? currentUserId : undefined}
         />
       )}
 

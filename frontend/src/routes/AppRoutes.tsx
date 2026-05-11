@@ -63,6 +63,7 @@ export function AppRoutes() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="dashboard/clients/:id" element={<ClientDetailPage fromDashboard />} />
         <Route
           path="schedule"
           element={

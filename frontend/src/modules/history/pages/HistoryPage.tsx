@@ -91,12 +91,11 @@ function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return ''
   if (typeof value === 'boolean') return value ? 'Ativo' : 'Inativo'
   if (key === 'status') {
-    if (value === 1 || value === 0 || value === '1' || value === '0')
-      return value === 1 || value === '1' ? 'Ativo' : 'Inativo'
     if (typeof value === 'string' && PROPOSAL_STATUS_LABELS[value])
       return PROPOSAL_STATUS_LABELS[value]
   }
-  if (key === 'active') return value === true || value === 1 || value === '1' ? 'Ativo' : 'Inativo'
+  if (value === 1 || value === 0 || value === '1' || value === '0')
+    return value === 1 || value === '1' ? 'Ativo' : 'Inativo'
   return String(value)
 }
 
@@ -245,7 +244,9 @@ function LogCard({ log, collaboratorsMap }: { log: Log; collaboratorsMap?: Recor
 
         {/* Cliente + Módulo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{log.entityName ? `${log.action === 'create' ? 'para' : 'de'} ${log.entityName}` : '—'}</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+            {log.entityName && log.action !== 'create' ? `de ${log.entityName}` : ''}
+          </span>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{moduleLabel}</span>
         </div>
       </div>

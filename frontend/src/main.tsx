@@ -10,7 +10,7 @@ import { HeroUIProvider } from '@heroui/system'
 import { App } from './App'
 import './styles/globals.css'
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,

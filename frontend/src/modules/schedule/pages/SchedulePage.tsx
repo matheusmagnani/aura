@@ -10,7 +10,7 @@ import {
   format,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CalendarBlank, CaretLeft, CaretRight, Plus, Funnel, X } from '@phosphor-icons/react'
+import { CalendarBlank, CaretLeft, CaretRight, Plus, Funnel, X, Rows } from '@phosphor-icons/react'
 import { useScheduleStore } from '../stores/useScheduleStore'
 import { scheduleService, type Appointment } from '../../../shared/services/scheduleService'
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
@@ -77,6 +77,7 @@ export function SchedulePage() {
   const queryClient = useQueryClient()
   const currentUser = useAuthStore(s => s.user)
 
+  const [displayMode, setDisplayMode] = useState<'list' | 'grid'>('grid')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>()
   const [prefilledDate, setPrefilledDate] = useState<Date | undefined>()
@@ -198,13 +199,13 @@ export function SchedulePage() {
   ) : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
+    <div className="flex flex-col md:h-full md:overflow-hidden">
 
       {/* ── Toolbar ─────────────────────────────────────────── */}
-      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+      <div className="page-header" style={{ flexShrink: 0 }}>
 
         {/* Desktop: tudo em uma linha */}
-        <div className="hidden md:flex items-center justify-between" style={{ padding: '12px 16px' }}>
+        <div className="hidden md:flex items-center justify-between" style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <CalendarBlank size={26} className="text-app-secondary" weight="regular" />
             <h1 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', margin: 0 }}>Agenda</h1>
@@ -221,16 +222,39 @@ export function SchedulePage() {
                 <CaretRight size={14} color="var(--color-app-gray)" />
               </button>
             </div>
-            {viewToggle}
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+              {viewToggle}
+              {view === 'week' && (
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10, overflow: 'hidden' }}>
+                  {([
+                    { mode: 'grid' as const, icon: <CalendarBlank size={14} /> },
+                    { mode: 'list' as const, icon: <Rows size={14} /> },
+                  ] as const).map(({ mode, icon }) => (
+                    <button
+                      key={mode}
+                      onClick={() => setDisplayMode(mode)}
+                      style={{
+                        padding: '0 10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        background: displayMode === mode ? 'var(--color-app-accent)' : 'transparent',
+                        color: displayMode === mode ? 'white' : 'var(--color-app-gray)',
+                        transition: 'background 0.2s',
+                      }}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {filterBtn}
             {createBtn}
           </div>
         </div>
 
         {/* Mobile: múltiplas linhas */}
-        <div className="flex md:hidden flex-col">
+        <div className="flex md:hidden flex-col" style={{ width: '100%' }}>
           {/* Linha 1: título | filtro + novo */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <CalendarBlank size={26} className="text-app-secondary" weight="regular" />
               <h1 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', margin: 0 }}>Agenda</h1>
@@ -241,7 +265,7 @@ export function SchedulePage() {
             </div>
           </div>
           {/* Linha 2: nav período centralizado */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px 8px', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 0', gap: 6 }}>
             <button onClick={() => navigate('prev')} style={btnNav}>
               <CaretLeft size={14} color="var(--color-app-gray)" />
             </button>
@@ -253,7 +277,7 @@ export function SchedulePage() {
             </button>
           </div>
           {/* Linha 3: toggles de view centralizados */}
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px 12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 4 }}>
             {viewToggle}
           </div>
         </div>
@@ -261,7 +285,7 @@ export function SchedulePage() {
 
       {/* Chips de filtros ativos */}
       {filterActive && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '8px 16px 0' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '8px 16px 0', flexShrink: 0 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Colaborador</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 12, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
@@ -277,7 +301,7 @@ export function SchedulePage() {
       {/* ── Conteúdo da view ────────────────────────────────── */}
       {/* Desktop: flex 1 + overflow hidden para a grade fixa */}
       <div className="hidden md:flex md:flex-col md:overflow-hidden" style={{ flex: 1, padding: view === 'week' ? 0 : '12px 16px 0' }}>
-        {view === 'week' && <WeekView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
+        {view === 'week' && <WeekView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} forceMode={displayMode} />}
         {view === 'month' && <MonthView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
         {view === 'year' && <YearView currentDate={currentDate} appointments={appointments} onMonthClick={handleMonthClick} />}
       </div>

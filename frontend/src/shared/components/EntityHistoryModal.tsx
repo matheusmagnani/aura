@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ClockCounterClockwise } from '@phosphor-icons/react'
 import { Modal } from './Modal'
-import { logService, type Log } from '../services/logService'
-import { collaboratorsService } from '../services/collaboratorsService'
+import { logService, type Log, type LogsResponse } from '../services/logService'
+import { collaboratorsService, type CollaboratorSelectItem } from '../services/collaboratorsService'
 import { formatPhone, formatCPF, formatCNPJ, formatZipCode } from '../utils/formatters'
 
 const ACTION_LABELS: Record<string, string> = {
@@ -225,20 +225,22 @@ interface EntityHistoryModalProps {
   module?: string
   entityId: number
   entityName?: string
+  fetchFn?: (entityId: number, page: number) => Promise<LogsResponse>
+  collaboratorsFetchFn?: () => Promise<CollaboratorSelectItem[]>
 }
 
-export function EntityHistoryModal({ isOpen, onClose, module, entityId, entityName }: EntityHistoryModalProps) {
+export function EntityHistoryModal({ isOpen, onClose, module, entityId, entityName, fetchFn, collaboratorsFetchFn }: EntityHistoryModalProps) {
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['logs', module ?? 'all', entityId, page],
-    queryFn: () => logService.listByEntity(entityId, page, module),
+    queryKey: ['logs', module ?? 'all', entityId, page, !!fetchFn],
+    queryFn: () => fetchFn ? fetchFn(entityId, page) : logService.listByEntity(entityId, page, module),
     enabled: isOpen,
   })
 
   const { data: collaboratorsData } = useQuery({
-    queryKey: ['collaborators-select'],
-    queryFn: () => collaboratorsService.select(),
+    queryKey: [collaboratorsFetchFn ? 'dashboard-collaborators-select' : 'collaborators-select'],
+    queryFn: () => collaboratorsFetchFn ? collaboratorsFetchFn() : collaboratorsService.select(),
     staleTime: 1000 * 60 * 5,
   })
 

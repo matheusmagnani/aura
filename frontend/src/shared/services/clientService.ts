@@ -51,6 +51,13 @@ export interface ClientSelectItem {
   phone: string
 }
 
+export interface ClientStatusStat {
+  id: number
+  name: string
+  color: string
+  count: number
+}
+
 export const clientService = {
   async select(search?: string): Promise<ClientSelectItem[]> {
     const response = await api.get('/clients/select', { params: search ? { search } : undefined })
@@ -86,5 +93,23 @@ export const clientService = {
 
   async delete(id: number): Promise<void> {
     await api.delete(`/clients/${id}`)
+  },
+
+  async stats(params?: {
+    userIds?: number[]
+    search?: string
+    dateFrom?: string
+    dateTo?: string
+    appointmentDateFrom?: string
+    appointmentDateTo?: string
+  }): Promise<ClientStatusStat[]> {
+    const { userIds, ...rest } = params ?? {}
+    const response = await api.get('/clients/stats', {
+      params: {
+        ...rest,
+        ...(userIds?.length ? { userIds: userIds.join(',') } : {}),
+      },
+    })
+    return response.data
   },
 }

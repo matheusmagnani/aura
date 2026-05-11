@@ -37,11 +37,14 @@ interface FormData {
 
 interface ClientFormModalProps {
   client?: Client
+  defaultCollaboratorId?: number
   onClose: () => void
   onSaved: () => void
+  createFn?: (data: any) => Promise<Client>
+  updateFn?: (id: number, data: any) => Promise<Client>
 }
 
-export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalProps) {
+export function ClientFormModal({ client, defaultCollaboratorId, onClose, onSaved, createFn, updateFn }: ClientFormModalProps) {
   const { addToast } = useToast()
   const currentUser = useAuthStore(s => s.user)
   const { fetchAddress, isLoading: isLoadingCep } = useCepSearch()
@@ -89,7 +92,7 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
     neighborhood: client?.neighborhood ?? '',
     city: client?.city ?? '',
     state: client?.state ?? '',
-    userId: client?.userId != null ? String(client.userId) : '',
+    userId: client?.userId != null ? String(client.userId) : (defaultCollaboratorId ? String(defaultCollaboratorId) : ''),
     statusId: client?.statusId != null ? String(client.statusId) : '',
   })
 
@@ -167,8 +170,8 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
         userId: form.userId ? Number(form.userId) : null,
         statusId: form.statusId ? Number(form.statusId) : null,
       }
-      if (client) await clientService.update(client.id, payload)
-      else await clientService.create(payload)
+      if (client) await (updateFn ?? clientService.update)(client.id, payload)
+      else await (createFn ?? clientService.create)(payload)
       addToast(client ? 'Cliente atualizado!' : 'Cliente criado!', 'success')
       onSaved()
     } catch (err: any) {
@@ -250,13 +253,15 @@ export function ClientFormModal({ client, onClose, onSaved }: ClientFormModalPro
           placeholder="Sem status"
         />
 
-        <Select
-          label="Colaborador responsável"
-          value={form.userId}
-          onChange={v => { setForm(prev => ({ ...prev, userId: v })); setErrors(prev => ({ ...prev, userId: undefined })) }}
-          options={collaboratorOptions}
-          placeholder="Selecione um colaborador"
-        />
+        {!defaultCollaboratorId && (
+          <Select
+            label="Colaborador responsável"
+            value={form.userId}
+            onChange={v => { setForm(prev => ({ ...prev, userId: v })); setErrors(prev => ({ ...prev, userId: undefined })) }}
+            options={collaboratorOptions}
+            placeholder="Selecione um colaborador"
+          />
+        )}
 
         <Input
           label="CEP"

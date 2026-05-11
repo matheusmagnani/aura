@@ -36,6 +36,10 @@ export async function updatePermissionsByRoleIdService(
     throw { statusCode: 404, message: 'Setor não encontrado.' }
   }
 
+  if (role.name === 'Administrativo') {
+    throw { statusCode: 403, message: 'As permissões do setor Administrativo não podem ser alteradas.' }
+  }
+
   const results = await prisma.$transaction(
     permissions.map((p) =>
       prisma.permission.upsert({

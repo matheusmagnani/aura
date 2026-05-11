@@ -317,9 +317,9 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 
 ### Páginas
 
-- **SchedulePage** — calendário com views Semana/Mês/Ano, toolbar sticky, drag-and-drop para reagendar, modal de create/edit. Rota: `/schedule`
+- **SchedulePage** — calendário com views Semana/Mês/Ano, toolbar sticky, drag-and-drop para reagendar, modal de create/edit. Rota: `/schedule`. Componentes: `WeekView`, `MonthView`, `YearView`, `DayView` (usado no dashboard)
 - **LoginPage** — login + cadastro em 2 etapas (usuário e empresa) na mesma página, com animação de transição no mobile. Desktop: split layout; Mobile: coluna única + barra inferior animada
-- **DashboardPage** — placeholder pós-login
+- **DashboardPage** — dashboard do usuário com 3 seções: (1) Agenda com toggle Dia/Semana (DayView/WeekView, estado local independente do store compartilhado, filtrada por collaboratorId=userId para usuários comuns; admins veem tudo e podem filtrar por colaborador), (2) Listagem de Clientes do usuário com busca e paginação, (3) Listagem de Propostas do usuário com busca, filtro de status e paginação. Layout: Agenda full-width no topo → Clientes | Propostas em grid md:grid-cols-2 abaixo. Rota: `/dashboard`
 - **ClientsPage** — lista paginada de clientes com busca (nome/email/telefone), filtro de status, ações (editar, inativar, excluir). Clicar no nome/contato navega para `/clients/:id`
 - **ClientDetailPage** — detalhe do cliente com card header (nome, status, telefone, email, data de cadastro com copy), card de endereço (condicional), ações de editar, toggle status (ToggleLeft/Right) e excluir com confirmação. Botão "Histórico" abre `EntityHistoryModal`. Cards de agendamentos e propostas em linha (desktop) ou empilhados (mobile): agendamentos via query `client-appointments` | propostas via query `client-proposals` — ambos com carousel 143×143px; clicar abre `AppointmentDetailModal` / `ProposalDetailModal` com opções de editar/excluir respeitando permissões. Propostas mostram valor (formatCurrency), badge de status colorido, colaborador
 - **CollaboratorsPage** — lista paginada de colaboradores (usuários da empresa) com avatar, badge "Você", filtro de status, setor (role), ações (editar, inativar, excluir, redefinir senha, histórico). Usa `ListCard` no mobile e tabela div no desktop

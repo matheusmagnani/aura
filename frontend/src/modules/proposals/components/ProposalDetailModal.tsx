@@ -28,6 +28,7 @@ interface ProposalDetailModalProps {
   onDeleted: () => void
   canEdit?: boolean
   canDelete?: boolean
+  deleteFn?: (id: number) => Promise<void>
 }
 
 function DetailRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
@@ -49,6 +50,7 @@ export function ProposalDetailModal({
   onDeleted,
   canEdit,
   canDelete,
+  deleteFn,
 }: ProposalDetailModalProps) {
   const { addToast } = useToast()
   const [deleting, setDeleting] = useState(false)
@@ -63,7 +65,7 @@ export function ProposalDetailModal({
   async function handleDelete() {
     setDeleting(true)
     try {
-      await proposalService.delete(proposal.id)
+      await (deleteFn ?? proposalService.delete)(proposal.id)
       addToast('Proposta excluída!', 'success')
       onDeleted()
       onClose()

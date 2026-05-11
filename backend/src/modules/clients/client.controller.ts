@@ -3,12 +3,27 @@ import { z } from 'zod'
 import {
   listClientsService,
   getClientByIdService,
+  getClientStatusStatsService,
   createClientService,
   updateClientService,
   deleteClientService,
 } from './client.service'
 import { getActorName } from '../logs/log.service'
 import { prisma } from '../../lib/prisma'
+
+export async function getClientStatusStatsController(request: FastifyRequest, reply: FastifyReply) {
+  const query = z.object({
+    userIds: z.string().optional().transform(v => v ? v.split(',').map(Number) : undefined),
+    search: z.string().optional(),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
+    appointmentDateFrom: z.string().optional(),
+    appointmentDateTo: z.string().optional(),
+  }).parse(request.query)
+  const { companyId } = request.user as { companyId: number }
+  const stats = await getClientStatusStatsService(query, companyId)
+  return reply.send(stats)
+}
 
 export async function listClientsSelectController(request: FastifyRequest, reply: FastifyReply) {
   const { search } = z.object({ search: z.string().optional() }).parse(request.query)

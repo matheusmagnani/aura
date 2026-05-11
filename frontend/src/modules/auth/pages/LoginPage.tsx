@@ -577,8 +577,8 @@ export function LoginPage() {
 
         {/* ── Sliding panel ── */}
         <motion.div
-          className="absolute top-0 bottom-0 w-1/2 flex items-center justify-center"
-          style={{ left: 0, zIndex: 20, backgroundColor: 'var(--color-app-bg)' }}
+          className="absolute top-0 bottom-0 flex items-center justify-center"
+          style={{ left: '-6px', width: 'calc(50% + 12px)', zIndex: 20, backgroundColor: 'var(--color-app-bg)' }}
           initial={false}
           animate={{ x: isLogin ? '0%' : '100%' }}
           transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}

@@ -14,8 +14,11 @@ interface AppointmentModalProps {
   appointment?: Appointment
   prefilledDate?: Date
   prefilledClient?: { id: number; name: string }
+  defaultCollaboratorId?: number
   onClose: () => void
   onSaved: () => void
+  createFn?: (data: any) => Promise<Appointment>
+  updateFn?: (id: number, data: any) => Promise<Appointment>
 }
 
 interface FormData {
@@ -27,7 +30,7 @@ interface FormData {
   collaboratorId: string
 }
 
-export function AppointmentModal({ appointment, prefilledDate, prefilledClient, onClose, onSaved }: AppointmentModalProps) {
+export function AppointmentModal({ appointment, prefilledDate, prefilledClient, defaultCollaboratorId, onClose, onSaved, createFn, updateFn }: AppointmentModalProps) {
   const { addToast } = useToast()
   const currentUser = useAuthStore(s => s.user)
   const [saving, setSaving] = useState(false)
@@ -51,7 +54,7 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
     date: initialDate,
     time: initialTime,
     clientId: appointment?.clientId?.toString() ?? prefilledClient?.id.toString() ?? '',
-    collaboratorId: appointment?.collaboratorId?.toString() ?? '',
+    collaboratorId: appointment?.collaboratorId?.toString() ?? (defaultCollaboratorId ? String(defaultCollaboratorId) : ''),
   })
 
   const { data: collaboratorsData } = useQuery({
@@ -98,10 +101,10 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
     setSaving(true)
     try {
       if (appointment) {
-        await scheduleService.update(appointment.id, payload)
+        await (updateFn ?? scheduleService.update)(appointment.id, payload)
         addToast('Agendamento atualizado!', 'success')
       } else {
-        await scheduleService.create(payload)
+        await (createFn ?? scheduleService.create)(payload)
         addToast('Agendamento criado!', 'success')
       }
       onSaved()
@@ -228,14 +231,16 @@ return (
           />
         )}
 
-        <Select
-          label="Colaborador *"
-          value={form.collaboratorId}
-          onChange={(v) => set('collaboratorId', v)}
-          options={collaboratorOptions}
-          placeholder="Selecionar colaborador"
-          error={errors.collaboratorId}
-        />
+        {!defaultCollaboratorId && (
+          <Select
+            label="Colaborador *"
+            value={form.collaboratorId}
+            onChange={(v) => set('collaboratorId', v)}
+            options={collaboratorOptions}
+            placeholder="Selecionar colaborador"
+            error={errors.collaboratorId}
+          />
+        )}
 
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 }}>

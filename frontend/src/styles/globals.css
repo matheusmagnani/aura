@@ -266,7 +266,7 @@ body {
 }
 
 @media (min-width: 768px) {
-  .desktop-sidebar { display: flex !important; flex-direction: column; position: sticky; top: 0; }
+  .desktop-sidebar { display: flex !important; flex-direction: column; position: sticky; top: 0; padding-bottom: 1rem; }
   .mobile-nav { display: none !important; }
 }
 

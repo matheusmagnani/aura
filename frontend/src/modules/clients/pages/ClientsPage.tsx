@@ -12,8 +12,9 @@ import { Pagination } from '../../../shared/components/Pagination'
 import { ListCard } from '../../../shared/components/ListCard'
 import { Modal } from '../../../shared/components/Modal'
 import { Select } from '../../../shared/components/ui/Select'
-import { clientService, type Client } from '../../../shared/services/clientService'
+import { clientService, type Client, type ClientStatusStat } from '../../../shared/services/clientService'
 import { clientStatusService } from '../../../shared/services/clientStatusService'
+import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { ClientFormModal } from '../components/ClientFormModal'
 import { EntityHistoryModal } from '../../../shared/components/EntityHistoryModal'
@@ -178,6 +179,19 @@ export function ClientsPage() {
   const [historyTarget, setHistoryTarget] = useState<Client | undefined>(undefined)
   const [deleteTarget, setDeleteTarget] = useState<Client | undefined>(undefined)
 
+  const { data: statusStats = [] } = useQuery<ClientStatusStat[]>({
+    queryKey: ['client-status-stats', search, filterUserIds, filterDateRange, filterAppointmentDateRange],
+    queryFn: () => clientService.stats({
+      search: search || undefined,
+      userIds: filterUserIds.length > 0 ? filterUserIds.map(Number) : undefined,
+      dateFrom: filterDateRange.from ? startOfDay(filterDateRange.from).toISOString() : undefined,
+      dateTo: filterDateRange.to ? endOfDay(filterDateRange.to).toISOString() : (filterDateRange.from ? endOfDay(filterDateRange.from).toISOString() : undefined),
+      appointmentDateFrom: filterAppointmentDateRange.from ? startOfDay(filterAppointmentDateRange.from).toISOString() : undefined,
+      appointmentDateTo: filterAppointmentDateRange.to ? endOfDay(filterAppointmentDateRange.to).toISOString() : (filterAppointmentDateRange.from ? endOfDay(filterAppointmentDateRange.from).toISOString() : undefined),
+    }),
+    staleTime: 1000 * 60 * 2,
+  })
+
   const { data, isLoading } = useQuery({
     queryKey: ['clients', page, search, filterStatusIds, filterUserIds, filterDateRange, filterAppointmentDateRange],
     queryFn: () => clientService.list({
@@ -192,11 +206,16 @@ export function ClientsPage() {
     }),
   })
 
+  function invalidateStats() {
+    queryClient.invalidateQueries({ queryKey: ['client-status-stats'] })
+  }
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => clientService.delete(id),
     onSuccess: () => {
       addToast('Cliente excluído!', 'success')
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      invalidateStats()
       setSelected([])
       setDeleteTarget(undefined)
     },
@@ -232,6 +251,7 @@ export function ClientsPage() {
       )
       addToast('Status atualizado!', 'success')
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      invalidateStats()
       setShowBulkStatus(false)
       setBulkStatusId('')
       setSelected([])
@@ -248,6 +268,7 @@ export function ClientsPage() {
       await Promise.all(selected.map(id => clientService.delete(id)))
       addToast(`${selected.length} ${selected.length === 1 ? 'cliente excluído' : 'clientes excluídos'}!`, 'success')
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      invalidateStats()
       setShowBulkDelete(false)
       setSelected([])
     } catch {
@@ -273,6 +294,7 @@ export function ClientsPage() {
     setShowForm(false)
     setEditingClient(undefined)
     queryClient.invalidateQueries({ queryKey: ['clients'] })
+    invalidateStats()
   }
 
   function openEdit(client: Client) {
@@ -366,6 +388,22 @@ export function ClientsPage() {
         </div>
       )}
 
+      {statusStats.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <StatisticsStatusCards
+            items={statusStats.map(s => ({ id: String(s.id), label: s.name, color: s.color, primaryValue: s.count }))}
+            activeIds={filterStatusIds}
+            onToggle={(id) => {
+              setFilterStatusIds(filterStatusIds.includes(id) ? filterStatusIds.filter(x => x !== id) : [...filterStatusIds, id])
+              setPage(1)
+            }}
+            layout="row"
+            pageSize={4}
+            hideLabelOnMobile
+          />
+        </div>
+      )}
+
       <Modal isOpen={showFilterModal} onClose={() => setShowFilterModal(false)} title="Filtros">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <MultiFilterSelect
@@ -446,12 +484,13 @@ export function ClientsPage() {
             {clients.map((client) => (
               <div
                 key={client.id}
+                onClick={() => navigate(`/clients/${client.id}`)}
                 style={{
                   display: 'grid', gridTemplateColumns: DESKTOP_COLS,
                   padding: '12px 16px', background: 'rgba(23,27,36,0.5)',
                   borderRadius: 10, alignItems: 'center',
                   border: '1px solid rgba(230,194,132,0.2)',
-                  position: 'relative',
+                  position: 'relative', cursor: 'pointer',
                 }}
               >
                 <div style={{
@@ -464,17 +503,14 @@ export function ClientsPage() {
                   clipPath: selected.includes(client.id) ? 'inset(0 0% 0 0)' : 'inset(0 100% 0 0)',
                 }} />
                 <button
-                  onClick={() => toggleOne(client.id)}
+                  onClick={(e) => { e.stopPropagation(); toggleOne(client.id) }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                 >
                   <Checkbox checked={selected.includes(client.id)} />
                 </button>
 
                 {/* Name + phone */}
-                <div
-                  onClick={() => navigate(`/clients/${client.id}`)}
-                  style={{ minWidth: 0, cursor: 'pointer' }}
-                >
+                <div style={{ minWidth: 0 }}>
                   <p style={{ fontWeight: 500, color: '#fff', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {client.name}
                   </p>
@@ -493,7 +529,7 @@ export function ClientsPage() {
                   <StatusBadge status={client.clientStatus} />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center' }} onClick={e => e.stopPropagation()}>
                   <ActionMenu
                     client={client}
                     onEdit={openEdit}

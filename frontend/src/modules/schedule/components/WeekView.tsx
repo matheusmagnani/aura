@@ -25,6 +25,7 @@ interface WeekViewProps {
   onAppointmentClick: (a: Appointment) => void
   onReschedule?: (appointmentId: number, newStartAt: string) => void
   canEdit?: boolean
+  forceMode?: 'list' | 'grid'
 }
 
 function SlotDropTarget({
@@ -72,7 +73,7 @@ function SlotDropTarget({
   )
 }
 
-export function WeekView({ currentDate, appointments, onSlotClick, onAppointmentClick, onReschedule, canEdit }: WeekViewProps) {
+export function WeekView({ currentDate, appointments, onSlotClick, onAppointmentClick, onReschedule, canEdit, forceMode }: WeekViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const today = new Date()
@@ -95,16 +96,13 @@ export function WeekView({ currentDate, appointments, onSlotClick, onAppointment
     appointments.filter((a) => isSameDay(parseISO(a.startAt), day))
   )
 
-  // A SchedulePage já renderiza o WeekView em dois containers separados (mobile/desktop),
-  // então aqui sempre mostramos a lista quando o grid não cabe.
-  // Como o container mobile tem padding e flui normalmente, usamos a prop do pai via CSS.
-  // Mas o WeekView precisa decidir qual layout usar internamente:
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  const [isMobileNative, setIsMobileNative] = useState(() => window.innerWidth < 768)
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768)
+    const handler = () => setIsMobileNative(window.innerWidth < 768)
     window.addEventListener('resize', handler)
     return () => window.removeEventListener('resize', handler)
   }, [])
+  const isMobile = forceMode === 'list' ? true : forceMode === 'grid' ? false : isMobileNative
 
   if (isMobile) {
     return (

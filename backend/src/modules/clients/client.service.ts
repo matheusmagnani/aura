@@ -103,6 +103,72 @@ export async function listClientsService(query: ListClientsQuery, companyId: num
   }
 }
 
+export async function getClientStatusStatsService(
+  query: {
+    userIds?: number[]
+    search?: string
+    dateFrom?: string
+    dateTo?: string
+    appointmentDateFrom?: string
+    appointmentDateTo?: string
+  },
+  companyId: number,
+) {
+  const { userIds, search, dateFrom, dateTo, appointmentDateFrom, appointmentDateTo } = query
+  const strippedSearch = search ? search.replace(/\D/g, '') : ''
+
+  const where = {
+    companyId,
+    deletedAt: null,
+    ...(userIds && userIds.length > 0 && { userId: { in: userIds } }),
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' as const } },
+        { email: { contains: search, mode: 'insensitive' as const } },
+        { phone: { contains: search, mode: 'insensitive' as const } },
+        ...(strippedSearch ? [{ document: { contains: strippedSearch, mode: 'insensitive' as const } }] : []),
+      ],
+    }),
+    ...((dateFrom || dateTo) && {
+      createdAt: {
+        ...(dateFrom && { gte: new Date(dateFrom) }),
+        ...(dateTo && { lte: new Date(dateTo) }),
+      },
+    }),
+    ...((appointmentDateFrom || appointmentDateTo) && {
+      appointments: {
+        some: {
+          deletedAt: null,
+          startAt: {
+            ...(appointmentDateFrom && { gte: new Date(appointmentDateFrom) }),
+            ...(appointmentDateTo && { lte: new Date(appointmentDateTo) }),
+          },
+        },
+      },
+    }),
+  }
+
+  const [grouped, statuses] = await Promise.all([
+    prisma.client.groupBy({
+      by: ['statusId'],
+      where,
+      _count: { id: true },
+    }),
+    prisma.clientStatus.findMany({
+      where: { companyId },
+      select: { id: true, name: true, color: true },
+      orderBy: { name: 'asc' },
+    }),
+  ])
+
+  return statuses.map(status => ({
+    id: status.id,
+    name: status.name,
+    color: status.color,
+    count: grouped.find(g => g.statusId === status.id)?._count.id ?? 0,
+  }))
+}
+
 export async function getClientByIdService(id: number, companyId: number) {
   const client = await prisma.client.findFirst({
     where: { id, companyId, deletedAt: null },

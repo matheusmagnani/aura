@@ -13,6 +13,7 @@ interface AppointmentDetailModalProps {
   onDeleted: () => void
   canEdit?: boolean
   canDelete?: boolean
+  deleteFn?: (id: number) => Promise<void>
 }
 
 function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -34,6 +35,7 @@ export function AppointmentDetailModal({
   onDeleted,
   canEdit,
   canDelete,
+  deleteFn,
 }: AppointmentDetailModalProps) {
   const { addToast } = useToast()
   const [deleting, setDeleting] = useState(false)
@@ -45,7 +47,7 @@ export function AppointmentDetailModal({
   async function handleDelete() {
     setDeleting(true)
     try {
-      await scheduleService.delete(appointment.id)
+      await (deleteFn ?? scheduleService.delete)(appointment.id)
       addToast('Agendamento excluído!', 'success')
       onDeleted()
       onClose()
