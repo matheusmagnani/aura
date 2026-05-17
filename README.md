@@ -1,5 +1,9 @@
 <div align="center">
-  <img src="frontend/src/assets/logo.png" alt="Aura" width="160" />
+  <img src="frontend/src/assets/icone_fundo_preto.png" alt="Aura Icon" height="72" />
+  &nbsp;&nbsp;
+  <img src="frontend/src/assets/logo.png" alt="Aura" height="72" />
+
+  <br /><br />
 
   <h3>Plataforma SaaS de gestão para prestadores de serviços</h3>
 
@@ -21,13 +25,17 @@
 
 ## Telas
 
-| Login — Desktop | Login — Mobile |
-|---|---|
-| ![Login Desktop](frontend/src/assets/print-readme/print-login.png) | ![Login Mobile](frontend/src/assets/print-readme/print-login-mobile.png) |
+<p align="center">
+  <img src="frontend/src/assets/print-readme/macbook-dashboard.png" width="68%" alt="Dashboard Desktop" />
+  &nbsp;
+  <img src="frontend/src/assets/print-readme/iphone-dashboard.png" width="24%" alt="Dashboard Mobile" />
+</p>
 
-| Dashboard — Desktop | Dashboard — Mobile |
-|---|---|
-| ![Dashboard Desktop](frontend/src/assets/print-readme/print-dashboard.png) | ![Dashboard Mobile](frontend/src/assets/print-readme/print-dashboard-mobile.png) |
+<p align="center">
+  <img src="frontend/src/assets/print-readme/macbook-login.png" width="68%" alt="Login Desktop" />
+  &nbsp;
+  <img src="frontend/src/assets/print-readme/iphone-login.png" width="24%" alt="Login Mobile" />
+</p>
 
 ## Funcionalidades
 
