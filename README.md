@@ -111,8 +111,7 @@ Acesse `http://localhost:5173` e clique em **Criar conta** para registrar sua em
 
 ---
 
-<div align="center">
-  <img src="frontend/src/assets/logo_beets_transparent.png" alt="BEE.TS" height="16" style="vertical-align:middle" />
-  &nbsp;
-  <span>Desenvolvido por Matheus Magnani</span>
-</div>
+<p align="center">                                                                                                                                                                                                                                                                                                         
+      <sub>Desenvolvido por Matheus Magnani</sub><br/>                                                                                                                                    
+      <img src="frontend/src/assets/logo_beets_transparent.png" alt="BEE.TS" height="20" />                                                                                                      
+</p> 
