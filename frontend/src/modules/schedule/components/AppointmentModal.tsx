@@ -15,6 +15,7 @@ interface AppointmentModalProps {
   prefilledDate?: Date
   prefilledClient?: { id: number; name: string }
   defaultCollaboratorId?: number
+  filterClientUserId?: number
   onClose: () => void
   onSaved: () => void
   createFn?: (data: any) => Promise<Appointment>
@@ -30,7 +31,7 @@ interface FormData {
   collaboratorId: string
 }
 
-export function AppointmentModal({ appointment, prefilledDate, prefilledClient, defaultCollaboratorId, onClose, onSaved, createFn, updateFn }: AppointmentModalProps) {
+export function AppointmentModal({ appointment, prefilledDate, prefilledClient, defaultCollaboratorId, filterClientUserId, onClose, onSaved, createFn, updateFn }: AppointmentModalProps) {
   const { addToast } = useToast()
   const currentUser = useAuthStore(s => s.user)
   const [saving, setSaving] = useState(false)
@@ -228,6 +229,7 @@ return (
             onChange={(id) => set('clientId', id)}
             placeholder="Buscar cliente..."
             error={errors.clientId}
+            filterUserId={filterClientUserId}
           />
         )}
 

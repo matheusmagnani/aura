@@ -1,3 +1,5 @@
+export const PROPOSAL_STATUS_ORDER = ['accepted', 'pending', 'sent', 'refused'] as const
+
 export const PROPOSAL_LABELS: Record<string, string> = {
   pending: 'Pendente',
   sent: 'Enviada',

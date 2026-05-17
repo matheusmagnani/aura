@@ -26,12 +26,16 @@ export async function getClientStatusStatsController(request: FastifyRequest, re
 }
 
 export async function listClientsSelectController(request: FastifyRequest, reply: FastifyReply) {
-  const { search } = z.object({ search: z.string().optional() }).parse(request.query)
+  const { search, userId } = z.object({
+    search: z.string().optional(),
+    userId: z.coerce.number().optional(),
+  }).parse(request.query)
   const { companyId } = request.user as { companyId: number }
   const data = await prisma.client.findMany({
     where: {
       companyId,
       deletedAt: null,
+      ...(userId !== undefined && { userId }),
       ...(search && {
         OR: [
           { name: { contains: search, mode: 'insensitive' as const } },

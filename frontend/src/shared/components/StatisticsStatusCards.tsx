@@ -26,16 +26,18 @@ interface Props {
   mobileColumns?: number
   /** Esconde o label no mobile. */
   hideLabelOnMobile?: boolean
+  compact?: boolean
 }
 
 function Card({
-  item, active, onToggle, size = 'normal', hideLabelOnMobile = false,
+  item, active, onToggle, size = 'normal', hideLabelOnMobile = false, compact = false,
 }: {
   item: StatisticsStatusCardItem
   active: boolean
   onToggle: () => void
   size?: 'normal' | 'sidebar'
   hideLabelOnMobile?: boolean
+  compact?: boolean
 }) {
   if (size === 'sidebar') {
     return (
@@ -83,16 +85,16 @@ function Card({
           {item.label}
         </span>
       </div>
-      <span style={{ fontSize: 18, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{item.primaryValue}</span>
+      <span style={{ fontSize: compact ? 12 : 18, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{item.primaryValue}</span>
       {item.secondaryValue && (
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>{item.secondaryValue}</span>
+        <span style={{ fontSize: compact ? 9 : 10, color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>{item.secondaryValue}</span>
       )}
     </div>
   )
 }
 
 function Paginated({
-  items, activeIds, onToggle, pageSize, columns, hideLabelOnMobile,
+  items, activeIds, onToggle, pageSize, columns, hideLabelOnMobile, compact,
 }: {
   items: StatisticsStatusCardItem[]
   activeIds: string[]
@@ -100,6 +102,7 @@ function Paginated({
   pageSize: number
   columns: number
   hideLabelOnMobile: boolean
+  compact: boolean
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrollPage, setScrollPage] = useState(0)
@@ -108,7 +111,7 @@ function Paginated({
     return (
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: 8 }}>
         {items.map(item => (
-          <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} />
+          <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
         ))}
       </div>
     )
@@ -143,7 +146,7 @@ function Paginated({
               style={{ flexShrink: 0, width: '100%', scrollSnapAlign: 'start', display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: 8 }}
             >
               {page.map(item => (
-                <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} />
+                <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
               ))}
             </div>
           ))}
@@ -182,6 +185,7 @@ export function StatisticsStatusCards({
   pageSize,
   mobileColumns,
   hideLabelOnMobile = false,
+  compact = false,
 }: Props) {
   if (items.length === 0) return null
 
@@ -203,12 +207,12 @@ export function StatisticsStatusCards({
       <>
         <div className={`grid md:hidden`} style={{ gridTemplateColumns: `repeat(${mobileColumns}, minmax(0, 1fr))`, gap: 8 }}>
           {items.map(item => (
-            <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} />
+            <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
           ))}
         </div>
         <div className="hidden md:grid" style={{ gridTemplateColumns: `repeat(${desktopCols}, minmax(0, 1fr))`, gap: 8 }}>
           {items.map(item => (
-            <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} />
+            <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
           ))}
         </div>
       </>
@@ -225,6 +229,7 @@ export function StatisticsStatusCards({
         pageSize={pageSize}
         columns={desktopCols}
         hideLabelOnMobile={hideLabelOnMobile}
+        compact={compact}
       />
     )
   }
@@ -233,7 +238,7 @@ export function StatisticsStatusCards({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${desktopCols}, minmax(0, 1fr))`, gap: 8 }}>
       {items.map(item => (
-        <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} />
+        <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
       ))}
     </div>
   )

@@ -11,9 +11,10 @@ interface AutocompleteClientProps {
   placeholder?: string
   initialName?: string
   error?: string
+  filterUserId?: number
 }
 
-export function AutocompleteClient({ label, value, onChange, placeholder = 'Buscar cliente...', initialName, error }: AutocompleteClientProps) {
+export function AutocompleteClient({ label, value, onChange, placeholder = 'Buscar cliente...', initialName, error, filterUserId }: AutocompleteClientProps) {
   const [inputValue, setInputValue] = useState(initialName ?? '')
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
@@ -24,8 +25,8 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   const { data, isFetching } = useQuery({
-    queryKey: ['clients-autocomplete', search],
-    queryFn: () => clientService.select(search),
+    queryKey: ['clients-autocomplete', search, filterUserId],
+    queryFn: () => clientService.select(search, filterUserId),
     enabled: search.length >= 1,
     staleTime: 1000 * 30,
   })

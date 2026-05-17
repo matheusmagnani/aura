@@ -59,8 +59,8 @@ export interface ClientStatusStat {
 }
 
 export const clientService = {
-  async select(search?: string): Promise<ClientSelectItem[]> {
-    const response = await api.get('/clients/select', { params: search ? { search } : undefined })
+  async select(search?: string, userId?: number): Promise<ClientSelectItem[]> {
+    const response = await api.get('/clients/select', { params: { ...(search ? { search } : {}), ...(userId !== undefined ? { userId } : {}) } })
     return response.data
   },
 
