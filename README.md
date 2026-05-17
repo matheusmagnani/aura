@@ -1,11 +1,9 @@
 <div align="center">
-  <img src="frontend/src/assets/icone_fundo_preto.png" alt="Aura Icon" height="100" />
-  &nbsp;&nbsp;
-  <img src="frontend/src/assets/logo.png" alt="Aura" height="48" />
+  <img src="frontend/src/assets/header.png" alt="Aura" width="460" />
 
   <br /><br />
 
-  <h3>Plataforma SaaS de gestão para prestadores de serviços</h3>
+  <h3>CRM - Plataforma SaaS Multi-tenant de gestão empresarial, voltada para empresas que trabalham com representantes de venda.</h3>
 
   <p>Agenda · Clientes · Propostas · Equipe · Permissões</p>
 
