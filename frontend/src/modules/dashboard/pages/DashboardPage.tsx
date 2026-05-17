@@ -21,7 +21,7 @@ import { ClientFormModal } from '../../clients/components/ClientFormModal'
 import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { ProposalModal } from '../../proposals/components/ProposalModal'
 import { ProposalDetailModal } from '../../proposals/components/ProposalDetailModal'
-import { PROPOSAL_COLORS, PROPOSAL_LABELS } from '../../../shared/constants/proposalStatus'
+import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
 import { PageHeader } from '../../../shared/components/PageHeader'
 import { Modal } from '../../../shared/components/Modal'
 import { Select } from '../../../shared/components/ui/Select'
@@ -91,7 +91,7 @@ function ProposalBadge({ status }: { status: string }) {
   )
 }
 
-const STATUS_VALUES = ['pending', 'sent', 'accepted', 'refused'] as const
+const STATUS_VALUES = PROPOSAL_STATUS_ORDER
 
 // ── box styles ────────────────────────────────────────────────────────────────
 
@@ -654,12 +654,13 @@ export function DashboardPage() {
           {proposalStatusStats.length > 0 && (
             <div className="md:hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, padding: '10px 16px' }}>
               <StatisticsStatusCards
-                items={proposalStatusStats.map(s => ({ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: s.count }))}
+                items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = proposalStatusStats.find(x => x.status === o); return s ? [{ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
                 activeIds={proposalFilterStatuses}
                 onToggle={(s) => {
                   setProposalFilterStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
                   setProposalPage(1)
                 }}
+                compact
               />
             </div>
           )}
@@ -669,7 +670,7 @@ export function DashboardPage() {
             {/* Painel de status — apenas desktop */}
             <div className="hidden md:flex" style={{ width: 250, flexShrink: 0, flexDirection: 'column', justifyContent: 'center', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.06)', gap: 8 }}>
               <StatisticsStatusCards
-                items={proposalStatusStats.map(s => ({ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }))}
+                items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = proposalStatusStats.find(x => x.status === o); return s ? [{ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
                 activeIds={proposalFilterStatuses}
                 onToggle={(s) => {
                   setProposalFilterStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
@@ -784,12 +785,7 @@ export function DashboardPage() {
             label="Status"
             values={proposalFilterStatuses}
             onChange={v => { setProposalFilterStatuses(v); setProposalPage(1) }}
-            options={[
-              { value: 'pending', label: 'Pendente', color: PROPOSAL_COLORS.pending },
-              { value: 'sent', label: 'Enviada', color: PROPOSAL_COLORS.sent },
-              { value: 'accepted', label: 'Aceita', color: PROPOSAL_COLORS.accepted },
-              { value: 'refused', label: 'Recusada', color: PROPOSAL_COLORS.refused },
-            ]}
+            options={PROPOSAL_STATUS_ORDER.map(s => ({ value: s, label: PROPOSAL_LABELS[s], color: PROPOSAL_COLORS[s] }))}
             placeholder="Todos os status"
             noCheckbox
           />
@@ -859,6 +855,7 @@ export function DashboardPage() {
           appointment={editingAppointment}
           prefilledDate={prefilledDate}
           defaultCollaboratorId={userId}
+          filterClientUserId={userId}
           onClose={() => setScheduleModalOpen(false)}
           onSaved={handleScheduleSaved}
           createFn={dashboardService.createAppointment}
@@ -880,6 +877,7 @@ export function DashboardPage() {
         <ProposalModal
           proposal={editingProposal}
           defaultCollaboratorId={!editingProposal ? userId : undefined}
+          filterClientUserId={userId}
           onClose={() => setProposalModalOpen(false)}
           onSaved={() => { setProposalModalOpen(false); handleProposalSaved() }}
           createFn={dashboardService.createProposal}

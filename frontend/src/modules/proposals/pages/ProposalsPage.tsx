@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText, List, Trash, PencilSimple, ClockCounterClockwise, X, TrashSimple, Eye, Tag } from '@phosphor-icons/react'
 import { PageHeader } from '../../../shared/components/PageHeader'
+import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
 import { MultiFilterSelect } from '../../../shared/components/MultiFilterSelect'
 import { DateRangePicker } from '../../../shared/components/DateRangePicker'
 import { Select } from '../../../shared/components/ui/Select'
@@ -16,7 +17,6 @@ import { proposalService, type Proposal, type ProposalStatusStat } from '../../.
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { ProposalModal } from '../components/ProposalModal'
 import { ProposalDetailModal } from '../components/ProposalDetailModal'
-import { PROPOSAL_COLORS, PROPOSAL_LABELS } from '../../../shared/constants/proposalStatus'
 import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
@@ -26,12 +26,7 @@ import { useAuthStore } from '../../../shared/stores/useAuthStore'
 const MODULE = 'proposals'
 const DESKTOP_COLS = '44px minmax(0,130px) minmax(0,1fr) minmax(0,160px) minmax(0,130px) 60px'
 
-const STATUS_FILTER_OPTIONS = [
-  { value: 'pending', label: 'Pendente', color: '#F59E0B' },
-  { value: 'sent', label: 'Enviada', color: '#6AA6C1' },
-  { value: 'accepted', label: 'Aceita', color: '#4ADE80' },
-  { value: 'refused', label: 'Recusada', color: '#F87171' },
-]
+const STATUS_FILTER_OPTIONS = PROPOSAL_STATUS_ORDER.map(s => ({ value: s, label: PROPOSAL_LABELS[s], color: PROPOSAL_COLORS[s] }))
 
 function StatusBadge({ status }: { status: string }) {
   const color = PROPOSAL_COLORS[status] ?? '#8A919C'
@@ -340,7 +335,7 @@ export function ProposalsPage() {
       {statusStats.length > 0 && (
         <div style={{ marginTop: 12 }}>
           <StatisticsStatusCards
-            items={statusStats.map(s => ({ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }))}
+            items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = statusStats.find(x => x.status === o); return s ? [{ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
             activeIds={filterStatus}
             onToggle={(s) => {
               setFilterStatus(filterStatus.includes(s) ? filterStatus.filter(x => x !== s) : [...filterStatus, s])

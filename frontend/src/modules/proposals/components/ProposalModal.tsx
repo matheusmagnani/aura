@@ -4,21 +4,18 @@ import { Modal } from '../../../shared/components/Modal'
 import { AutocompleteClient } from '../../../shared/components/AutocompleteClient'
 import { Select } from '../../../shared/components/ui/Select'
 import { proposalService, type Proposal } from '../../../shared/services/proposalService'
+import { PROPOSAL_STATUS_ORDER, PROPOSAL_LABELS } from '../../../shared/constants/proposalStatus'
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
-const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pendente' },
-  { value: 'sent', label: 'Enviada' },
-  { value: 'accepted', label: 'Aceita' },
-  { value: 'refused', label: 'Recusada' },
-]
+const STATUS_OPTIONS = PROPOSAL_STATUS_ORDER.map(s => ({ value: s, label: PROPOSAL_LABELS[s] }))
 
 interface ProposalModalProps {
   proposal?: Proposal
   prefilledClient?: { id: number; name: string }
   defaultCollaboratorId?: number
+  filterClientUserId?: number
   onClose: () => void
   onSaved: () => void
   createFn?: (data: any) => Promise<Proposal>
@@ -45,7 +42,7 @@ function maskCurrency(value: string): string {
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId, onClose, onSaved, createFn, updateFn }: ProposalModalProps) {
+export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId, filterClientUserId, onClose, onSaved, createFn, updateFn }: ProposalModalProps) {
   const { addToast } = useToast()
   const currentUser = useAuthStore(s => s.user)
   const [saving, setSaving] = useState(false)
@@ -178,6 +175,7 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
             onChange={(id) => set('clientId', id)}
             placeholder="Buscar cliente..."
             error={errors.clientId}
+            filterUserId={filterClientUserId}
           />
         )}
 
