@@ -112,7 +112,7 @@ Acesse `http://localhost:5173` e clique em **Criar conta** para registrar sua em
 ---
 
 <div align="center">
-  <sub>Desenvolvido por <a href="https://github.com/matheusmagnani">Matheus Magnani</a></sub>
-  &nbsp;·&nbsp;
-  <img src="frontend/src/assets/logo_beets_transparent.png" alt="BEE.TS" height="14" />
+  <img src="frontend/src/assets/logo_beets_transparent.png" alt="BEE.TS" height="16" style="vertical-align:middle" />
+  &nbsp;
+  <span>Desenvolvido por Matheus Magnani</span>
 </div>
