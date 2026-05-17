@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="frontend/src/assets/icone_fundo_preto.png" alt="Aura Icon" height="72" />
+  <img src="frontend/src/assets/icone_fundo_preto.png" alt="Aura Icon" height="100" />
   &nbsp;&nbsp;
-  <img src="frontend/src/assets/logo.png" alt="Aura" height="72" />
+  <img src="frontend/src/assets/logo.png" alt="Aura" height="48" />
 
   <br /><br />
 
@@ -21,15 +21,20 @@
 
 ## Sobre
 
-**Aura** é um SaaS multi-tenant voltado para empresas de serviços. Cada empresa tem seus dados totalmente isolados e pode gerenciar agenda, clientes, propostas e equipe com controle granular de permissões por setor.
+**CRM - Plataforma SaaS Multi-tenant de gestão empresarial**, voltada para empresas que trabalham com representantes de venda.
+
+Desenvolvida do zero com foco em empresas que trabalham com representantes de venda. Permite que cada colaborador gerencie sua agenda de atendimentos, carteira de clientes, propostas comerciais. Os responsáveis podem gerenciar o sistema e equipe de colaboradores em um único lugar, com controle granular de permissões por setor. Além disso esta plataforma é totalmente responsiva, podendo acessá-la tanto pelo mobile quanto pelo desktop.
+
+**Funcionalidades principais:**
+
+- Autenticação e cadastro de empresas com isolamento de dados por tenant (multi-tenant)
+- Agenda com visualizações por dia, semana e mês, com drag-and-drop para reagendamento
+- Gestão de clientes com histórico de agendamentos e propostas vinculados
+- Pipeline de propostas comerciais com controle de status (pendente, enviada, aceita, recusada)
+- Gestão de colaboradores com controle de acesso por setor/role (permissionamento)
+- Sistema de auditoria (audit trail) com registro automático de todas as operações
 
 ## Telas
-
-<p align="center">
-  <img src="frontend/src/assets/print-readme/macbook-dashboard.png" width="68%" alt="Dashboard Desktop" />
-  &nbsp;
-  <img src="frontend/src/assets/print-readme/iphone-dashboard.png" width="24%" alt="Dashboard Mobile" />
-</p>
 
 <p align="center">
   <img src="frontend/src/assets/print-readme/macbook-login.png" width="68%" alt="Login Desktop" />
@@ -37,16 +42,11 @@
   <img src="frontend/src/assets/print-readme/iphone-login.png" width="24%" alt="Login Mobile" />
 </p>
 
-## Funcionalidades
-
-- **Multi-tenant** — cada empresa isolada, login com JWT
-- **Agenda** — views dia / semana / mês, drag-and-drop para reagendar
-- **Clientes** — cadastro completo com endereço, CPF/CNPJ e histórico
-- **Propostas** — pipeline com status pendente → enviada → aceita / recusada
-- **Equipe** — colaboradores com avatar, setor e controle de acesso
-- **Permissões** — 6 módulos × 4 ações (read/create/edit/delete) por role
-- **Audit trail** — log automático de toda operação no sistema
-- **Responsivo** — mobile-first, funciona em qualquer tela
+<p align="center">
+  <img src="frontend/src/assets/print-readme/macbook-dashboard.png" width="68%" alt="Dashboard Desktop" />
+  &nbsp;
+  <img src="frontend/src/assets/print-readme/iphone-dashboard.png" width="24%" alt="Dashboard Mobile" />
+</p>
 
 ## Stack
 
