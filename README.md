@@ -19,8 +19,6 @@
 
 ## Sobre
 
-**CRM - Plataforma SaaS Multi-tenant de gestão empresarial**, voltada para empresas que trabalham com representantes de venda.
-
 Desenvolvida do zero com foco em empresas que trabalham com representantes de venda. Permite que cada colaborador gerencie sua agenda de atendimentos, carteira de clientes, propostas comerciais. Os responsáveis podem gerenciar o sistema e equipe de colaboradores em um único lugar, com controle granular de permissões por setor. Além disso esta plataforma é totalmente responsiva, podendo acessá-la tanto pelo mobile quanto pelo desktop.
 
 **Funcionalidades principais:**
