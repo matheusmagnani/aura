@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 
-export interface StatisticsStatisticsStatusCardItem {
+export interface StatisticsStatusCardItem {
   id: string
   label: string
   color: string

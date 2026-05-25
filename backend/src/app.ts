@@ -3,8 +3,6 @@ import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
 import multipart from '@fastify/multipart'
-import fastifyStatic from '@fastify/static'
-import path from 'node:path'
 import { ZodError } from 'zod'
 import { env } from './env'
 import './lib/zodErrorMap'
@@ -50,7 +48,7 @@ app.setErrorHandler((error: FastifyError | ZodError, _request, reply) => {
 })
 
 app.register(cors, {
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  origin: env.CORS_ORIGIN.split(','),
   credentials: true,
 })
 
@@ -65,11 +63,6 @@ app.register(jwt, {
 
 app.register(multipart, {
   limits: { fileSize: 5 * 1024 * 1024 },
-})
-
-app.register(fastifyStatic, {
-  root: path.join(__dirname, '..', 'uploads'),
-  prefix: '/uploads/',
 })
 
 app.register(authRoutes, { prefix: '/api/auth' })

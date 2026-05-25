@@ -104,10 +104,9 @@ function ActionMenu({ client, onEdit, onDelete, onHistory, canEdit, canDelete }:
       right: 'auto',
       left: menuPos.left,
       zIndex: 9999,
-      transform: 'translateX(-100%)',
       ...(menuPos.openUp
         ? { bottom: 'auto', top: menuPos.top, transform: 'translateX(-100%) translateY(-100%)' }
-        : { top: menuPos.top }),
+        : { top: menuPos.top, transform: 'translateX(-100%)' }),
       background: 'var(--color-app-primary)', border: '1px solid rgba(230,194,132,0.2)',
       borderRadius: 10, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden',
     }}>

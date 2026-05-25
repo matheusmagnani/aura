@@ -8,8 +8,8 @@ import ptBR from 'rsuite/locales/pt_BR'
 import 'rsuite/DateRangePicker/styles/index.css'
 
 export interface DateRange {
-  from?: Date
-  to?: Date
+  from?: Date | null
+  to?: Date | null
 }
 
 interface DateRangePickerProps {

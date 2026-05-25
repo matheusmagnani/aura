@@ -18,7 +18,6 @@ import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { useCollaboratorsFilterStore } from '../stores/useCollaboratorsFilterStore'
 
 const MODULE = 'collaborators'
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333'
 
 function Avatar({ name, avatar, size = 36 }: { name: string; avatar: string | null; size?: number }) {
   const initials = name
@@ -31,7 +30,7 @@ function Avatar({ name, avatar, size = 36 }: { name: string; avatar: string | nu
   if (avatar) {
     return (
       <img
-        src={`${API_URL}/uploads/${avatar}`}
+        src={avatar}
         alt={name}
         style={{
           width: size, height: size, borderRadius: '50%',

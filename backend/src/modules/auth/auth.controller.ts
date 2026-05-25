@@ -1,7 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import path from 'path'
-import fs from 'fs'
+import { uploadToS3 } from '../../lib/s3'
 import { registerService, loginService, getMeService, updateProfileService, uploadAvatarService, removeAvatarService, changePasswordService } from './auth.service'
 
 export async function registerController(
@@ -169,17 +168,18 @@ export async function uploadAvatarController(
     return reply.status(400).send({ message: 'Formato inválido. Use JPEG, PNG ou WebP.' })
   }
 
-  const uploadDir = path.resolve('uploads/avatars')
-  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
-
   const ext = data.mimetype.split('/')[1].replace('jpeg', 'jpg')
-  const filename = `${userId}-${Date.now()}.${ext}`
-  const filepath = path.join(uploadDir, filename)
+  const key = `avatars/${userId}-${Date.now()}.${ext}`
+  const buffer = await data.toBuffer()
 
-  await fs.promises.writeFile(filepath, await data.toBuffer())
-
-  const user = await uploadAvatarService(userId, `avatars/${filename}`)
-  return reply.send({ avatar: user.avatar })
+  try {
+    const url = await uploadToS3(key, buffer, data.mimetype)
+    const user = await uploadAvatarService(userId, url)
+    return reply.send({ avatar: user.avatar })
+  } catch (error: any) {
+    console.error('[S3 Upload Error]', error)
+    return reply.status(500).send({ message: error?.message || 'Erro ao enviar arquivo.' })
+  }
 }
 
 export async function removeAvatarController(

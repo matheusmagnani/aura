@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-interface DateRange { from: Date | null; to: Date | null }
+interface DateRange { from?: Date | null; to?: Date | null }
 
 interface ProposalsFilterState {
   search: string

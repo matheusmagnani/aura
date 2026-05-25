@@ -12,8 +12,6 @@ import { Modal } from './Modal'
 import { Input } from './ui/Input'
 import { queryClient } from '../../main'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333'
-
 const PREPOSITIONS = new Set(['de', 'da', 'do', 'das', 'dos', 'e'])
 
 export function Header() {
@@ -96,7 +94,7 @@ export function Header() {
         .toUpperCase()
     : 'U'
 
-  const avatarUrl = user?.avatar ? `${API_URL}/uploads/${user.avatar}` : null
+  const avatarUrl = user?.avatar || null
 
   function handleLogout() {
     logout()

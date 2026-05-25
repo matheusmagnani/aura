@@ -300,8 +300,8 @@ export function DashboardPage() {
   const [proposalSearch, setProposalSearch] = useState('')
   const [showProposalFilterModal, setShowProposalFilterModal] = useState(false)
   const [proposalFilterStatuses, setProposalFilterStatuses] = useState<string[]>([])
-  const [proposalFilterDateRange, setProposalFilterDateRange] = useState<DateRange>({ from: null, to: null })
-  const [proposalFilterStatusChangedRange, setProposalFilterStatusChangedRange] = useState<DateRange>({ from: null, to: null })
+  const [proposalFilterDateRange, setProposalFilterDateRange] = useState<DateRange>({})
+  const [proposalFilterStatusChangedRange, setProposalFilterStatusChangedRange] = useState<DateRange>({})
   const [proposalModalOpen, setProposalModalOpen] = useState(false)
   const [editingProposal, setEditingProposal] = useState<Proposal | undefined>()
   const [proposalDetailOpen, setProposalDetailOpen] = useState(false)
@@ -638,13 +638,13 @@ export function DashboardPage() {
                 {proposalFilterDateRange.from && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, fontSize: 11, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
                     Criação: {format(proposalFilterDateRange.from, 'dd/MM/yy')}{proposalFilterDateRange.to && proposalFilterDateRange.to !== proposalFilterDateRange.from ? ` – ${format(proposalFilterDateRange.to, 'dd/MM/yy')}` : ''}
-                    <button onClick={() => { setProposalFilterDateRange({ from: null, to: null }); setProposalPage(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={9} weight="bold" /></button>
+                    <button onClick={() => { setProposalFilterDateRange({}); setProposalPage(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={9} weight="bold" /></button>
                   </span>
                 )}
                 {proposalFilterStatusChangedRange.from && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, fontSize: 11, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
                     Mudança status: {format(proposalFilterStatusChangedRange.from, 'dd/MM/yy')}{proposalFilterStatusChangedRange.to && proposalFilterStatusChangedRange.to !== proposalFilterStatusChangedRange.from ? ` – ${format(proposalFilterStatusChangedRange.to, 'dd/MM/yy')}` : ''}
-                    <button onClick={() => { setProposalFilterStatusChangedRange({ from: null, to: null }); setProposalPage(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={9} weight="bold" /></button>
+                    <button onClick={() => { setProposalFilterStatusChangedRange({}); setProposalPage(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={9} weight="bold" /></button>
                   </span>
                 )}
               </div>

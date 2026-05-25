@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma'
 import bcrypt from 'bcryptjs'
+import { deleteFromS3 } from '../../lib/s3'
 
 const MODULES = ['schedule', 'clients', 'collaborators', 'settings', 'history', 'proposals'] as const
 const ACTIONS = ['read', 'create', 'edit', 'delete'] as const
@@ -209,6 +210,15 @@ export async function uploadAvatarService(userId: number, avatar: string) {
 }
 
 export async function removeAvatarService(userId: number) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { avatar: true },
+  })
+
+  if (user?.avatar) {
+    await deleteFromS3(user.avatar)
+  }
+
   await prisma.user.update({
     where: { id: userId },
     data: { avatar: null },

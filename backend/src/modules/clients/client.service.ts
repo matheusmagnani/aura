@@ -5,11 +5,11 @@ const NUMERIC_FIELDS = ['phone', 'document', 'zipCode']
 const strip = (val: unknown) => typeof val === 'string' ? val.replace(/\D/g, '') : val
 
 function stripClientData<T extends Record<string, unknown>>(data: T): T {
-  const result = { ...data }
+  const result = { ...data } as Record<string, unknown>
   for (const field of NUMERIC_FIELDS) {
     if (field in result && result[field] != null) result[field] = strip(result[field])
   }
-  return result
+  return result as T
 }
 
 interface ListClientsQuery {
@@ -187,7 +187,7 @@ export async function getClientByIdService(id: number, companyId: number) {
 
 export async function createClientService(data: ClientInput, companyId: number, actor: LogActor) {
   const client = await prisma.client.create({
-    data: { ...stripClientData(data as Record<string, unknown>) as ClientInput, companyId },
+    data: { ...stripClientData(data as unknown as Record<string, unknown>) as unknown as ClientInput, companyId },
     include: {
       user: { select: { id: true, name: true, avatar: true } },
       clientStatus: { select: { id: true, name: true, color: true } },
