@@ -31,6 +31,15 @@ app.setErrorHandler((error: FastifyError | ZodError, _request, reply) => {
   }
 
   const fastifyError = error as FastifyError
+
+  if (fastifyError.statusCode === 413 || (fastifyError as any).code === 'FST_FILES_LIMIT') {
+    return reply.status(413).send({
+      statusCode: 413,
+      error: 'Payload Too Large',
+      message: 'O arquivo é muito grande. O tamanho máximo permitido é 5 MB.',
+    })
+  }
+
   if (fastifyError.statusCode) {
     return reply.status(fastifyError.statusCode).send({
       statusCode: fastifyError.statusCode,

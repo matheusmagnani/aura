@@ -85,8 +85,8 @@ export function RolesSection({ isExpanded: isExpandedProp, onToggle: onTogglePro
         addToast('Setor criado com sucesso!', 'success')
       }
       closeModal()
-    } catch {
-      addToast(editingRole ? 'Erro ao atualizar setor' : 'Erro ao criar setor', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || (editingRole ? 'Erro ao atualizar setor' : 'Erro ao criar setor'), 'danger')
     }
   }
 
@@ -96,8 +96,8 @@ export function RolesSection({ isExpanded: isExpandedProp, onToggle: onTogglePro
       await updateRole.mutateAsync({ id: role.id, data: { status: newStatus } })
       addToast(newStatus === 1 ? 'Setor ativado!' : 'Setor inativado!', 'success')
       setOpenMenuId(null)
-    } catch {
-      addToast('Erro ao alterar status do setor', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao alterar status do setor', 'danger')
       setOpenMenuId(null)
     }
   }
@@ -108,8 +108,8 @@ export function RolesSection({ isExpanded: isExpandedProp, onToggle: onTogglePro
       addToast('Setor excluído com sucesso!', 'success')
       setDeleteConfirmId(null)
       setOpenMenuId(null)
-    } catch {
-      addToast('Erro ao excluir setor. Verifique se não há colaboradores vinculados.', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao excluir setor', 'danger')
       setDeleteConfirmId(null)
       setOpenMenuId(null)
     }

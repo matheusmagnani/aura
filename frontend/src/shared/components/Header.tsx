@@ -126,6 +126,11 @@ export function Header() {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('O arquivo é muito grande. O tamanho máximo permitido é 5 MB.', 'danger')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
     try {
       const result = await authService.uploadAvatar(file)
       updateUser({ avatar: result.avatar })
