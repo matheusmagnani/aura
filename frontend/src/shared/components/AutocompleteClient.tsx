@@ -33,7 +33,11 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
 
   function updateDropdownPos() {
     const rect = wrapperRef.current?.getBoundingClientRect()
-    if (rect) setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    if (!rect) return
+    const vv = window.visualViewport
+    const vtop = vv?.offsetTop ?? 0
+    const vleft = vv?.offsetLeft ?? 0
+    setDropdownPos({ top: rect.bottom + vtop + 4, left: rect.left + vleft, width: rect.width })
   }
 
   useEffect(() => {
@@ -55,9 +59,13 @@ export function AutocompleteClient({ label, value, onChange, placeholder = 'Busc
     updateDropdownPos()
     window.addEventListener('scroll', updateDropdownPos, true)
     window.addEventListener('resize', updateDropdownPos)
+    window.visualViewport?.addEventListener('resize', updateDropdownPos)
+    window.visualViewport?.addEventListener('scroll', updateDropdownPos)
     return () => {
       window.removeEventListener('scroll', updateDropdownPos, true)
       window.removeEventListener('resize', updateDropdownPos)
+      window.visualViewport?.removeEventListener('resize', updateDropdownPos)
+      window.visualViewport?.removeEventListener('scroll', updateDropdownPos)
     }
   }, [open])
 

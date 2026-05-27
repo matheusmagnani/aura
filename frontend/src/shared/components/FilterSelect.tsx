@@ -29,10 +29,13 @@ export function FilterSelect({ label, value, onChange, options }: FilterSelectPr
   function handleToggle() {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
+      const vv = window.visualViewport
+      const vtop = vv?.offsetTop ?? 0
+      const vleft = vv?.offsetLeft ?? 0
       setDropdownStyle({
         position: 'fixed',
-        top: rect.bottom + 4,
-        left: rect.left,
+        top: rect.bottom + vtop + 4,
+        left: rect.left + vleft,
         minWidth: rect.width, maxWidth: 180,
         zIndex: 9999,
       })
