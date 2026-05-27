@@ -30,10 +30,13 @@ export function MultiFilterSelect({ label, values, onChange, options, placeholde
   function handleToggle() {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
+      const vv = window.visualViewport
+      const vtop = vv?.offsetTop ?? 0
+      const vleft = vv?.offsetLeft ?? 0
       setDropdownStyle({
         position: 'fixed',
-        top: rect.bottom + 4,
-        left: rect.left + rect.width / 2,
+        top: rect.bottom + vtop + 4,
+        left: rect.left + vleft + rect.width / 2,
         transform: 'translateX(-50%)',
         minWidth: rect.width, maxWidth: 220,
         zIndex: 9999,
