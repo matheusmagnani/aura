@@ -625,6 +625,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
       <EntityHistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
+        module="clients"
         entityId={Number(id)}
         entityName={client.name}
         fetchFn={fromDashboard ? (entityId, page) => dashboardService.clientLogs(entityId, page) : undefined}

@@ -46,7 +46,7 @@ export const logService = {
     return response.data
   },
 
-  async listByEntity(entityId: number, page = 1, entityModule?: string): Promise<LogsResponse> {
+  async listByEntity(entityId: number, entityModule: string, page = 1): Promise<LogsResponse> {
     return logService.list({ entityId, entityModule, page, limit: 30 })
   },
 }
