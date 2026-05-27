@@ -215,8 +215,8 @@ Após registro bem-sucedido: **não** faz auto-login, retorna à tela de login c
 **Cores:**
 | Variável CSS | Tailwind | Valor |
 |--------------|----------|-------|
-| `--color-app-bg` | `app-bg` | #13161B |
-| `--color-app-primary` | `app-primary` | #171B24 |
+| `--color-app-bg` | `app-bg` | #1D2529 |
+| `--color-app-primary` | `app-primary` | #171514 |
 | `--color-app-secondary` | `app-secondary` | #E6C284 |
 | `--color-app-accent` | `app-accent` | #6AA6C1 |
 | `--color-app-gray` | `app-gray` | #8A919C |

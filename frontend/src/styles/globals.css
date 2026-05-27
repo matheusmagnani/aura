@@ -43,7 +43,7 @@
 
 body {
   font-family: 'Maven Pro', system-ui, -apple-system, sans-serif;
-  background-color: var(--color-app-bg);
+  background-color: var(--color-app-primary);
   color: #fff;
   -webkit-font-smoothing: antialiased;
 }

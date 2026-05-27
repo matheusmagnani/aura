@@ -4,7 +4,7 @@ import { Header } from './Header'
 import { useThemeColor } from '../hooks/useThemeColor'
 
 export function Layout() {
-  useThemeColor('#171B24')
+  useThemeColor('#171514')
   return (
     <div className="flex h-screen overflow-hidden bg-app-bg">
       <Sidebar />
