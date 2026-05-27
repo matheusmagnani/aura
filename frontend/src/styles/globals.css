@@ -257,6 +257,13 @@ body {
   .mobile-list { display: none !important; }
 }
 
+/* Prevent iOS Safari auto-zoom on input focus (triggered when font-size < 16px) */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Sidebar responsiveness */
 .desktop-sidebar { display: none !important; }
 .mobile-nav {
