@@ -10,7 +10,6 @@ import { validateCNPJ } from '../../../shared/utils/validateDocuments'
 import { Input } from '../../../shared/components/ui/Input'
 import { Select } from '../../../shared/components/ui/Select'
 import { Button } from '../../../shared/components/ui/Button'
-import { useThemeColor } from '../../../shared/hooks/useThemeColor'
 
 import iconeDireito from '../../../assets/icone_fundo_azul.png'
 import iconeEsquerdo from '../../../assets/icone_fundo_preto.png'
@@ -43,7 +42,6 @@ function formatZipCode(value: string) {
 }
 
 export function LoginPage() {
-  useThemeColor('#171514')
   const [mode, setMode] = useState<Mode>('login')
   const [regStep, setRegStep] = useState<RegStep>('user')
   const isLogin = mode === 'login'

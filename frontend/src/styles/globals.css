@@ -33,6 +33,7 @@
   --color-app-secondary-rgb: 230, 194, 132;
   --color-app-accent-rgb: 106, 166, 193;
   --color-app-gray-rgb: 138, 145, 156;
+  --sat: env(safe-area-inset-top);
 }
 
 * {
@@ -43,7 +44,7 @@
 
 body {
   font-family: 'Maven Pro', system-ui, -apple-system, sans-serif;
-  background-color: var(--color-app-primary);
+  background-color: var(--color-app-bg);
   color: #fff;
   -webkit-font-smoothing: antialiased;
 }
