@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAutoThemeColor } from '../shared/hooks/useThemeColor'
 import { LoginPage } from '../modules/auth/pages/LoginPage'
 import { RegisterPage } from '../modules/auth/pages/RegisterPage'
 import { DashboardPage } from '../modules/dashboard/pages/DashboardPage'
@@ -35,6 +36,7 @@ function PermissionRoute({ children, module }: { children: React.ReactNode; modu
 }
 
 export function AppRoutes() {
+  useAutoThemeColor()
   return (
     <Routes>
       <Route

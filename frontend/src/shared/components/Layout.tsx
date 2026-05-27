@@ -1,10 +1,8 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar, MobileNav } from './Sidebar'
 import { Header } from './Header'
-import { useThemeColor } from '../hooks/useThemeColor'
 
 export function Layout() {
-  useThemeColor('#171514')
   return (
     <div className="flex h-screen overflow-hidden bg-app-bg">
       <Sidebar />
