@@ -134,7 +134,7 @@ export function MobileNav() {
   const visibleMenuItems = useVisibleMenuItems()
 
   return (
-    <div className="mobile-nav" style={{ marginTop: '0.75rem' }}>
+    <div className="mobile-nav">
       {visibleMenuItems.map((item) => {
         const Icon = item.icon
         const isActive = location.pathname === item.path
