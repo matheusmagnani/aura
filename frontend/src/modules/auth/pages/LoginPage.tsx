@@ -250,7 +250,7 @@ export function LoginPage() {
     <div className="min-h-screen bg-app-bg">
 
       {/* ───────── MOBILE ───────── */}
-      <div className="flex md:hidden relative overflow-hidden bg-app-primary" style={{ height: '100svh' }}>
+      <div className="flex md:hidden relative overflow-hidden bg-app-primary" style={{ height: '100svh', paddingTop: 'env(safe-area-inset-top)' }}>
 
         {/* Orbs — always visible */}
         <div className="absolute inset-0" style={{ zIndex: 0, pointerEvents: 'none' }}>
