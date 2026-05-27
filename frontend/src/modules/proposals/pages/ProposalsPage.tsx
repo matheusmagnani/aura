@@ -490,7 +490,7 @@ export function ProposalsPage() {
               onClick={() => setViewingProposal(proposal)}
             >
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 13, color: 'var(--color-app-secondary)', fontWeight: 600 }}>
+                <p className="text-[11px] md:text-[13px]" style={{ color: 'var(--color-app-secondary)', fontWeight: 600 }}>
                   {formatCurrency(Number(proposal.value))}
                 </p>
                 <p style={{ fontWeight: 500, color: 'rgba(255,255,255,0.55)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>
