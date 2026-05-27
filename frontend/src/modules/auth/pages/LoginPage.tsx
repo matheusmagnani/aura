@@ -245,10 +245,10 @@ export function LoginPage() {
   const UF_OPTIONS_SELECT = UF_OPTIONS.map(uf => ({ value: uf, label: uf }))
 
   return (
-    <div className="min-h-screen bg-app-bg">
+    <div className="bg-app-bg overflow-hidden" style={{ minHeight: '100dvh' }}>
 
       {/* ───────── MOBILE ───────── */}
-      <div className="flex md:hidden relative overflow-hidden bg-app-primary" style={{ height: '100svh', paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="flex md:hidden relative overflow-hidden bg-app-primary" style={{ height: '100dvh', paddingTop: 'env(safe-area-inset-top)' }}>
 
         {/* Orbs — always visible */}
         <div className="absolute inset-0" style={{ zIndex: 0, pointerEvents: 'none' }}>

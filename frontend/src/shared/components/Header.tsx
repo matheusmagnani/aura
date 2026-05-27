@@ -170,7 +170,7 @@ export function Header() {
   }
 
   return (
-    <div ref={wrapperRef} className="relative z-40 md:sticky md:top-0">
+    <div ref={wrapperRef} className="sticky top-0 z-40">
       <div ref={headerBarRef}>
         <div className="bg-app-primary border-b border-white/10 pt-[env(safe-area-inset-top)]">
           <input
