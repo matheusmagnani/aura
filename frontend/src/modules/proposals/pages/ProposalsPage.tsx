@@ -605,6 +605,7 @@ export function ProposalsPage() {
         <EntityHistoryModal
           isOpen
           onClose={() => setHistoryTarget(undefined)}
+          module="clients"
           entityId={historyTarget.clientId}
           entityName={historyTarget.client.name}
         />

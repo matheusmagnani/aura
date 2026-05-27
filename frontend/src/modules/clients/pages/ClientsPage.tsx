@@ -678,6 +678,7 @@ export function ClientsPage() {
         <EntityHistoryModal
           isOpen
           onClose={() => setHistoryTarget(undefined)}
+          module="clients"
           entityId={historyTarget.id}
           entityName={historyTarget.name}
         />

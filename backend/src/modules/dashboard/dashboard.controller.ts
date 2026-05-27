@@ -326,7 +326,7 @@ export async function dashboardClientLogsController(request: FastifyRequest, rep
   })
   if (!client) return reply.status(404).send({ message: 'Cliente não encontrado.' })
 
-  const result = await listLogsService({ entityId, companyId, page, limit })
+  const result = await listLogsService({ entityId, entityModule: 'clients', companyId, page, limit })
   return reply.send(result)
 }
 

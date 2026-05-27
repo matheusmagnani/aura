@@ -222,7 +222,7 @@ function LogRow({ log, collaboratorsMap }: { log: Log; collaboratorsMap?: Record
 interface EntityHistoryModalProps {
   isOpen: boolean
   onClose: () => void
-  module?: string
+  module: string
   entityId: number
   entityName?: string
   fetchFn?: (entityId: number, page: number) => Promise<LogsResponse>
@@ -233,8 +233,8 @@ export function EntityHistoryModal({ isOpen, onClose, module, entityId, entityNa
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['logs', module ?? 'all', entityId, page, !!fetchFn],
-    queryFn: () => fetchFn ? fetchFn(entityId, page) : logService.listByEntity(entityId, page, module),
+    queryKey: ['logs', module, entityId, page, !!fetchFn],
+    queryFn: () => fetchFn ? fetchFn(entityId, page) : logService.listByEntity(entityId, module, page),
     enabled: isOpen,
   })
 
