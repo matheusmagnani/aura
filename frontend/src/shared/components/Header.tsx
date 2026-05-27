@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { DoorOpen, PencilSimple, CaretUp, Key } from '@phosphor-icons/react'
-import logoBeets from '../../assets/logo_beets.png'
+import logoBeets from '../../assets/logo_beets_transparent.png'
 import iconBeets from '../../assets/icon_beets.png'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
