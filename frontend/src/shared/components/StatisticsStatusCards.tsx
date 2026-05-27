@@ -85,7 +85,7 @@ function Card({
           {item.label}
         </span>
       </div>
-      <span style={{ fontSize: compact ? 12 : 18, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{item.primaryValue}</span>
+      <span className={compact ? '' : 'text-sm md:text-lg'} style={{ fontSize: compact ? 12 : undefined, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{item.primaryValue}</span>
       {item.secondaryValue && (
         <span style={{ fontSize: compact ? 9 : 10, color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>{item.secondaryValue}</span>
       )}
@@ -109,7 +109,7 @@ function Paginated({
 
   if (items.length <= pageSize) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 8 }}>
         {items.map(item => (
           <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
         ))}
@@ -199,7 +199,7 @@ export function StatisticsStatusCards({
     )
   }
 
-  const desktopCols = layout === 'row' ? items.length : 2
+  const desktopCols = layout === 'row' ? (pageSize ? Math.min(pageSize, items.length) : items.length) : 2
 
   // row com split mobile/desktop
   if (layout === 'row' && mobileColumns) {
