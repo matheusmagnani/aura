@@ -440,8 +440,8 @@ export function CollaboratorsPage() {
       addToast(`${selected.length} ${selected.length === 1 ? 'colaborador' : 'colaboradores'} ${active ? 'ativado(s)' : 'inativado(s)'}!`, 'success')
       queryClient.invalidateQueries({ queryKey: ['collaborators'] })
       setSelected([])
-    } catch {
-      addToast('Erro ao atualizar status', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao atualizar status', 'danger')
     } finally {
       setBulkToggling(false)
     }
@@ -455,8 +455,8 @@ export function CollaboratorsPage() {
       queryClient.invalidateQueries({ queryKey: ['collaborators'] })
       setShowBulkDelete(false)
       setSelected([])
-    } catch {
-      addToast('Erro ao excluir colaboradores', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao excluir colaboradores', 'danger')
     } finally {
       setBulkDeleting(false)
     }

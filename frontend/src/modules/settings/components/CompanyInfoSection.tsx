@@ -153,8 +153,8 @@ export function CompanyInfoSection({ isExpanded: isExpandedProp, onToggle: onTog
       })
       addToast('Informações da empresa atualizadas!', 'success')
       setIsEditing(false)
-    } catch {
-      addToast('Erro ao atualizar informações da empresa', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao atualizar informações da empresa', 'danger')
     }
   }
 

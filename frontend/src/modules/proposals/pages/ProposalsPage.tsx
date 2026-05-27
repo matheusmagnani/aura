@@ -210,7 +210,7 @@ export function ProposalsPage() {
       setSelected([])
       setDeleteTarget(undefined)
     },
-    onError: (err: any) => addToast(err?.response?.data?.message || 'Erro ao excluir', 'danger'),
+    onError: (err: any) => addToast(err?.message || 'Erro ao excluir proposta', 'danger'),
   })
 
   const proposals = data?.data ?? []
@@ -242,8 +242,8 @@ export function ProposalsPage() {
       invalidateStats()
       setShowBulkDelete(false)
       setSelected([])
-    } catch {
-      addToast('Erro ao excluir propostas', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao excluir propostas', 'danger')
     } finally {
       setBulkDeleting(false)
     }
@@ -259,8 +259,8 @@ export function ProposalsPage() {
       setShowBulkStatus(false)
       setBulkStatusValue('')
       setSelected([])
-    } catch {
-      addToast('Erro ao atualizar status', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao atualizar status', 'danger')
     } finally {
       setBulkUpdating(false)
     }

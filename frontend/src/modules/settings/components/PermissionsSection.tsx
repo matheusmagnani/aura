@@ -133,8 +133,8 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
       await updatePermissions.mutateAsync({ roleId: selectedRoleId, permissions: permissionsArray })
       addToast('Permissões atualizadas com sucesso!', 'success')
       setHasChanges(false)
-    } catch {
-      addToast('Erro ao atualizar permissões', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao atualizar permissões', 'danger')
     }
   }
 

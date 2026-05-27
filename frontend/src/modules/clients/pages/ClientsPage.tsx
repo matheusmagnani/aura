@@ -218,7 +218,7 @@ export function ClientsPage() {
       setSelected([])
       setDeleteTarget(undefined)
     },
-    onError: (err: any) => addToast(err?.response?.data?.message || 'Erro ao excluir', 'danger'),
+    onError: (err: any) => addToast(err?.message || 'Erro ao excluir cliente', 'danger'),
   })
 
   const { data: statusesData = [] } = useQuery({
@@ -254,8 +254,8 @@ export function ClientsPage() {
       setShowBulkStatus(false)
       setBulkStatusId('')
       setSelected([])
-    } catch {
-      addToast('Erro ao atualizar status', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao atualizar status', 'danger')
     } finally {
       setBulkUpdating(false)
     }
@@ -270,8 +270,8 @@ export function ClientsPage() {
       invalidateStats()
       setShowBulkDelete(false)
       setSelected([])
-    } catch {
-      addToast('Erro ao excluir clientes', 'danger')
+    } catch (err: any) {
+      addToast(err?.message || 'Erro ao excluir clientes', 'danger')
     } finally {
       setBulkDeleting(false)
     }
