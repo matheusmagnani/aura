@@ -19,7 +19,15 @@ export const queryClient = new QueryClient({
   },
 })
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root')!
+
+declare global {
+  interface Window { __reactRoot?: ReactDOM.Root }
+}
+
+const root = window.__reactRoot ?? (window.__reactRoot = ReactDOM.createRoot(container))
+
+root.render(
   <React.StrictMode>
     <HeroUIProvider>
       <QueryClientProvider client={queryClient}>

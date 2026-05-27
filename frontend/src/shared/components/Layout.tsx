@@ -4,7 +4,7 @@ import { Header } from './Header'
 
 export function Layout() {
   return (
-    <div className="flex h-screen overflow-hidden bg-app-bg">
+    <div className="flex overflow-hidden bg-app-bg" style={{ height: '100dvh' }}>
       <Sidebar />
       <div
         className="flex-1 min-w-0 flex flex-col overflow-hidden"
