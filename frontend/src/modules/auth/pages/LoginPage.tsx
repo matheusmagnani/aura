@@ -43,7 +43,7 @@ function formatZipCode(value: string) {
 }
 
 export function LoginPage() {
-  useThemeColor('#171B24')
+  useThemeColor('#171514')
   const [mode, setMode] = useState<Mode>('login')
   const [regStep, setRegStep] = useState<RegStep>('user')
   const isLogin = mode === 'login'
