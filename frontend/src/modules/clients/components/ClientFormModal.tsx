@@ -58,8 +58,8 @@ export function ClientFormModal({ client, defaultCollaboratorId, onClose, onSave
   })
 
   const { data: statusesData = [] } = useQuery({
-    queryKey: ['client-statuses'],
-    queryFn: clientStatusService.list,
+    queryKey: ['client-statuses-select'],
+    queryFn: clientStatusService.select,
     staleTime: 1000 * 60 * 5,
   })
 

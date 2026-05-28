@@ -15,6 +15,11 @@ export const clientStatusService = {
     return response.data
   },
 
+  async select(): Promise<ClientStatus[]> {
+    const response = await api.get('/client-statuses/select')
+    return response.data
+  },
+
   async create(data: { name: string; color: string }): Promise<ClientStatus> {
     const response = await api.post('/client-statuses', data)
     return response.data

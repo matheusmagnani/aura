@@ -11,6 +11,7 @@ import {
 export async function clientStatusRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)
 
+  app.get('/select', listClientStatusesController)
   app.get('/', { preHandler: [requirePermission('clients', 'read')] }, listClientStatusesController)
   app.post('/', { preHandler: [requirePermission('clients', 'create')] }, createClientStatusController)
   app.put('/:id', { preHandler: [requirePermission('clients', 'edit')] }, updateClientStatusController)
