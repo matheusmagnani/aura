@@ -5,28 +5,28 @@ interface ListRolesQuery {
   page: number
   limit: number
   search?: string
-  status?: number
+  idStatus?: number
 }
 
 interface CreateRoleInput {
   name: string
-  status?: number
+  idStatus?: number
 }
 
 interface UpdateRoleInput {
   name?: string
-  status?: number
+  idStatus?: number
 }
 
 export async function listRolesService(query: ListRolesQuery, companyId: number) {
-  const { page, limit, search, status } = query
+  const { page, limit, search, idStatus } = query
   const skip = (page - 1) * limit
 
   const where = {
     companyId,
     deletedAt: null,
     ...(search && { name: { contains: search, mode: 'insensitive' as const } }),
-    ...(status !== undefined && { status }),
+    ...(idStatus !== undefined && { idStatus }),
   }
 
   const [roles, total] = await Promise.all([
@@ -82,10 +82,10 @@ export async function createRoleService(
   const role = deleted
     ? await prisma.role.update({
         where: { id: deleted.id },
-        data: { name: data.name, status: data.status ?? 1, deletedAt: null },
+        data: { name: data.name, idStatus: data.idStatus ?? 1, deletedAt: null },
       })
     : await prisma.role.create({
-        data: { name: data.name, status: data.status ?? 1, companyId },
+        data: { name: data.name, idStatus: data.idStatus ?? 1, companyId },
       })
 
   const [userName, companyName] = await Promise.all([getActorName(actor.userId), getCompanyName(companyId)])
@@ -133,7 +133,7 @@ export async function updateRoleService(
   const nameKey = `Nome do setor "${role.name}"`
   const statusKey = `Status do setor "${role.name}"`
   if (data.name && data.name !== role.name) { prev[nameKey] = role.name; changed[nameKey] = data.name }
-  if (data.status !== undefined && data.status !== role.status) { prev[statusKey] = role.status; changed[statusKey] = data.status }
+  if (data.idStatus !== undefined && data.idStatus !== role.idStatus) { prev[statusKey] = role.idStatus; changed[statusKey] = data.idStatus }
 
   if (Object.keys(changed).length > 0) {
     const [userName, companyName] = await Promise.all([getActorName(actor.userId), getCompanyName(companyId)])
@@ -172,7 +172,7 @@ export async function deleteRoleService(id: number, companyId: number, actor: { 
 
   await prisma.role.update({
     where: { id },
-    data: { deletedAt: new Date(), status: 0 },
+    data: { deletedAt: new Date(), idStatus: 0 },
   })
 
   const [userName, companyName] = await Promise.all([getActorName(actor.userId), getCompanyName(companyId)])

@@ -58,14 +58,19 @@ export function Select({
   }, [])
 
   // Close on scroll or resize to avoid stale positioning
+  // but ignore scroll events that happen inside the dropdown list itself
   React.useEffect(() => {
     if (!isOpen) return
-    function handleClose() { setIsOpen(false) }
-    window.addEventListener('scroll', handleClose, true)
-    window.addEventListener('resize', handleClose)
+    function handleScroll(e: Event) {
+      if ((e.target as Element)?.closest('[data-select-dropdown]')) return
+      setIsOpen(false)
+    }
+    function handleResize() { setIsOpen(false) }
+    window.addEventListener('scroll', handleScroll, true)
+    window.addEventListener('resize', handleResize)
     return () => {
-      window.removeEventListener('scroll', handleClose, true)
-      window.removeEventListener('resize', handleClose)
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleResize)
     }
   }, [isOpen])
 

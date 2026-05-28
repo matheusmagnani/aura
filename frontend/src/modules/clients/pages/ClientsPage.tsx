@@ -245,7 +245,7 @@ export function ClientsPage() {
     try {
       await Promise.all(
         selected.map(id =>
-          clientService.update(id, { statusId: bulkStatusId ? Number(bulkStatusId) : null })
+          clientService.update(id, { idStatus: bulkStatusId ? Number(bulkStatusId) : null })
         )
       )
       addToast('Status atualizado!', 'success')
@@ -335,22 +335,28 @@ export function ClientsPage() {
               </span>
             </div>
           ))}
-          {filterStatusIds.map(sid => (
-            <div key={sid} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Status</span>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '4px 10px', borderRadius: 999, fontSize: 12,
-                background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)',
-                color: 'var(--color-app-secondary)',
-              }}>
-                {statusesData.find(s => String(s.id) === sid)?.name ?? 'Status'}
-                <button onClick={() => setFilterStatusIds(filterStatusIds.filter(v => v !== sid))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
-                  <X size={11} weight="bold" />
-                </button>
-              </span>
-            </div>
-          ))}
+          {filterStatusIds.map(sid => {
+            const isNoStatus = sid === '0'
+            const status = statusesData.find(s => String(s.id) === sid)
+            const color = isNoStatus ? '#8A919C' : (status?.color ?? 'var(--color-app-secondary)')
+            const label = isNoStatus ? 'Sem status' : (status?.name ?? 'Status')
+            return (
+              <div key={sid} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Status</span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '4px 10px', borderRadius: 999, fontSize: 12,
+                  background: `${color}22`, border: `1px solid ${color}55`,
+                  color,
+                }}>
+                  {label}
+                  <button onClick={() => setFilterStatusIds(filterStatusIds.filter(v => v !== sid))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
+                    <X size={11} weight="bold" />
+                  </button>
+                </span>
+              </div>
+            )
+          })}
           {filterDateRange.from && filterDateRange.to && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Período de cadastro</span>
@@ -422,7 +428,10 @@ export function ClientsPage() {
             label="Status"
             values={filterStatusIds}
             onChange={setFilterStatusIds}
-            options={statusesData.map(s => ({ value: String(s.id), label: s.name, color: s.color }))}
+            options={[
+              { value: '0', label: 'Sem status', color: '#8A919C' },
+              ...statusesData.map(s => ({ value: String(s.id), label: s.name, color: s.color })),
+            ]}
             placeholder="Todos os status"
             noCheckbox
           />

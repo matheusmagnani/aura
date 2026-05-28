@@ -30,8 +30,8 @@ export async function listProposalsController(request: FastifyRequest, reply: Fa
     search: z.string().optional(),
     clientId: z.coerce.number().optional(),
     collaboratorId: z.coerce.number().optional(),
-    status: z.string().optional(),
-    statuses: z.string().optional().transform(v => v ? v.split(',') : undefined),
+    idStatus: z.coerce.number().optional(),
+    statuses: z.string().optional().transform(v => v ? v.split(',').map(Number) : undefined),
     dateFrom: z.string().optional(),
     dateTo: z.string().optional(),
     statusChangedFrom: z.string().optional(),
@@ -63,7 +63,7 @@ export async function createProposalController(request: FastifyRequest, reply: F
     value: z.number({ required_error: 'Valor é obrigatório' }).positive('Valor deve ser positivo'),
     description: z.string().nullable().optional(),
     clientObservation: z.string().nullable().optional(),
-    status: z.enum(['pending', 'sent', 'accepted', 'refused']).default('pending'),
+    idStatus: z.number().int().min(1).max(4).optional(),
     clientId: z.number({ required_error: 'Cliente é obrigatório' }).int().positive('Cliente é obrigatório'),
     collaboratorId: z.number().nullable().optional(),
   })
@@ -87,7 +87,7 @@ export async function updateProposalController(request: FastifyRequest, reply: F
     value: z.number().positive().optional(),
     description: z.string().nullable().optional(),
     clientObservation: z.string().nullable().optional(),
-    status: z.enum(['pending', 'sent', 'accepted', 'refused']).optional(),
+    idStatus: z.number().int().min(1).max(4).optional(),
     collaboratorId: z.number().nullable().optional(),
   })
 

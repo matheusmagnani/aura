@@ -56,7 +56,7 @@ model User {
 model Role {
   id        Int          @id @default(autoincrement())
   name      String
-  status    Int          @default(1)
+  idStatus  Int          @default(1)
   companyId Int
   company   Company      @relation(fields: [companyId], references: [id])
   users     User[]
@@ -86,8 +86,8 @@ model Client {
   company           Company       @relation(fields: [companyId], references: [id])
   userId            Int?
   user              User?         @relation(fields: [userId], references: [id])
-  statusId          Int?
-  clientStatus      ClientStatus? @relation(fields: [statusId], references: [id])
+  idStatus          Int?
+  clientStatus      ClientStatus? @relation(fields: [idStatus], references: [id])
   appointments      Appointment[]
   proposals         Proposal[]
   deletedAt         DateTime?
@@ -148,6 +148,8 @@ model Appointment {
   client         Client?   @relation(fields: [clientId], references: [id])
   collaboratorId Int?
   collaborator   User?     @relation("AppointmentCollaborator", fields: [collaboratorId], references: [id])
+  idStatus        Int       @default(1)
+  statusChangedAt DateTime?
   deletedAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -158,7 +160,7 @@ model Proposal {
   value             Decimal
   description       String?
   clientObservation String?
-  status            String    @default("pending")
+  idStatus          Int       @default(1)
   statusChangedAt   DateTime?
   companyId         Int
   company           Company   @relation(fields: [companyId], references: [id])

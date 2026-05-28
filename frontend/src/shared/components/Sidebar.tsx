@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ChartPieSlice, CalendarBlank, Users, UsersThree, Gear, ClockCounterClockwise, AlignLeft, AlignTopSimple, FileText, type Icon, type IconWeight } from '@phosphor-icons/react'
+import { House, CalendarBlank, Users, UsersThree, Gear, ClockCounterClockwise, AlignLeft, AlignTopSimple, FileText, type Icon, type IconWeight } from '@phosphor-icons/react'
 import { Link, useLocation } from 'react-router-dom'
 import logoImg from '../../assets/logo.png'
 import { useMyPermissions, PATH_TO_MODULE } from '../hooks/useMyPermissions'
@@ -11,7 +11,7 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { label: 'Dashboard', icon: ChartPieSlice, path: '/dashboard' },
+  { label: 'Home', icon: House, path: '/dashboard' },
   { label: 'Clientes', icon: UsersThree, path: '/clients' },
   { label: 'Agenda', icon: CalendarBlank, path: '/schedule' },
   { label: 'Propostas', icon: FileText, path: '/proposals' },
@@ -122,7 +122,7 @@ export function Sidebar() {
         <span
           className={`text-xs text-app-secondary/50 font-light transition-all duration-500 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}
         >
-          v1.0.0
+          v{__APP_VERSION__}
         </span>
       </div>
     </div>

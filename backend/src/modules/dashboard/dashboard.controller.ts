@@ -109,7 +109,7 @@ export async function dashboardProposalsController(request: FastifyRequest, repl
     search: z.string().optional(),
     clientId: z.coerce.number().optional(),
     collaboratorId: z.coerce.number().optional(),
-    statuses: z.string().optional().transform(v => v ? v.split(',') : undefined),
+    statuses: z.string().optional().transform(v => v ? v.split(',').map(Number) : undefined),
     dateFrom: z.string().optional(),
     dateTo: z.string().optional(),
     statusChangedFrom: z.string().optional(),
@@ -201,6 +201,7 @@ export async function dashboardUpdateAppointmentController(request: FastifyReque
     description: z.string().nullable().optional(),
     startAt: z.string().optional(),
     collaboratorId: z.number().nullable().optional(),
+    idStatus: z.number().int().min(1).max(3).optional(),
   }).parse(request.body)
 
   const { companyId, userId } = request.user as { companyId: number; userId: number }
@@ -249,7 +250,7 @@ export async function dashboardCreateClientController(request: FastifyRequest, r
     city: z.string().nullable().optional(),
     state: z.string().nullable().optional(),
     zipCode: z.string().nullable().optional(),
-    statusId: z.number().nullable().optional(),
+    idStatus: z.number().nullable().optional(),
     userId: z.number().nullable().optional(),
   }).parse(request.body)
 
@@ -274,7 +275,7 @@ export async function dashboardUpdateClientController(request: FastifyRequest, r
     city: z.string().nullable().optional(),
     state: z.string().nullable().optional(),
     zipCode: z.string().nullable().optional(),
-    statusId: z.number().nullable().optional(),
+    idStatus: z.number().nullable().optional(),
     userId: z.number().nullable().optional(),
   }).parse(request.body)
 
@@ -355,7 +356,7 @@ export async function dashboardCreateProposalController(request: FastifyRequest,
     value: z.number({ required_error: 'Valor é obrigatório' }).positive('Valor deve ser positivo'),
     description: z.string().nullable().optional(),
     clientObservation: z.string().nullable().optional(),
-    status: z.enum(['pending', 'sent', 'accepted', 'refused']).default('pending'),
+    idStatus: z.number().int().min(1).max(4).optional(),
     clientId: z.number({ required_error: 'Cliente é obrigatório' }).int().positive(),
     collaboratorId: z.number().nullable().optional(),
   }).parse(request.body)
@@ -372,7 +373,7 @@ export async function dashboardUpdateProposalController(request: FastifyRequest,
     value: z.number().positive().optional(),
     description: z.string().nullable().optional(),
     clientObservation: z.string().nullable().optional(),
-    status: z.enum(['pending', 'sent', 'accepted', 'refused']).optional(),
+    idStatus: z.number().int().min(1).max(4).optional(),
     collaboratorId: z.number().nullable().optional(),
   }).parse(request.body)
 
@@ -404,4 +405,20 @@ export async function dashboardDeleteProposalController(request: FastifyRequest,
   const userName = await getActorName(userId)
   await deleteProposalService(id, companyId, { userId, userName, companyId })
   return reply.status(204).send()
+}
+
+export async function dashboardNoStatusClientsCountController(request: FastifyRequest, reply: FastifyReply) {
+  const { companyId, userId } = request.user as { companyId: number; userId: number }
+  const admin = await isAdmin(userId)
+
+  const count = await prisma.client.count({
+    where: {
+      companyId,
+      deletedAt: null,
+      idStatus: null,
+      ...(admin ? {} : { userId }),
+    },
+  })
+
+  return reply.send({ count })
 }

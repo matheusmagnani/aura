@@ -5,6 +5,8 @@ export interface Appointment {
   title: string
   description: string | null
   startAt: string
+  idStatus: number
+  statusChangedAt: string | null
   companyId: number
   clientId: number | null
   client: { id: number; name: string } | null
@@ -19,6 +21,7 @@ export interface AppointmentPayload {
   title: string
   description?: string | null
   startAt: string
+  idStatus?: number
   clientId?: number | null
   collaboratorId?: number | null
 }

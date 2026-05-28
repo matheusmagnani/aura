@@ -19,6 +19,7 @@ import {
   dashboardCreateProposalController,
   dashboardUpdateProposalController,
   dashboardDeleteProposalController,
+  dashboardNoStatusClientsCountController,
 } from './dashboard.controller'
 
 export async function dashboardRoutes(app: FastifyInstance) {
@@ -34,6 +35,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
   app.get('/clients', dashboardClientsController)
   app.get('/client-stats', dashboardClientStatsController)
+  app.get('/clients-no-status-count', dashboardNoStatusClientsCountController)
   app.get('/clients/:id', dashboardGetClientByIdController)
   app.get('/client-logs/:entityId', dashboardClientLogsController)
   app.post('/clients', dashboardCreateClientController)

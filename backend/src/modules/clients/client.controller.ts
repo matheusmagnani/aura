@@ -98,7 +98,7 @@ export async function createClientController(request: FastifyRequest, reply: Fas
     city: z.string().nullable().optional(),
     state: z.string().nullable().optional(),
     zipCode: z.string().nullable().optional(),
-    statusId: z.number().nullable().optional(),
+    idStatus: z.number().nullable().optional(),
     userId: z.number().nullable().optional(),
   })
 
@@ -130,7 +130,7 @@ export async function updateClientController(request: FastifyRequest, reply: Fas
     city: z.string().nullable().optional(),
     state: z.string().nullable().optional(),
     zipCode: z.string().nullable().optional(),
-    statusId: z.number().nullable().optional(),
+    idStatus: z.number().nullable().optional(),
     userId: z.number().nullable().optional(),
   })
 

@@ -44,6 +44,7 @@ export async function createAppointmentController(request: FastifyRequest, reply
     startAt: z.string().min(1, 'Data/hora é obrigatória'),
     clientId: z.number({ required_error: 'Cliente é obrigatório' }).int().positive('Cliente é obrigatório'),
     collaboratorId: z.number().nullable().optional(),
+    idStatus: z.number().int().min(1).max(3).optional(),
   })
 
   const data = schema.parse(request.body)
@@ -66,6 +67,7 @@ export async function updateAppointmentController(request: FastifyRequest, reply
     description: z.string().nullable().optional(),
     startAt: z.string().optional(),
     collaboratorId: z.number().nullable().optional(),
+    idStatus: z.number().int().min(1).max(3).optional(),
   })
 
   const data = schema.parse(request.body)

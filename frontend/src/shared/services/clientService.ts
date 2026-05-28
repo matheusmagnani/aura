@@ -17,7 +17,7 @@ export interface Client {
   companyId: number
   userId: number | null
   user: { id: number; name: string; avatar: string | null } | null
-  statusId: number | null
+  idStatus: number | null
   clientStatus: { id: number; name: string; color: string } | null
   createdAt: string
   updatedAt: string
@@ -41,7 +41,7 @@ export interface ClientPayload {
   city?: string | null
   state?: string | null
   zipCode?: string | null
-  statusId?: number | null
+  idStatus?: number | null
   userId?: number | null
 }
 

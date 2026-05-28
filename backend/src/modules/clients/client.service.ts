@@ -38,7 +38,7 @@ interface ClientInput {
   city?: string | null
   state?: string | null
   zipCode?: string | null
-  statusId?: number | null
+  idStatus?: number | null
   userId?: number | null
 }
 
@@ -62,11 +62,24 @@ export async function listClientsService(query: ListClientsQuery, companyId: num
         ]
     : undefined
 
+  const andClauses: any[] = []
+  if (searchOR) andClauses.push({ OR: searchOR })
+  if (statusIds && statusIds.length > 0) {
+    const realIds = statusIds.filter(id => id !== 0)
+    const hasNull = statusIds.includes(0)
+    if (hasNull && realIds.length > 0) {
+      andClauses.push({ OR: [{ idStatus: { in: realIds } }, { idStatus: null }] })
+    } else if (hasNull) {
+      andClauses.push({ idStatus: null })
+    } else {
+      andClauses.push({ idStatus: { in: realIds } })
+    }
+  }
+
   const where = {
     companyId,
     deletedAt: null,
-    ...(searchOR && { OR: searchOR }),
-    ...(statusIds && statusIds.length > 0 && { statusId: { in: statusIds } }),
+    ...(andClauses.length > 0 && { AND: andClauses }),
     ...(userIds && userIds.length > 0 && { userId: { in: userIds } }),
     ...((dateFrom || dateTo) && {
       createdAt: {
@@ -150,12 +163,12 @@ export async function getClientStatusStatsService(
 
   const [grouped, statuses] = await Promise.all([
     prisma.client.groupBy({
-      by: ['statusId'],
+      by: ['idStatus'],
       where,
       _count: { id: true },
     }),
     prisma.clientStatus.findMany({
-      where: { companyId },
+      where: { companyId, deletedAt: null },
       select: { id: true, name: true, color: true },
       orderBy: { name: 'asc' },
     }),
@@ -165,7 +178,7 @@ export async function getClientStatusStatsService(
     id: status.id,
     name: status.name,
     color: status.color,
-    count: grouped.find(g => g.statusId === status.id)?._count.id ?? 0,
+    count: grouped.find(g => g.idStatus === status.id)?._count.id ?? 0,
   }))
 }
 
@@ -240,7 +253,7 @@ export async function updateClientService(id: number, data: Partial<ClientInput>
     const prevVal = NUMERIC_FIELDS.includes(k) ? strip((client as any)[k]) : (client as any)[k]
     const nextVal = (strippedData as any)[k]
 
-    if (k === 'statusId') {
+    if (k === 'idStatus') {
       const [prevStatus, nextStatus] = await Promise.all([
         prevVal != null ? prisma.clientStatus.findUnique({ where: { id: prevVal }, select: { name: true } }) : null,
         nextVal != null ? prisma.clientStatus.findUnique({ where: { id: nextVal }, select: { name: true } }) : null,

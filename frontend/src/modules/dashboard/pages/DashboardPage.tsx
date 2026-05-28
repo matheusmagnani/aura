@@ -6,7 +6,7 @@ import {
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  CalendarBlank, CaretLeft, CaretRight, Plus, Funnel, X, UsersThree, FileText, MagnifyingGlass, ChartPieSlice, Rows,
+  CalendarBlank, CaretLeft, CaretRight, Plus, Funnel, X, UsersThree, FileText, MagnifyingGlass, Rows,
 } from '@phosphor-icons/react'
 import { useNavigate } from 'react-router-dom'
 import type { Appointment } from '../../../shared/services/scheduleService'
@@ -23,6 +23,7 @@ import { ProposalModal } from '../../proposals/components/ProposalModal'
 import { ProposalDetailModal } from '../../proposals/components/ProposalDetailModal'
 import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
 import { PageHeader } from '../../../shared/components/PageHeader'
+import { GreetingHero } from '../../../shared/components/GreetingHero'
 import { Modal } from '../../../shared/components/Modal'
 import { Select } from '../../../shared/components/ui/Select'
 import { MultiFilterSelect } from '../../../shared/components/MultiFilterSelect'
@@ -31,6 +32,9 @@ import { Pagination } from '../../../shared/components/Pagination'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { useToast } from '../../../shared/hooks/useToast'
 import { formatCurrency, formatPhone } from '../../../shared/utils/formatters'
+import { SummaryChipCarousel } from '../../../shared/components/SummaryChipCarousel'
+import type { ChipData } from '../../../shared/components/SummaryChipCarousel'
+import { DayStrip, buildWeek } from '../../../shared/components/DayStrip'
 
 // ── helpers de agenda ─────────────────────────────────────────────────────────
 
@@ -76,7 +80,7 @@ const btnNav: React.CSSProperties = {
 
 // ── status badge de proposta ──────────────────────────────────────────────────
 
-function ProposalBadge({ status }: { status: string }) {
+function ProposalBadge({ status }: { status: number }) {
   const color = PROPOSAL_COLORS[status] ?? '#8A919C'
   return (
     <span style={{
@@ -86,7 +90,7 @@ function ProposalBadge({ status }: { status: string }) {
       border: `1px solid ${color}55`, background: `${color}22`,
     }}>
       <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
-      {PROPOSAL_LABELS[status] ?? status}
+      {PROPOSAL_LABELS[status] ?? String(status)}
     </span>
   )
 }
@@ -147,6 +151,7 @@ export function DashboardPage() {
   const [detailAppointment, setDetailAppointment] = useState<Appointment | undefined>()
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [filterCollaboratorId, setFilterCollaboratorId] = useState<string>('')
+  const [todayDate] = useState(() => startOfDay(new Date()))
 
   const { data: collaboratorsData } = useQuery({
     queryKey: ['dashboard-collaborators-select'],
@@ -167,6 +172,25 @@ export function DashboardPage() {
     staleTime: 1000 * 30,
     enabled: !!userId,
   })
+
+  const { data: todayAppointments = [] } = useQuery({
+    queryKey: ['dashboard-today-count', todayDate.toISOString(), scheduleCollaboratorId],
+    queryFn: () => dashboardService.appointments({
+      dateFrom: todayDate.toISOString(),
+      dateTo: endOfDay(todayDate).toISOString(),
+      collaboratorId: scheduleCollaboratorId,
+    }),
+    staleTime: 1000 * 60,
+    enabled: !!userId,
+  })
+
+  const { data: noStatusClientsData } = useQuery({
+    queryKey: ['dashboard-no-status-clients'],
+    queryFn: () => dashboardService.noStatusClientsCount(),
+    staleTime: 1000 * 60,
+    enabled: !!userId,
+  })
+
 
   function openCreateSchedule(date?: Date) {
     if (!canCreateSchedule) return
@@ -189,6 +213,17 @@ export function DashboardPage() {
 
   function handleScheduleSaved() {
     queryClient.invalidateQueries({ queryKey: ['dashboard-appointments'] })
+  }
+
+  function handleAppointmentStatusUpdated(updated: Appointment) {
+    queryClient.setQueryData<Appointment[]>(scheduleQK, (old = []) =>
+      old.map(a => a.id === updated.id ? updated : a)
+    )
+    queryClient.setQueryData<Appointment[]>(
+      ['dashboard-today-count', todayDate.toISOString(), scheduleCollaboratorId],
+      (old = []) => old.map(a => a.id === updated.id ? updated : a)
+    )
+    setDetailAppointment(updated)
   }
 
   async function handleReschedule(appointmentId: number, newStartAt: string) {
@@ -289,6 +324,7 @@ export function DashboardPage() {
   function handleClientSaved() {
     queryClient.invalidateQueries({ queryKey: ['dashboard-clients'] })
     queryClient.invalidateQueries({ queryKey: ['dashboard-client-status-stats'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard-no-status-clients'] })
   }
 
   // ── Propostas ─────────────────────────────────────────────────────────────
@@ -327,7 +363,7 @@ export function DashboardPage() {
       page: proposalPage,
       limit: 10,
       search: proposalSearch || undefined,
-      statuses: proposalFilterStatuses.length > 0 ? proposalFilterStatuses : undefined,
+      statuses: proposalFilterStatuses.length > 0 ? proposalFilterStatuses.map(Number) : undefined,
       dateFrom: proposalFilterDateRange.from ? startOfDay(proposalFilterDateRange.from).toISOString() : undefined,
       dateTo: proposalFilterDateRange.to ? endOfDay(proposalFilterDateRange.to).toISOString() : proposalFilterDateRange.from ? endOfDay(proposalFilterDateRange.from).toISOString() : undefined,
       statusChangedFrom: proposalFilterStatusChangedRange.from ? startOfDay(proposalFilterStatusChangedRange.from).toISOString() : undefined,
@@ -353,43 +389,85 @@ export function DashboardPage() {
     setProposalModalOpen(true)
   }
 
+  // ── chips de resumo do dia ────────────────────────────────────────────────
+
+  const todayLabel = (() => {
+    const raw = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
+    return raw.charAt(0).toUpperCase() + raw.slice(1)
+  })()
+
+  const pendingTodayCount = todayAppointments.filter(a => a.idStatus === 1).length
+  const noStatusCount = noStatusClientsData?.count ?? 0
+  const pendingProposalStat = proposalStatusStats.find(s => s.idStatus === 1)
+  const pendingProposalCount = pendingProposalStat?.count ?? 0
+  const pendingProposalValue = Number(pendingProposalStat?.totalValue ?? 0)
+
+  const chips: ChipData[] = [
+    {
+      icon: CalendarBlank,
+      accent: 'gold',
+      date: todayLabel,
+      summary: (
+        <>
+          <strong style={{ color: '#fff' }}>
+            {pendingTodayCount} compromisso{pendingTodayCount !== 1 ? 's' : ''} pendente{pendingTodayCount !== 1 ? 's' : ''}
+          </strong>
+          {' hoje'}
+        </>
+      ),
+    },
+    {
+      icon: UsersThree,
+      accent: 'blue',
+      date: 'Clientes',
+      summary: (
+        <>
+          <strong style={{ color: '#fff' }}>
+            {noStatusCount} cliente{noStatusCount !== 1 ? 's' : ''}
+          </strong>
+          {' sem atendimento'}
+        </>
+      ),
+    },
+    {
+      icon: FileText,
+      accent: 'success',
+      date: formatCurrency(pendingProposalValue),
+      summary: (
+        <>
+          <strong style={{ color: '#fff' }}>
+            {pendingProposalCount} proposta{pendingProposalCount !== 1 ? 's' : ''} pendente{pendingProposalCount !== 1 ? 's' : ''}
+          </strong>
+        </>
+      ),
+    },
+  ]
+
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col pb-8">
 
-      {/* Global Dashboard Header */}
-      <PageHeader title="Dashboard" icon={ChartPieSlice} />
+      <GreetingHero />
+
+      {/* Chips de resumo do dia */}
+      <div style={{ marginBottom: 28 }}>
+        <SummaryChipCarousel chips={chips} />
+      </div>
 
       {/* Three boxes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
 
         {/* ─── Box: Agenda ─── */}
-        <div className="flex flex-col md:col-span-2 md:h-[580px]" style={boxStyle}>
+        <div className="flex flex-col md:col-span-3 md:h-[580px]" style={boxStyle}>
           <div style={boxHeaderStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            {/* Linha 1: título | toggle + filtro + criar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <CalendarBlank size={17} className="text-app-secondary" />
                 <span style={{ fontWeight: 600, fontSize: 14, color: '#fff' }}>Agenda</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {filterBtn}
-                {createScheduleBtn}
-              </div>
-            </div>
-            <div className="flex flex-col items-center gap-2 md:flex-row md:justify-between">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <button onClick={() => handleNavigate('prev')} style={btnNav}>
-                  <CaretLeft size={11} color="var(--color-app-gray)" />
-                </button>
-                <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.7)', textTransform: 'capitalize', minWidth: 90, textAlign: 'center' }}>
-                  {rangeLabel}
-                </span>
-                <button onClick={() => handleNavigate('next')} style={btnNav}>
-                  <CaretRight size={11} color="var(--color-app-gray)" />
-                </button>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8, overflow: 'hidden' }}>
                   {VIEW_BUTTONS.map(btn => (
                     <button
@@ -415,7 +493,7 @@ export function DashboardPage() {
                       key={mode}
                       onClick={() => setAgendaDisplayMode(mode)}
                       style={{
-                        padding: '0 8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        padding: '0 8px', height: 28, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                         background: agendaDisplayMode === mode ? 'var(--color-app-accent)' : 'transparent',
                         color: agendaDisplayMode === mode ? 'white' : 'var(--color-app-gray)',
                         transition: 'background 0.2s',
@@ -425,7 +503,37 @@ export function DashboardPage() {
                     </button>
                   ))}
                 </div>
+                {filterBtn}
+                <div style={{ marginLeft: 8 }}>{createScheduleBtn}</div>
               </div>
+            </div>
+            {/* Linha 2: nav mobile simples */}
+            <div className="flex md:hidden items-center justify-center" style={{ padding: '10px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <button onClick={() => handleNavigate('prev')} style={btnNav}>
+                  <CaretLeft size={11} color="var(--color-app-gray)" />
+                </button>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.7)', textTransform: 'capitalize', minWidth: 90, textAlign: 'center' }}>
+                  {rangeLabel}
+                </span>
+                <button onClick={() => handleNavigate('next')} style={btnNav}>
+                  <CaretRight size={11} color="var(--color-app-gray)" />
+                </button>
+              </div>
+            </div>
+            {/* Linha 2: DayStrip desktop — oculto no modo calendário */}
+            <div className="hidden md:block" style={{ marginTop: 6, display: agendaDisplayMode === 'grid' ? 'none' : undefined }}>
+              <DayStrip
+                days={buildWeek(agendaDate)}
+                activeIndex={dashView === 'week' ? [0, 1, 2, 3, 4, 5, 6] : agendaDate.getDay()}
+                onSelect={(i) => {
+                  const week = buildWeek(agendaDate)
+                  setAgendaDate(startOfDay(week[i]))
+                  setDashView('day')
+                }}
+                onPrev={() => setAgendaDate(d => startOfDay(subDays(d, 7)))}
+                onNext={() => setAgendaDate(d => startOfDay(addDays(d, 7)))}
+              />
             </div>
             {isAdmin && filterActive && (
               <div style={{ marginTop: 8 }}>
@@ -449,6 +557,7 @@ export function DashboardPage() {
                 onReschedule={canEditSchedule ? handleReschedule : undefined}
                 canEdit={canEditSchedule}
                 forceMode={agendaDisplayMode}
+                hideDateHeader
               />
             )}
             {dashView === 'week' && (
@@ -466,7 +575,7 @@ export function DashboardPage() {
         </div>
 
         {/* ─── Box: Clientes ─── */}
-        <div className="flex flex-col h-[560px] md:h-[580px]" style={boxStyle}>
+        <div className="flex flex-col h-[560px] md:col-span-2 md:h-[580px]" style={boxStyle}>
           <div style={boxHeaderStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -502,13 +611,16 @@ export function DashboardPage() {
             {clientFilterActive && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                 {clientFilterStatusIds.map(sid => {
+                  const isNoStatus = sid === '0'
                   const s = clientStatusesData.find(x => String(x.id) === sid)
-                  return s ? (
-                    <span key={sid} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, fontSize: 11, background: `${s.color}22`, border: `1px solid ${s.color}55`, color: s.color }}>
-                      {s.name}
+                  const color = isNoStatus ? '#8A919C' : (s?.color ?? '#8A919C')
+                  const label = isNoStatus ? 'Sem status' : (s?.name ?? 'Status')
+                  return (
+                    <span key={sid} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, fontSize: 11, background: `${color}22`, border: `1px solid ${color}55`, color }}>
+                      {label}
                       <button onClick={() => setClientFilterStatusIds(clientFilterStatusIds.filter(x => x !== sid))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={9} weight="bold" /></button>
                     </span>
-                  ) : null
+                  )
                 })}
                 {clientFilterDateRange.from && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, fontSize: 11, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
@@ -594,7 +706,7 @@ export function DashboardPage() {
         </div>
 
         {/* ─── Box: Propostas ─── */}
-        <div className="flex flex-col h-[560px] md:col-span-3 md:h-[460px]" style={boxStyle}>
+        <div className="flex flex-col h-[560px] md:col-span-5 md:h-[460px]" style={boxStyle}>
           <div style={boxHeaderStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -630,8 +742,8 @@ export function DashboardPage() {
             {proposalFilterActive && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                 {proposalFilterStatuses.map(s => (
-                  <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, fontSize: 11, background: `${PROPOSAL_COLORS[s]}22`, border: `1px solid ${PROPOSAL_COLORS[s]}55`, color: PROPOSAL_COLORS[s] }}>
-                    {PROPOSAL_LABELS[s]}
+                  <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, fontSize: 11, background: `${PROPOSAL_COLORS[Number(s)]}22`, border: `1px solid ${PROPOSAL_COLORS[Number(s)]}55`, color: PROPOSAL_COLORS[Number(s)] }}>
+                    {PROPOSAL_LABELS[Number(s)]}
                     <button onClick={() => setProposalFilterStatuses(proposalFilterStatuses.filter(x => x !== s))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={9} weight="bold" /></button>
                   </span>
                 ))}
@@ -654,7 +766,7 @@ export function DashboardPage() {
           {proposalStatusStats.length > 0 && (
             <div className="md:hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, padding: '10px 16px' }}>
               <StatisticsStatusCards
-                items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = proposalStatusStats.find(x => x.status === o); return s ? [{ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
+                items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = proposalStatusStats.find(x => x.idStatus === o); return s ? [{ id: String(s.idStatus), label: PROPOSAL_LABELS[s.idStatus], color: PROPOSAL_COLORS[s.idStatus], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
                 activeIds={proposalFilterStatuses}
                 onToggle={(s) => {
                   setProposalFilterStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
@@ -670,7 +782,7 @@ export function DashboardPage() {
             {/* Painel de status — apenas desktop */}
             <div className="hidden md:flex" style={{ width: 250, flexShrink: 0, flexDirection: 'column', justifyContent: 'center', padding: '14px', borderRight: '1px solid rgba(255,255,255,0.06)', gap: 8 }}>
               <StatisticsStatusCards
-                items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = proposalStatusStats.find(x => x.status === o); return s ? [{ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
+                items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = proposalStatusStats.find(x => x.idStatus === o); return s ? [{ id: String(s.idStatus), label: PROPOSAL_LABELS[s.idStatus], color: PROPOSAL_COLORS[s.idStatus], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
                 activeIds={proposalFilterStatuses}
                 onToggle={(s) => {
                   setProposalFilterStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
@@ -707,7 +819,7 @@ export function DashboardPage() {
                       {proposal.client.name}
                     </p>
                   </div>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: PROPOSAL_COLORS[proposal.status] ?? 'var(--color-app-gray)' }} />
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: PROPOSAL_COLORS[proposal.idStatus] ?? 'var(--color-app-gray)' }} />
                 </div>
 
                 {/* Desktop */}
@@ -730,7 +842,7 @@ export function DashboardPage() {
                     </p>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <ProposalBadge status={proposal.status} />
+                    <ProposalBadge status={proposal.idStatus} />
                   </div>
                 </div>
 
@@ -755,7 +867,10 @@ export function DashboardPage() {
             label="Status"
             values={clientFilterStatusIds}
             onChange={v => { setClientFilterStatusIds(v); setClientPage(1) }}
-            options={clientStatusesData.map(s => ({ value: String(s.id), label: s.name, color: s.color }))}
+            options={[
+              { value: '0', label: 'Sem status', color: '#8A919C' },
+              ...clientStatusesData.map(s => ({ value: String(s.id), label: s.name, color: s.color })),
+            ]}
             placeholder="Todos os status"
             noCheckbox
           />
@@ -785,7 +900,7 @@ export function DashboardPage() {
             label="Status"
             values={proposalFilterStatuses}
             onChange={v => { setProposalFilterStatuses(v); setProposalPage(1) }}
-            options={PROPOSAL_STATUS_ORDER.map(s => ({ value: s, label: PROPOSAL_LABELS[s], color: PROPOSAL_COLORS[s] }))}
+            options={PROPOSAL_STATUS_ORDER.map(s => ({ value: String(s), label: PROPOSAL_LABELS[s], color: PROPOSAL_COLORS[s] }))}
             placeholder="Todos os status"
             noCheckbox
           />
@@ -844,9 +959,11 @@ export function DashboardPage() {
           onClose={() => setDetailScheduleOpen(false)}
           onEdit={openEditFromDetail}
           onDeleted={handleScheduleSaved}
+          onUpdated={handleAppointmentStatusUpdated}
           canEdit={canEditSchedule}
           canDelete={canDeleteSchedule}
           deleteFn={dashboardService.deleteAppointment}
+          updateFn={dashboardService.updateAppointment}
         />
       )}
 

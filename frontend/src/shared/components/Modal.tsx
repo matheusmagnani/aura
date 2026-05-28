@@ -19,17 +19,18 @@ export function Modal({ isOpen, onClose, children, title, className }: ModalProp
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ padding: '1rem' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ padding: '1rem', paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn"
         onClick={onClose}
       />
       <div
-        className={cn('relative z-10 rounded-2xl animate-modalIn shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden', className)}
+        className={cn('relative z-10 rounded-2xl animate-modalIn shadow-2xl w-full max-w-md flex flex-col overflow-hidden', className)}
         style={{
           background: 'var(--color-app-primary)',
           border: '1px solid var(--color-app-accent)',
           margin: '0 0.35rem',
+          maxHeight: 'calc(100dvh - 2rem)',
         }}
       >
         {title && (

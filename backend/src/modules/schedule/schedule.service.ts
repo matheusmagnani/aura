@@ -12,6 +12,7 @@ interface AppointmentInput {
   title: string
   description?: string | null
   startAt: string
+  idStatus?: number
   clientId?: number
   collaboratorId?: number | null
 }
@@ -106,6 +107,10 @@ export async function updateAppointmentService(
   if (data.description !== undefined) updateData.description = data.description ?? null
   if (data.startAt !== undefined) updateData.startAt = new Date(data.startAt)
   if (data.collaboratorId !== undefined) updateData.collaboratorId = data.collaboratorId ?? null
+  if (data.idStatus !== undefined && data.idStatus !== (existing as any).idStatus) {
+    updateData.idStatus = data.idStatus
+    updateData.statusChangedAt = new Date()
+  }
 
   const updated = await prisma.appointment.update({
     where: { id },

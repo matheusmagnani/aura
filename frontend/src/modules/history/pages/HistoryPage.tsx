@@ -6,6 +6,7 @@ import { format, startOfDay, endOfDay } from 'date-fns'
 import { DateRangePicker, type DateRange } from '../../../shared/components/DateRangePicker'
 import { logService, type Log } from '../../../shared/services/logService'
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
+import { clientStatusService } from '../../../shared/services/clientStatusService'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { PageHeader } from '../../../shared/components/PageHeader'
 import { Pagination } from '../../../shared/components/Pagination'
@@ -63,6 +64,7 @@ const FIELD_LABELS: Record<string, string> = {
   state: 'UF',
   zipCode: 'CEP',
   status: 'Status',
+  idStatus: 'Status',
   active: 'Status',
   color: 'Cor "status do cliente"',
   tradeName: 'Nome fantasia',
@@ -78,21 +80,38 @@ const FIELD_LABELS: Record<string, string> = {
   clientObservation: 'Observação',
 }
 
-const PROPOSAL_STATUS_LABELS: Record<string, string> = {
+// Labels legados (logs antigos guardavam status como string)
+const PROPOSAL_STATUS_LABELS_LEGACY: Record<string, string> = {
   pending: 'Pendente',
   sent: 'Enviada',
   accepted: 'Aceita',
   refused: 'Recusada',
 }
 
+const PROPOSAL_STATUS_LABELS_NUM: Record<number, string> = {
+  1: 'Pendente', 2: 'Enviada', 3: 'Aceita', 4: 'Recusada',
+}
+
+const APPOINTMENT_STATUS_LABELS_NUM: Record<number, string> = {
+  1: 'Pendente', 2: 'Concluído', 3: 'Cancelado',
+}
+
 const HIDDEN_KEYS = new Set(['statusChangedAt'])
 
-function formatValue(key: string, value: unknown): string {
+function formatValue(key: string, value: unknown, module?: string, clientStatusesMap?: Record<number, string>): string {
   if (value === null || value === undefined || value === '') return ''
   if (typeof value === 'boolean') return value ? 'Ativo' : 'Inativo'
+  if (key === 'idStatus') {
+    const num = Number(value)
+    if (module === 'proposals') return PROPOSAL_STATUS_LABELS_NUM[num] ?? String(num)
+    if (module === 'schedule') return APPOINTMENT_STATUS_LABELS_NUM[num] ?? String(num)
+    if (module === 'clients' && clientStatusesMap) return clientStatusesMap[num] ?? String(num)
+    return num === 1 ? 'Ativo' : num === 0 ? 'Inativo' : String(num)
+  }
+  // compatibilidade com logs antigos que guardavam status como string
   if (key === 'status') {
-    if (typeof value === 'string' && PROPOSAL_STATUS_LABELS[value])
-      return PROPOSAL_STATUS_LABELS[value]
+    if (typeof value === 'string' && PROPOSAL_STATUS_LABELS_LEGACY[value])
+      return PROPOSAL_STATUS_LABELS_LEGACY[value]
   }
   if (value === 1 || value === 0 || value === '1' || value === '0')
     return value === 1 || value === '1' ? 'Ativo' : 'Inativo'
@@ -126,7 +145,7 @@ function formatISODate(value: unknown): string | null {
   })
 }
 
-function ValueDisplay({ fieldKey, value, collaboratorsMap }: { fieldKey: string; value: unknown; collaboratorsMap?: Record<number, string> }) {
+function ValueDisplay({ fieldKey, value, collaboratorsMap, clientStatusesMap, module }: { fieldKey: string; value: unknown; collaboratorsMap?: Record<number, string>; clientStatusesMap?: Record<number, string>; module?: string }) {
   if (fieldKey === 'collaboratorId' && collaboratorsMap) {
     const id = typeof value === 'number' ? value : Number(value)
     return <>{collaboratorsMap[id] ?? (value === null || value === undefined ? '—' : String(value))}</>
@@ -134,7 +153,7 @@ function ValueDisplay({ fieldKey, value, collaboratorsMap }: { fieldKey: string;
   if (fieldKey === 'value') {
     return <>{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</>
   }
-  const text = formatValue(fieldKey, value)
+  const text = formatValue(fieldKey, value, module, clientStatusesMap)
   if (isHexColor(value)) {
     return <span style={{ width: 12, height: 12, borderRadius: '50%', background: value, display: 'inline-block', border: '1px solid rgba(255,255,255,0.2)' }} />
   }
@@ -152,7 +171,7 @@ const MODULE_FIELD_SUFFIX: Record<string, string> = {
   empresa: 'da empresa',
 }
 
-function ChangesTable({ metadata, module, collaboratorsMap }: { metadata: Record<string, unknown>; module?: string; collaboratorsMap?: Record<number, string> }) {
+function ChangesTable({ metadata, module, collaboratorsMap, clientStatusesMap }: { metadata: Record<string, unknown>; module?: string; collaboratorsMap?: Record<number, string>; clientStatusesMap?: Record<number, string> }) {
   const before = metadata.before as Record<string, unknown> | undefined
   const after = metadata.after as Record<string, unknown> | undefined
   if (!before || !after) return null
@@ -182,11 +201,11 @@ function ChangesTable({ metadata, module, collaboratorsMap }: { metadata: Record
             {FIELD_LABELS[k] ?? k}{suffix && FIELD_LABELS[k] && k !== 'startAt' && k !== 'color' ? ` ${suffix}` : ''}
           </span>
           <span key={`before-${k}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
-            <ValueDisplay fieldKey={k} value={before[k]} collaboratorsMap={collaboratorsMap} />
+            <ValueDisplay fieldKey={k} value={before[k]} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} module={module} />
           </span>
           <span key={`arrow-${k}`} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' as const }}>→</span>
           <span key={`after-${k}`} style={{ fontSize: 12, color: 'var(--color-app-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
-            <ValueDisplay fieldKey={k} value={after[k]} collaboratorsMap={collaboratorsMap} />
+            <ValueDisplay fieldKey={k} value={after[k]} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} module={module} />
           </span>
         </>
       ))}
@@ -194,7 +213,7 @@ function ChangesTable({ metadata, module, collaboratorsMap }: { metadata: Record
   )
 }
 
-function LogCard({ log, collaboratorsMap }: { log: Log; collaboratorsMap?: Record<number, string> }) {
+function LogCard({ log, collaboratorsMap, clientStatusesMap }: { log: Log; collaboratorsMap?: Record<number, string>; clientStatusesMap?: Record<number, string> }) {
   const color = ACTION_COLORS[log.action] ?? 'rgba(255,255,255,0.5)'
   const actionLabel = ACTION_LABELS[log.action] ?? log.action
   const moduleLabel = MODULE_LABELS[log.module] ?? log.module
@@ -240,7 +259,7 @@ function LogCard({ log, collaboratorsMap }: { log: Log; collaboratorsMap?: Recor
         {!hasChanges && log.description && (
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{log.description}</span>
         )}
-        {hasChanges && log.metadata ? <ChangesTable metadata={log.metadata as Record<string, unknown>} module={log.module} collaboratorsMap={collaboratorsMap} /> : null}
+        {hasChanges && log.metadata ? <ChangesTable metadata={log.metadata as Record<string, unknown>} module={log.module} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} /> : null}
 
         {/* Cliente + Módulo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -298,12 +317,19 @@ export function HistoryPage() {
     staleTime: 1000 * 60 * 5,
   })
 
+  const { data: clientStatusesData = [] } = useQuery({
+    queryKey: ['client-statuses'],
+    queryFn: clientStatusService.list,
+    staleTime: 1000 * 60 * 5,
+  })
+
   const userOptions = [
     { label: 'Todos os colaboradores', value: '' },
     ...(collaboratorsData ?? []).map(c => ({ label: c.name, value: String(c.id) })),
   ]
 
   const collaboratorsMap = Object.fromEntries((collaboratorsData ?? []).map(c => [c.id, c.name])) as Record<number, string>
+  const clientStatusesMap = Object.fromEntries(clientStatusesData.map(s => [s.id, s.name])) as Record<number, string>
 
   const { data, isLoading } = useQuery({
     queryKey: ['logs', page, search, modules, actions, userIds, dateRange, entityId],
@@ -501,7 +527,7 @@ export function HistoryPage() {
       {!isLoading && logs.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {logs.map((log) => (
-            <LogCard key={log.id} log={log} collaboratorsMap={collaboratorsMap} />
+            <LogCard key={log.id} log={log} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} />
           ))}
         </div>
       )}

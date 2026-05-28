@@ -210,10 +210,9 @@ function DayCell({
               {onSlotClick && (
                 <button
                   onClick={() => { setDayModalOpen(false); onSlotClick(day) }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: 'var(--color-app-accent)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ background: 'var(--color-app-accent)', border: 'none', borderRadius: 7, width: 28, height: 28, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
                   <Plus size={14} weight="bold" />
-                  Novo
                 </button>
               )}
               <button

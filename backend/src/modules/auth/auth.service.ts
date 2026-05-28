@@ -69,7 +69,7 @@ export async function registerService({ companyName, name, email, password, trad
       data: {
         name: 'Administrativo',
         companyId: company.id,
-        status: 1,
+        idStatus: 1,
       },
     })
 

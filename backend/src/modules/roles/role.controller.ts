@@ -12,7 +12,7 @@ import { prisma } from '../../lib/prisma'
 export async function listRolesSelectController(request: FastifyRequest, reply: FastifyReply) {
   const { companyId } = request.user as { companyId: number }
   const data = await prisma.role.findMany({
-    where: { companyId, deletedAt: null, status: 1 },
+    where: { companyId, deletedAt: null, idStatus: 1 },
     select: { id: true, name: true },
     orderBy: { name: 'asc' },
   })
@@ -27,7 +27,7 @@ export async function listRolesController(
     page: z.coerce.number().min(1).default(1),
     limit: z.coerce.number().default(20),
     search: z.string().optional(),
-    status: z.coerce.number().optional(),
+    idStatus: z.coerce.number().optional(),
   })
 
   const query = schema.parse(request.query)
@@ -61,7 +61,7 @@ export async function createRoleController(
 ) {
   const schema = z.object({
     name: z.string().min(1),
-    status: z.number().optional(),
+    idStatus: z.number().optional(),
   })
 
   const data = schema.parse(request.body)
@@ -85,7 +85,7 @@ export async function updateRoleController(
   const { id } = z.object({ id: z.coerce.number() }).parse(request.params)
   const schema = z.object({
     name: z.string().min(1).optional(),
-    status: z.number().optional(),
+    idStatus: z.number().optional(),
   })
 
   const data = schema.parse(request.body)

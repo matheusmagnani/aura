@@ -9,7 +9,7 @@ import { collaboratorsService } from '../../../shared/services/collaboratorsServ
 import { useToast } from '../../../shared/hooks/useToast'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
-const STATUS_OPTIONS = PROPOSAL_STATUS_ORDER.map(s => ({ value: s, label: PROPOSAL_LABELS[s] }))
+const STATUS_OPTIONS = PROPOSAL_STATUS_ORDER.map(s => ({ value: String(s), label: PROPOSAL_LABELS[s] }))
 
 interface ProposalModalProps {
   proposal?: Proposal
@@ -27,7 +27,7 @@ interface FormData {
   value: string
   description: string
   collaboratorId: string
-  status: string
+  idStatus: string
   clientObservation: string
 }
 
@@ -55,7 +55,7 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
     value: initialValue,
     description: proposal?.description ?? '',
     collaboratorId: proposal?.collaboratorId?.toString() ?? (defaultCollaboratorId ? String(defaultCollaboratorId) : ''),
-    status: proposal?.status ?? 'pending',
+    idStatus: proposal?.idStatus != null ? String(proposal.idStatus) : '1',
     clientObservation: proposal?.clientObservation ?? '',
   })
 
@@ -99,7 +99,7 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
       value: parseCurrency(form.value),
       description: form.description.trim() || null,
       clientObservation: form.clientObservation.trim() || null,
-      status: form.status as Proposal['status'],
+      idStatus: form.idStatus ? Number(form.idStatus) : 1,
       collaboratorId: form.collaboratorId ? Number(form.collaboratorId) : null,
       ...(proposal ? {} : { clientId: Number(form.clientId) }),
     }
@@ -225,8 +225,8 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
           )}
           <Select
             label="Status"
-            value={form.status}
-            onChange={(v) => set('status', v)}
+            value={form.idStatus}
+            onChange={(v) => set('idStatus', v)}
             options={STATUS_OPTIONS}
             placeholder="Selecionar status"
           />

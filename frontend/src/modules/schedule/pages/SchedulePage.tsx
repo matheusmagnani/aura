@@ -127,6 +127,13 @@ export function SchedulePage() {
     queryClient.invalidateQueries({ queryKey: ['appointments'] })
   }
 
+  function handleAppointmentStatusUpdated(updated: Appointment) {
+    queryClient.setQueryData<Appointment[]>(queryKey, (old = []) =>
+      old.map(a => a.id === updated.id ? updated : a)
+    )
+    setDetailAppointment(updated)
+  }
+
   async function handleReschedule(appointmentId: number, newStartAt: string) {
     if (!canEdit) return
     queryClient.setQueryData<Appointment[]>(queryKey, (old = []) =>
@@ -207,8 +214,8 @@ export function SchedulePage() {
         {/* Desktop: tudo em uma linha */}
         <div className="hidden md:flex items-center justify-between" style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <CalendarBlank size={26} className="text-app-secondary" weight="regular" />
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', margin: 0 }}>Agenda</h1>
+            <CalendarBlank size={28} className="text-app-secondary" weight="regular" />
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#fff', margin: 0 }}>Agenda</h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -256,8 +263,7 @@ export function SchedulePage() {
           {/* Linha 1: título | filtro + novo */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <CalendarBlank size={26} className="text-app-secondary" weight="regular" />
-              <h1 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', margin: 0 }}>Agenda</h1>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#fff', margin: 0 }}>Agenda</h1>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {filterBtn}
@@ -299,8 +305,8 @@ export function SchedulePage() {
       )}
 
       {/* ── Conteúdo da view ────────────────────────────────── */}
-      {/* Desktop: flex 1 + overflow hidden para a grade fixa */}
-      <div className="hidden md:flex md:flex-col md:overflow-hidden" style={{ flex: 1, padding: view === 'week' ? 0 : '12px 16px 0' }}>
+      {/* Desktop: flex 1 + overflow hidden para semana, scroll para mês/ano */}
+      <div className="hidden md:flex md:flex-col" style={{ flex: 1, padding: view === 'week' ? 0 : '12px 16px 0', overflow: view === 'week' ? 'hidden' : 'auto' }}>
         {view === 'week' && <WeekView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} forceMode={displayMode} />}
         {view === 'month' && <MonthView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
         {view === 'year' && <YearView currentDate={currentDate} appointments={appointments} onMonthClick={handleMonthClick} />}
@@ -349,6 +355,7 @@ export function SchedulePage() {
           onClose={() => setDetailModalOpen(false)}
           onEdit={openEditFromDetail}
           onDeleted={handleSaved}
+          onUpdated={handleAppointmentStatusUpdated}
           canEdit={canEdit}
           canDelete={canDelete}
         />

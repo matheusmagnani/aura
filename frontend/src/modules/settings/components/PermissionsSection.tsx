@@ -54,7 +54,7 @@ export function PermissionsSection({ isExpanded: isExpandedProp, onToggle: onTog
   const updatePermissions = useUpdatePermissions()
   const { addToast } = useToast()
 
-  const activeRoles = (rolesData?.data ?? []).filter((r) => r.status === 1)
+  const activeRoles = (rolesData?.data ?? []).filter((r) => r.idStatus === 1)
   const selectedRole = activeRoles.find((r) => r.id === selectedRoleId)
   const isAdminRole = selectedRole?.name === 'Administrativo'
 

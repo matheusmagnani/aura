@@ -84,8 +84,8 @@ export async function deleteClientStatusService(id: number, companyId: number, a
   if (!status) throw { statusCode: 404, message: 'Status não encontrado.' }
 
   await prisma.client.updateMany({
-    where: { statusId: id, companyId, deletedAt: null },
-    data: { statusId: null },
+    where: { idStatus: id, companyId, deletedAt: null },
+    data: { idStatus: null },
   })
 
   await prisma.clientStatus.update({

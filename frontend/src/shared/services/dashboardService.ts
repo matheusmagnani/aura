@@ -88,6 +88,11 @@ export const dashboardService = {
     return response.data
   },
 
+  async noStatusClientsCount(): Promise<{ count: number }> {
+    const response = await api.get('/dashboard/clients-no-status-count')
+    return response.data
+  },
+
   async createClient(data: ClientPayload): Promise<Client> {
     const response = await api.post('/dashboard/clients', data)
     return response.data
@@ -110,7 +115,7 @@ export const dashboardService = {
     search?: string
     clientId?: number
     collaboratorId?: number
-    statuses?: string[]
+    statuses?: number[]
     dateFrom?: string
     dateTo?: string
     statusChangedFrom?: string

@@ -497,9 +497,9 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
 
           const proposalStats = PROPOSAL_STATUS_ORDER
             .map(s => ({
-              status: s as string,
-              count: proposals.filter(p => p.status === s).length,
-              totalValue: proposals.filter(p => p.status === s).reduce((sum, p) => sum + Number(p.value), 0),
+              idStatus: s,
+              count: proposals.filter(p => p.idStatus === s).length,
+              totalValue: proposals.filter(p => p.idStatus === s).reduce((sum, p) => sum + Number(p.value), 0),
             }))
             .filter(s => s.count > 0)
 
@@ -511,9 +511,9 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                   <div className="md:hidden">
                     <StatisticsStatusCards
                       items={proposalStats.map(s => ({
-                        id: s.status,
-                        label: PROPOSAL_LABELS[s.status],
-                        color: PROPOSAL_COLORS[s.status],
+                        id: String(s.idStatus),
+                        label: PROPOSAL_LABELS[s.idStatus],
+                        color: PROPOSAL_COLORS[s.idStatus],
                         primaryValue: formatCurrency(s.totalValue),
                         secondaryValue: `${s.count} prop.`,
                       }))}
@@ -528,9 +528,9 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                   <div className="hidden md:block">
                     <StatisticsStatusCards
                       items={proposalStats.map(s => ({
-                        id: s.status,
-                        label: PROPOSAL_LABELS[s.status],
-                        color: PROPOSAL_COLORS[s.status],
+                        id: String(s.idStatus),
+                        label: PROPOSAL_LABELS[s.idStatus],
+                        color: PROPOSAL_COLORS[s.idStatus],
                         primaryValue: formatCurrency(s.totalValue),
                         secondaryValue: `${s.count} prop.`,
                       }))}
@@ -545,9 +545,9 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                 </div>
               )}
               <div className="md:max-h-32" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {proposals.filter(p => activeProposalStatuses.length === 0 || activeProposalStatuses.includes(p.status)).map((proposal) => {
-                  const pColor = PROPOSAL_STATUS_COLORS[proposal.status] ?? '#8A919C'
-                  const pLabel = PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status
+                {proposals.filter(p => activeProposalStatuses.length === 0 || activeProposalStatuses.includes(String(p.idStatus))).map((proposal) => {
+                  const pColor = PROPOSAL_STATUS_COLORS[proposal.idStatus] ?? '#8A919C'
+                  const pLabel = PROPOSAL_STATUS_LABELS[proposal.idStatus] ?? String(proposal.idStatus)
                   return (
                     <button
                       key={proposal.id}
@@ -656,9 +656,16 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
             setSelectedAppointment(null)
             queryClient.invalidateQueries({ queryKey: ['client-appointments', Number(id)] })
           }}
+          onUpdated={(updated) => {
+            queryClient.setQueryData<Appointment[]>(['client-appointments', Number(id), fromDashboard], (old = []) =>
+              old.map(a => a.id === updated.id ? updated : a)
+            )
+            setSelectedAppointment(updated)
+          }}
           canEdit={canEditSchedule}
           canDelete={canDeleteSchedule}
           deleteFn={fromDashboard ? dashboardService.deleteAppointment : undefined}
+          updateFn={fromDashboard ? dashboardService.updateAppointment : undefined}
         />
       )}
 

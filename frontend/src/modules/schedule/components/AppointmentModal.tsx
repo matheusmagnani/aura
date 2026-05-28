@@ -9,6 +9,7 @@ import { scheduleService, type Appointment } from '../../../shared/services/sche
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
+import { APPOINTMENT_STATUS_OPTIONS } from '../../../shared/constants/appointmentStatus'
 
 interface AppointmentModalProps {
   appointment?: Appointment
@@ -29,6 +30,7 @@ interface FormData {
   time: string
   clientId: string
   collaboratorId: string
+  idStatus: string
 }
 
 export function AppointmentModal({ appointment, prefilledDate, prefilledClient, defaultCollaboratorId, filterClientUserId, onClose, onSaved, createFn, updateFn }: AppointmentModalProps) {
@@ -56,6 +58,7 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
     time: initialTime,
     clientId: appointment?.clientId?.toString() ?? prefilledClient?.id.toString() ?? '',
     collaboratorId: appointment?.collaboratorId?.toString() ?? (defaultCollaboratorId ? String(defaultCollaboratorId) : ''),
+    idStatus: appointment?.idStatus?.toString() ?? '1',
   })
 
   const { data: collaboratorsData } = useQuery({
@@ -97,6 +100,7 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
       startAt,
       ...(appointment ? {} : { clientId: Number(form.clientId) }),
       collaboratorId: form.collaboratorId ? Number(form.collaboratorId) : null,
+      ...(appointment ? { idStatus: Number(form.idStatus) } : {}),
     }
 
     setSaving(true)
@@ -241,6 +245,16 @@ return (
             options={collaboratorOptions}
             placeholder="Selecionar colaborador"
             error={errors.collaboratorId}
+          />
+        )}
+
+        {appointment && (
+          <Select
+            label="Status"
+            value={form.idStatus}
+            onChange={(v) => set('idStatus', v)}
+            options={APPOINTMENT_STATUS_OPTIONS.map(s => ({ value: String(s.value), label: s.label }))}
+            placeholder="Selecionar status"
           />
         )}
 

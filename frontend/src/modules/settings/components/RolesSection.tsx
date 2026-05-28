@@ -91,9 +91,9 @@ export function RolesSection({ isExpanded: isExpandedProp, onToggle: onTogglePro
   }
 
   const handleToggleStatus = async (role: Role) => {
-    const newStatus = role.status === 1 ? 0 : 1
+    const newStatus = role.idStatus === 1 ? 0 : 1
     try {
-      await updateRole.mutateAsync({ id: role.id, data: { status: newStatus } })
+      await updateRole.mutateAsync({ id: role.id, data: { idStatus: newStatus } })
       addToast(newStatus === 1 ? 'Setor ativado!' : 'Setor inativado!', 'success')
       setOpenMenuId(null)
     } catch (err: any) {
@@ -166,10 +166,10 @@ export function RolesSection({ isExpanded: isExpandedProp, onToggle: onTogglePro
                   <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-app-accent)' }}>{role.name}</span>
                   <span style={{
                     padding: '2px 10px', borderRadius: 999, fontSize: 12, fontWeight: 500,
-                    background: role.status === 1 ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-                    color: role.status === 1 ? '#4ade80' : '#f87171',
+                    background: role.idStatus === 1 ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                    color: role.idStatus === 1 ? '#4ade80' : '#f87171',
                   }}>
-                    {role.status === 1 ? 'Ativo' : 'Inativo'}
+                    {role.idStatus === 1 ? 'Ativo' : 'Inativo'}
                   </span>
                   {role._count && role._count.users > 0 && (
                     <span className="desktop-table" style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', display: 'none' }}>
@@ -203,9 +203,9 @@ export function RolesSection({ isExpanded: isExpandedProp, onToggle: onTogglePro
                     >
                       <button
                         onClick={() => handleToggleStatus(role)}
-                        style={{ width: '100%', padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: role.status === 1 ? 'rgba(255,255,255,0.8)' : '#4ade80' }}
+                        style={{ width: '100%', padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: role.idStatus === 1 ? 'rgba(255,255,255,0.8)' : '#4ade80' }}
                       >
-                        {role.status === 1
+                        {role.idStatus === 1
                           ? <><ToggleLeft size={20} />Inativar</>
                           : <><ToggleRight size={20} style={{ color: '#4ade80' }} />Ativar</>
                         }
