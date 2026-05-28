@@ -7,18 +7,18 @@ import { proposalService, type Proposal } from '../../../shared/services/proposa
 import { useToast } from '../../../shared/hooks/useToast'
 import { formatCurrency } from '../../../shared/utils/formatters'
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pendente',
-  sent: 'Enviada',
-  accepted: 'Aceita',
-  refused: 'Recusada',
+const STATUS_LABELS: Record<number, string> = {
+  1: 'Pendente',
+  2: 'Enviada',
+  3: 'Aceita',
+  4: 'Recusada',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: '#F59E0B',
-  sent: '#6AA6C1',
-  accepted: '#4ADE80',
-  refused: '#F87171',
+const STATUS_COLORS: Record<number, string> = {
+  1: '#F59E0B',
+  2: '#6AA6C1',
+  3: '#4ADE80',
+  4: '#F87171',
 }
 
 interface ProposalDetailModalProps {
@@ -56,8 +56,8 @@ export function ProposalDetailModal({
   const [deleting, setDeleting] = useState(false)
   const [isDeleteConfirm, setIsDeleteConfirm] = useState(false)
 
-  const color = STATUS_COLORS[proposal.status] ?? '#8A919C'
-  const label = STATUS_LABELS[proposal.status] ?? proposal.status
+  const color = STATUS_COLORS[proposal.idStatus] ?? '#8A919C'
+  const label = STATUS_LABELS[proposal.idStatus] ?? proposal.idStatus
   const statusDate = proposal.statusChangedAt
     ? format(parseISO(proposal.statusChangedAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
     : format(parseISO(proposal.createdAt), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
@@ -125,7 +125,7 @@ export function ProposalDetailModal({
               </DetailRow>
             )}
 
-            <DetailRow icon={<CalendarBlank size={16} />} label={`Status "${STATUS_LABELS[proposal.status] ?? proposal.status}" desde`}>
+            <DetailRow icon={<CalendarBlank size={16} />} label={`Status "${STATUS_LABELS[proposal.idStatus] ?? proposal.idStatus}" desde`}>
               {statusDate}
             </DetailRow>
           </div>

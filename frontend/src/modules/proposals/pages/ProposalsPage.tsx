@@ -26,11 +26,11 @@ import { useAuthStore } from '../../../shared/stores/useAuthStore'
 const MODULE = 'proposals'
 const DESKTOP_COLS = '44px minmax(0,130px) minmax(0,1fr) minmax(0,160px) minmax(0,130px) 60px'
 
-const STATUS_FILTER_OPTIONS = PROPOSAL_STATUS_ORDER.map(s => ({ value: s, label: PROPOSAL_LABELS[s], color: PROPOSAL_COLORS[s] }))
+const STATUS_FILTER_OPTIONS = PROPOSAL_STATUS_ORDER.map(s => ({ value: String(s), label: PROPOSAL_LABELS[s], color: PROPOSAL_COLORS[s] }))
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: number }) {
   const color = PROPOSAL_COLORS[status] ?? '#8A919C'
-  const label = PROPOSAL_LABELS[status] ?? status
+  const label = PROPOSAL_LABELS[status] ?? String(status)
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -170,7 +170,7 @@ export function ProposalsPage() {
     queryFn: () => proposalService.list({
       page, limit: 20,
       search: search || undefined,
-      statuses: filterStatus.length > 0 ? filterStatus : undefined,
+      statuses: filterStatus.length > 0 ? filterStatus.map(Number) : undefined,
       collaboratorId: filterCollaboratorIds.length === 1 ? Number(filterCollaboratorIds[0]) : undefined,
       dateFrom: filterDateRange.from ? startOfDay(filterDateRange.from).toISOString() : undefined,
       dateTo: filterDateRange.to ? endOfDay(filterDateRange.to).toISOString() : filterDateRange.from ? endOfDay(filterDateRange.from).toISOString() : undefined,
@@ -252,7 +252,7 @@ export function ProposalsPage() {
   async function handleBulkStatus() {
     setBulkUpdating(true)
     try {
-      await Promise.all(selected.map(id => proposalService.update(id, { status: bulkStatusValue as Proposal['status'] })))
+      await Promise.all(selected.map(id => proposalService.update(id, { idStatus: Number(bulkStatusValue) })))
       addToast('Status atualizado!', 'success')
       queryClient.invalidateQueries({ queryKey: ['proposals'] })
       invalidateStats()
@@ -289,7 +289,7 @@ export function ProposalsPage() {
             <div key={s} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500, paddingLeft: 10 }}>Status</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, fontSize: 12, background: 'rgba(230,194,132,0.1)', border: '1px solid rgba(230,194,132,0.3)', color: 'var(--color-app-secondary)' }}>
-                {PROPOSAL_LABELS[s] ?? s}
+                {PROPOSAL_LABELS[Number(s)] ?? s}
                 <button onClick={() => setFilterStatus(filterStatus.filter(v => v !== s))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}>
                   <X size={11} weight="bold" />
                 </button>
@@ -335,7 +335,7 @@ export function ProposalsPage() {
       {statusStats.length > 0 && (
         <div style={{ marginTop: 12 }}>
           <StatisticsStatusCards
-            items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = statusStats.find(x => x.status === o); return s ? [{ id: s.status, label: PROPOSAL_LABELS[s.status], color: PROPOSAL_COLORS[s.status], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
+            items={PROPOSAL_STATUS_ORDER.flatMap(o => { const s = statusStats.find(x => x.idStatus === o); return s ? [{ id: String(s.idStatus), label: PROPOSAL_LABELS[s.idStatus], color: PROPOSAL_COLORS[s.idStatus], primaryValue: formatCurrency(s.totalValue), secondaryValue: `${s.count} prop.` }] : [] })}
             activeIds={filterStatus}
             onToggle={(s) => {
               setFilterStatus(filterStatus.includes(s) ? filterStatus.filter(x => x !== s) : [...filterStatus, s])
@@ -454,7 +454,7 @@ export function ProposalsPage() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <StatusBadge status={proposal.status} />
+                  <StatusBadge status={proposal.idStatus} />
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -498,7 +498,7 @@ export function ProposalsPage() {
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: PROPOSAL_COLORS[proposal.status] ?? '#8A919C', flexShrink: 0 }} />
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: PROPOSAL_COLORS[proposal.idStatus] ?? '#8A919C', flexShrink: 0 }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ActionMenu

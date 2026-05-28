@@ -190,10 +190,10 @@ export function Header() {
             className="flex items-center justify-between"
             onClick={() => { if (!editing && !expanded) setExpanded(true) }}
             style={{ cursor: !expanded ? 'pointer' : 'default' }}
-            initial={{ paddingTop: 14, paddingBottom: 14, paddingLeft: 16, paddingRight: 16 }}
+            initial={{ paddingTop: 20, paddingBottom: 20, paddingLeft: 16, paddingRight: 16 }}
             animate={{
-              paddingTop: expanded ? (isMobile ? 24 : 48) : (isMobile ? 32 : 14),
-              paddingBottom: expanded ? (isMobile ? 12 : 24) : (isMobile ? 20 : 14),
+              paddingTop: expanded ? (isMobile ? 24 : 48) : (isMobile ? 20 : 20),
+              paddingBottom: expanded ? (isMobile ? 12 : 24) : (isMobile ? 20 : 20),
               paddingLeft: expanded ? (isMobile ? 20 : 48) : 16,
               paddingRight: expanded ? (isMobile ? 20 : 48) : 16,
             }}
@@ -211,7 +211,7 @@ export function Header() {
               ) : (
                 <motion.p
                   className="leading-[1.19] font-medium text-white text-left"
-                  style={{ marginTop: isMobile ? '0.75rem' : '0' }}
+                  style={{}}
                   initial={{ fontSize: '1rem' }}
                   animate={{ fontSize: expanded ? (isMobile ? '1.25rem' : '1.875rem') : '1rem' }}
                   transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}

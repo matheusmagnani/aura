@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import type { Appointment } from '../../../shared/services/scheduleService'
+import { APPOINTMENT_STATUS_COLORS } from '../../../shared/constants/appointmentStatus'
 
 interface AppointmentCardProps {
   appointment: Appointment
@@ -11,6 +12,7 @@ interface AppointmentCardProps {
 
 export function AppointmentCard({ appointment, variant, onClick, draggable: isDraggable }: AppointmentCardProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const color = APPOINTMENT_STATUS_COLORS[appointment.idStatus] ?? '#6AA6C1'
 
   useEffect(() => {
     if (!isDraggable || !ref.current) return
@@ -30,8 +32,8 @@ export function AppointmentCard({ appointment, variant, onClick, draggable: isDr
         onClick={(e) => { e.stopPropagation(); onClick(appointment) }}
         title={appointment.title}
         style={{
-          background: 'rgba(106,166,193,0.15)',
-          borderLeft: '3px solid var(--color-app-accent)',
+          background: 'rgba(255,255,255,0.04)',
+          borderLeft: `3px solid ${color}`,
           borderRadius: '0 4px 4px 0',
           padding: '2px 6px',
           fontSize: 12,
@@ -53,8 +55,8 @@ export function AppointmentCard({ appointment, variant, onClick, draggable: isDr
       ref={ref}
       onClick={(e) => { e.stopPropagation(); onClick(appointment) }}
       style={{
-        background: 'rgba(106,166,193,0.15)',
-        borderLeft: '3px solid var(--color-app-accent)',
+        background: 'rgba(255,255,255,0.04)',
+        borderLeft: `3px solid ${color}`,
         borderRadius: '0 6px 6px 0',
         padding: '4px 8px',
         fontSize: 12,
@@ -69,7 +71,7 @@ export function AppointmentCard({ appointment, variant, onClick, draggable: isDr
         {appointment.title}
       </div>
       {appointment.client && (
-        <div style={{ fontSize: 11, color: 'var(--color-app-accent)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+        <div style={{ fontSize: 11, color, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           {appointment.client.name}
         </div>
       )}

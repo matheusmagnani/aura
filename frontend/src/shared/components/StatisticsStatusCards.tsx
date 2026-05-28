@@ -109,7 +109,7 @@ function Paginated({
 
   if (items.length <= pageSize) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: 8, alignItems: 'start' }}>
         {items.map(item => (
           <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
         ))}
@@ -143,7 +143,7 @@ function Paginated({
           {pages.map((page, pi) => (
             <div
               key={pi}
-              style={{ flexShrink: 0, width: '100%', scrollSnapAlign: 'start', display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: 8 }}
+              style={{ flexShrink: 0, width: '100%', scrollSnapAlign: 'start', display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: 8, alignItems: 'start' }}
             >
               {page.map(item => (
                 <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
@@ -236,7 +236,7 @@ export function StatisticsStatusCards({
 
   // grid/row simples
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${desktopCols}, minmax(0, 1fr))`, gap: 8 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${desktopCols}, minmax(0, 1fr))`, gap: 8, alignItems: 'start' }}>
       {items.map(item => (
         <Card key={item.id} item={item} active={activeIds.includes(item.id)} onToggle={() => onToggle(item.id)} hideLabelOnMobile={hideLabelOnMobile} compact={compact} />
       ))}

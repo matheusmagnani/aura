@@ -51,6 +51,8 @@ export function ClientStatusSection({ isExpanded: isExpandedProp, onToggle: onTo
     onSuccess: () => {
       addToast('Status atualizado!', 'success')
       queryClient.invalidateQueries({ queryKey: ['client-statuses'] })
+      queryClient.invalidateQueries({ queryKey: ['client-status-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-client-status-stats'] })
       closeModal()
     },
     onError: (err: any) => addToast(err?.response?.data?.message || 'Erro ao atualizar status', 'danger'),
@@ -61,6 +63,9 @@ export function ClientStatusSection({ isExpanded: isExpandedProp, onToggle: onTo
     onSuccess: () => {
       addToast('Status excluído!', 'success')
       queryClient.invalidateQueries({ queryKey: ['client-statuses'] })
+      queryClient.invalidateQueries({ queryKey: ['client-status-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-client-status-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-clients'] })
       setDeleteConfirmId(null)
       setOpenMenuId(null)
     },

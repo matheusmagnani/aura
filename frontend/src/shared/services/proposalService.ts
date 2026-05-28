@@ -5,7 +5,7 @@ export interface Proposal {
   value: number
   description: string | null
   clientObservation: string | null
-  status: 'pending' | 'sent' | 'accepted' | 'refused'
+  idStatus: number
   statusChangedAt: string | null
   companyId: number
   clientId: number
@@ -26,13 +26,13 @@ export interface ProposalPayload {
   value: number
   description?: string | null
   clientObservation?: string | null
-  status?: 'pending' | 'sent' | 'accepted' | 'refused'
+  idStatus?: number
   clientId?: number
   collaboratorId?: number | null
 }
 
 export interface ProposalStatusStat {
-  status: 'pending' | 'sent' | 'accepted' | 'refused'
+  idStatus: number
   count: number
   totalValue: number
 }
@@ -44,8 +44,8 @@ export const proposalService = {
     search?: string
     clientId?: number
     collaboratorId?: number
-    status?: string
-    statuses?: string[]
+    idStatus?: number
+    statuses?: number[]
     dateFrom?: string
     dateTo?: string
     statusChangedFrom?: string

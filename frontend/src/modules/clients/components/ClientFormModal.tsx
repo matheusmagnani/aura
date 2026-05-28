@@ -32,7 +32,7 @@ interface FormData {
   city: string
   state: string
   userId: string
-  statusId: string
+  idStatus: string
 }
 
 interface ClientFormModalProps {
@@ -93,7 +93,7 @@ export function ClientFormModal({ client, defaultCollaboratorId, onClose, onSave
     city: client?.city ?? '',
     state: client?.state ?? '',
     userId: client?.userId != null ? String(client.userId) : (defaultCollaboratorId ? String(defaultCollaboratorId) : ''),
-    statusId: client?.statusId != null ? String(client.statusId) : '',
+    idStatus: client?.idStatus != null ? String(client.idStatus) : '',
   })
 
   function toggleDocumentType() {
@@ -168,7 +168,7 @@ export function ClientFormModal({ client, defaultCollaboratorId, onClose, onSave
         city: form.city || null,
         state: form.state || null,
         userId: form.userId ? Number(form.userId) : null,
-        statusId: form.statusId ? Number(form.statusId) : null,
+        idStatus: form.idStatus ? Number(form.idStatus) : null,
       }
       if (client) await (updateFn ?? clientService.update)(client.id, payload)
       else await (createFn ?? clientService.create)(payload)
@@ -247,8 +247,8 @@ export function ClientFormModal({ client, defaultCollaboratorId, onClose, onSave
 
         <Select
           label="Status"
-          value={form.statusId}
-          onChange={v => setForm(prev => ({ ...prev, statusId: v }))}
+          value={form.idStatus}
+          onChange={v => setForm(prev => ({ ...prev, idStatus: v }))}
           options={statusOptions}
           placeholder="Sem status"
         />

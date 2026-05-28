@@ -96,6 +96,15 @@ export function WeekView({ currentDate, appointments, onSlotClick, onAppointment
     appointments.filter((a) => isSameDay(parseISO(a.startAt), day))
   )
 
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const now = new Date()
+    const top = (now.getHours() * 60 + now.getMinutes()) * (SLOT_HEIGHT / 30)
+    scrollRef.current.scrollTop = Math.max(0, top - 120)
+  }, [])
+
   const [isMobileNative, setIsMobileNative] = useState(() => window.innerWidth < 768)
   useEffect(() => {
     const handler = () => setIsMobileNative(window.innerWidth < 768)
@@ -204,7 +213,7 @@ export function WeekView({ currentDate, appointments, onSlotClick, onAppointment
       </div>
 
       {/* Grade horária */}
-      <div style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
         <div style={{ display: 'flex', position: 'relative' }}>
           {/* Coluna de horas */}
           <div style={{ width: HOUR_COL_W, flexShrink: 0 }}>

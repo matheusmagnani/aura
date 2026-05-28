@@ -7,8 +7,8 @@ interface ListProposalsQuery {
   search?: string
   clientId?: number
   collaboratorId?: number
-  status?: string
-  statuses?: string[]
+  idStatus?: number
+  statuses?: number[]
   dateFrom?: string
   dateTo?: string
   statusChangedFrom?: string
@@ -19,7 +19,7 @@ interface ProposalInput {
   value: number
   description?: string | null
   clientObservation?: string | null
-  status?: string
+  idStatus?: number
   clientId: number
   collaboratorId?: number | null
 }
@@ -29,7 +29,7 @@ const proposalInclude = {
   collaborator: { select: { id: true, name: true, avatar: true } },
 }
 
-const PROPOSAL_STATUSES = ['pending', 'sent', 'accepted', 'refused'] as const
+const PROPOSAL_ID_STATUSES = [1, 2, 3, 4] as const
 
 export async function getProposalStatusStatsService(
   query: {
@@ -61,16 +61,16 @@ export async function getProposalStatusStatsService(
   }
 
   const grouped = await prisma.proposal.groupBy({
-    by: ['status'],
+    by: ['idStatus'],
     where,
     _count: { id: true },
     _sum: { value: true },
   })
 
-  return PROPOSAL_STATUSES.map(status => {
-    const row = grouped.find(g => g.status === status)
+  return PROPOSAL_ID_STATUSES.map(idStatus => {
+    const row = grouped.find(g => g.idStatus === idStatus)
     return {
-      status,
+      idStatus,
       count: row?._count.id ?? 0,
       totalValue: Number(row?._sum.value ?? 0),
     }
@@ -78,17 +78,17 @@ export async function getProposalStatusStatsService(
 }
 
 export async function listProposalsService(query: ListProposalsQuery, companyId: number) {
-  const { page, limit, search, clientId, collaboratorId, status, statuses, dateFrom, dateTo, statusChangedFrom, statusChangedTo } = query
+  const { page, limit, search, clientId, collaboratorId, idStatus, statuses, dateFrom, dateTo, statusChangedFrom, statusChangedTo } = query
   const skip = (page - 1) * limit
 
-  const activeStatuses = statuses && statuses.length > 0 ? statuses : status ? [status] : undefined
+  const activeStatuses = statuses && statuses.length > 0 ? statuses : idStatus ? [idStatus] : undefined
 
   const where: Record<string, unknown> = {
     companyId,
     deletedAt: null,
     ...(clientId && { clientId }),
     ...(collaboratorId && { collaboratorId }),
-    ...(activeStatuses && { status: activeStatuses.length === 1 ? activeStatuses[0] : { in: activeStatuses } }),
+    ...(activeStatuses && { idStatus: activeStatuses.length === 1 ? activeStatuses[0] : { in: activeStatuses } }),
     ...((dateFrom || dateTo) && {
       createdAt: {
         ...(dateFrom && { gte: new Date(dateFrom) }),
@@ -145,7 +145,7 @@ export async function createProposalService(data: ProposalInput, companyId: numb
       value: data.value,
       description: data.description ?? null,
       clientObservation: data.clientObservation ?? null,
-      status: data.status ?? 'pending',
+      idStatus: data.idStatus ?? 1,
       statusChangedAt: new Date(),
       companyId,
       clientId: data.clientId,
@@ -163,7 +163,7 @@ export async function createProposalService(data: ProposalInput, companyId: numb
     entityId: proposal.client.id,
     entityName: proposal.client.name,
     description: `Criou proposta de ${Number(proposal.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} para ${proposal.client.name}`,
-    metadata: { value: Number(proposal.value), status: proposal.status, clientId: proposal.clientId },
+    metadata: { value: Number(proposal.value), idStatus: proposal.idStatus, clientId: proposal.clientId },
   }).catch(() => {})
 
   return proposal
@@ -188,9 +188,9 @@ export async function updateProposalService(
   if (data.value !== undefined) updateData.value = data.value
   if (data.description !== undefined) updateData.description = data.description ?? null
   if (data.clientObservation !== undefined) updateData.clientObservation = data.clientObservation ?? null
-  if (data.status !== undefined) {
-    updateData.status = data.status
-    if (data.status !== existing.status) updateData.statusChangedAt = new Date()
+  if (data.idStatus !== undefined) {
+    updateData.idStatus = data.idStatus
+    if (data.idStatus !== existing.idStatus) updateData.statusChangedAt = new Date()
   }
   if (data.collaboratorId !== undefined) updateData.collaboratorId = data.collaboratorId ?? null
 

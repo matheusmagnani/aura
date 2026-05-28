@@ -24,6 +24,7 @@ interface DayViewProps {
   onReschedule?: (appointmentId: number, newStartAt: string) => void
   canEdit?: boolean
   forceMode?: 'list' | 'grid'
+  hideDateHeader?: boolean
 }
 
 function SlotDropTarget({
@@ -71,7 +72,7 @@ function SlotDropTarget({
   )
 }
 
-export function DayView({ currentDate, appointments, onSlotClick, onAppointmentClick, onReschedule, forceMode }: DayViewProps) {
+export function DayView({ currentDate, appointments, onSlotClick, onAppointmentClick, onReschedule, forceMode, hideDateHeader }: DayViewProps) {
   const today = new Date()
   const isToday = isSameDay(currentDate, today)
   const dayAppts = appointments.filter(a => isSameDay(parseISO(a.startAt), currentDate))
@@ -90,6 +91,15 @@ export function DayView({ currentDate, appointments, onSlotClick, onAppointmentC
     return () => clearInterval(interval)
   }, [])
 
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const now = new Date()
+    const top = (now.getHours() * 60 + now.getMinutes()) * (SLOT_HEIGHT / 30)
+    scrollRef.current.scrollTop = Math.max(0, top - 120)
+  }, [])
+
   const [isMobileNative, setIsMobileNative] = useState(() => window.innerWidth < 768)
   useEffect(() => {
     const handler = () => setIsMobileNative(window.innerWidth < 768)
@@ -103,18 +113,20 @@ export function DayView({ currentDate, appointments, onSlotClick, onAppointmentC
   if (isMobile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div
-          style={{ padding: '12px 16px 4px', cursor: onSlotClick ? 'pointer' : undefined }}
-          onClick={() => onSlotClick?.(slotForDay)}
-        >
-          <span style={{
-            fontSize: 13, fontWeight: 600,
-            color: isToday ? 'var(--color-app-accent)' : 'var(--color-app-gray)',
-            textTransform: 'capitalize',
-          }}>
-            {format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
-          </span>
-        </div>
+        {!hideDateHeader && (
+          <div
+            style={{ padding: '12px 16px 4px', cursor: onSlotClick ? 'pointer' : undefined }}
+            onClick={() => onSlotClick?.(slotForDay)}
+          >
+            <span style={{
+              fontSize: 13, fontWeight: 600,
+              color: isToday ? 'var(--color-app-accent)' : 'var(--color-app-gray)',
+              textTransform: 'capitalize',
+            }}>
+              {format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+            </span>
+          </div>
+        )}
         {dayAppts.length === 0 ? (
           <div
             onClick={() => onSlotClick?.(slotForDay)}
@@ -166,7 +178,7 @@ export function DayView({ currentDate, appointments, onSlotClick, onAppointmentC
       </div>
 
       {/* Grade horária */}
-      <div style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
         <div style={{ display: 'flex', position: 'relative' }}>
           {/* Coluna de horas */}
           <div style={{ width: HOUR_COL_W, flexShrink: 0 }}>

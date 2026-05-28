@@ -3,7 +3,7 @@ import { api } from './api'
 export interface Role {
   id: number
   name: string
-  status: number
+  idStatus: number
   companyId: number
   _count?: { users: number }
 }
@@ -29,12 +29,12 @@ export const roleService = {
     return response.data
   },
 
-  async create(data: { name: string; status?: number }): Promise<Role> {
+  async create(data: { name: string; idStatus?: number }): Promise<Role> {
     const response = await api.post<Role>('/roles', data)
     return response.data
   },
 
-  async update(id: number, data: { name?: string; status?: number }): Promise<Role> {
+  async update(id: number, data: { name?: string; idStatus?: number }): Promise<Role> {
     const response = await api.put<Role>(`/roles/${id}`, data)
     return response.data
   },
