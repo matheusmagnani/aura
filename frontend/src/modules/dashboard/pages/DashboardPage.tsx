@@ -125,6 +125,14 @@ export function DashboardPage() {
   const isAdmin = user?.roleId === null
   const userId = user?.id ?? 0
 
+  const agendaRef = useRef<HTMLDivElement>(null)
+  const clientsRef = useRef<HTMLDivElement>(null)
+  const proposalsRef = useRef<HTMLDivElement>(null)
+
+  function scrollToRef(ref: React.RefObject<HTMLDivElement | null>) {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   // ── Agenda — estado local (não usa o store compartilhado) ─────────────────
   const [dashView, setDashView] = useState<DashView>('day')
   const [agendaDisplayMode, setAgendaDisplayMode] = useState<'list' | 'grid'>('list')
@@ -180,14 +188,14 @@ export function DashboardPage() {
       dateTo: endOfDay(todayDate).toISOString(),
       collaboratorId: scheduleCollaboratorId,
     }),
-    staleTime: 1000 * 60,
+    staleTime: 0,
     enabled: !!userId,
   })
 
   const { data: noStatusClientsData } = useQuery({
     queryKey: ['dashboard-no-status-clients'],
     queryFn: () => dashboardService.noStatusClientsCount(),
-    staleTime: 1000 * 60,
+    staleTime: 0,
     enabled: !!userId,
   })
 
@@ -213,6 +221,7 @@ export function DashboardPage() {
 
   function handleScheduleSaved() {
     queryClient.invalidateQueries({ queryKey: ['dashboard-appointments'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard-today-count'] })
   }
 
   function handleAppointmentStatusUpdated(updated: Appointment) {
@@ -353,7 +362,7 @@ export function DashboardPage() {
       statusChangedFrom: proposalFilterStatusChangedRange.from ? startOfDay(proposalFilterStatusChangedRange.from).toISOString() : undefined,
       statusChangedTo: proposalFilterStatusChangedRange.to ? endOfDay(proposalFilterStatusChangedRange.to).toISOString() : proposalFilterStatusChangedRange.from ? endOfDay(proposalFilterStatusChangedRange.from).toISOString() : undefined,
     }),
-    staleTime: 1000 * 30,
+    staleTime: 0,
     enabled: !!userId,
   })
 
@@ -415,6 +424,11 @@ export function DashboardPage() {
           {' hoje'}
         </>
       ),
+      onClick: () => {
+        switchView('day')
+        setAgendaDate(startOfDay(new Date()))
+        scrollToRef(agendaRef)
+      },
     },
     {
       icon: UsersThree,
@@ -428,6 +442,11 @@ export function DashboardPage() {
           {' sem atendimento'}
         </>
       ),
+      onClick: () => {
+        setClientFilterStatusIds(['0'])
+        setClientPage(1)
+        scrollToRef(clientsRef)
+      },
     },
     {
       icon: FileText,
@@ -440,6 +459,11 @@ export function DashboardPage() {
           </strong>
         </>
       ),
+      onClick: () => {
+        setProposalFilterStatuses(['1'])
+        setProposalPage(1)
+        scrollToRef(proposalsRef)
+      },
     },
   ]
 
@@ -459,7 +483,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
 
         {/* ─── Box: Agenda ─── */}
-        <div className="flex flex-col md:col-span-3 md:h-[580px]" style={boxStyle}>
+        <div ref={agendaRef} className="flex flex-col md:col-span-3 md:h-[580px]" style={boxStyle}>
           <div style={boxHeaderStyle}>
             {/* Linha 1: título | toggle + filtro + criar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -575,7 +599,7 @@ export function DashboardPage() {
         </div>
 
         {/* ─── Box: Clientes ─── */}
-        <div className="flex flex-col h-[560px] md:col-span-2 md:h-[580px]" style={boxStyle}>
+        <div ref={clientsRef} className="flex flex-col h-[560px] md:col-span-2 md:h-[580px]" style={boxStyle}>
           <div style={boxHeaderStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -706,7 +730,7 @@ export function DashboardPage() {
         </div>
 
         {/* ─── Box: Propostas ─── */}
-        <div className="flex flex-col h-[560px] md:col-span-5 md:h-[460px]" style={boxStyle}>
+        <div ref={proposalsRef} className="flex flex-col h-[560px] md:col-span-5 md:h-[460px]" style={boxStyle}>
           <div style={boxHeaderStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>

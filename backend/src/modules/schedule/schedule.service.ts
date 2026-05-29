@@ -1,6 +1,12 @@
 import { prisma } from '../../lib/prisma'
 import { createLog, type LogActor } from '../logs/log.service'
 
+const APPOINTMENT_STATUS_LABELS: Record<number, string> = {
+  1: 'Pendente',
+  2: 'Concluído',
+  3: 'Cancelado',
+}
+
 interface ListAppointmentsQuery {
   dateFrom?: string
   dateTo?: string
@@ -118,23 +124,42 @@ export async function updateAppointmentService(
     include: appointmentInclude,
   })
 
+  const SKIP_LOG_KEYS = new Set(['statusChangedAt'])
+
   const changedKeys = Object.keys(updateData).filter((k) => {
+    if (SKIP_LOG_KEYS.has(k)) return false
     const newVal = k === 'startAt' ? (updateData[k] as Date).toISOString() : updateData[k]
     const oldVal = k === 'startAt' ? (existing as any)[k].toISOString() : (existing as any)[k]
     return newVal !== oldVal
   })
 
   if (changedKeys.length > 0) {
-    const onlyStartAtChanged = changedKeys.length === 1 && changedKeys[0] === 'startAt'
-    const description = onlyStartAtChanged
+    const onlyStartAt = changedKeys.length === 1 && changedKeys[0] === 'startAt'
+    const onlyStatus = changedKeys.length === 1 && changedKeys[0] === 'idStatus'
+
+    const oldStatusLabel = APPOINTMENT_STATUS_LABELS[(existing as any).idStatus] ?? String((existing as any).idStatus)
+    const newStatusLabel = APPOINTMENT_STATUS_LABELS[data.idStatus!] ?? String(data.idStatus)
+
+    const description = onlyStartAt
       ? `Reagendou "${updated.title}"`
-      : `Editou o agendamento "${updated.title}"`
+      : onlyStatus
+        ? `Alterou status do agendamento "${updated.title}" de ${oldStatusLabel} para ${newStatusLabel}`
+        : `Editou o agendamento "${updated.title}"`
 
     const before: Record<string, unknown> = {}
     const after: Record<string, unknown> = {}
     for (const k of changedKeys) {
-      before[k] = k === 'startAt' ? (existing as any)[k].toISOString() : (existing as any)[k]
-      after[k] = k === 'startAt' ? (updateData[k] as Date).toISOString() : updateData[k]
+      if (k === 'startAt') {
+        before['Data/hora'] = (existing as any)[k].toISOString()
+        after['Data/hora'] = (updateData[k] as Date).toISOString()
+      } else if (k === 'idStatus') {
+        const statusKey = `Status do agendamento "${updated.title}"`
+        before[statusKey] = oldStatusLabel
+        after[statusKey] = newStatusLabel
+      } else {
+        before[k] = (existing as any)[k]
+        after[k] = updateData[k]
+      }
     }
 
     createLog({
