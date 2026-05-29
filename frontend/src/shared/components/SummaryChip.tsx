@@ -7,6 +7,7 @@ interface SummaryChipProps {
   summary: ReactNode
   icon?: SizedIcon
   accent?: 'gold' | 'blue' | 'success'
+  onClick?: () => void
 }
 
 const ACCENT_MAP = {
@@ -30,11 +31,16 @@ const ACCENT_MAP = {
   },
 }
 
-export function SummaryChip({ date, summary, icon: Icon, accent = 'gold' }: SummaryChipProps) {
+export function SummaryChip({ date, summary, icon: Icon, accent = 'gold', onClick }: SummaryChipProps) {
   const a = ACCENT_MAP[accent]
+  const Tag = onClick ? 'button' : 'div'
   return (
-    <div
-      className="flex min-h-[88px] items-center gap-5 rounded-2xl"
+    <Tag
+      {...(onClick ? { type: 'button' as const, onClick } : {})}
+      className={[
+        'flex min-h-[88px] w-full items-center gap-5 rounded-2xl text-left',
+        onClick ? 'cursor-pointer transition-opacity hover:opacity-80 active:opacity-60' : '',
+      ].join(' ')}
       style={{ background: a.gradient, border: `1px solid ${a.border}`, padding: '12px 10px' }}
     >
       <span
@@ -47,6 +53,6 @@ export function SummaryChip({ date, summary, icon: Icon, accent = 'gold' }: Summ
         {date && <div className="text-xs text-app-gray">{date}</div>}
         <div className="mt-1 text-sm text-white">{summary}</div>
       </div>
-    </div>
+    </Tag>
   )
 }

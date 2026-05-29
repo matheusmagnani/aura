@@ -26,8 +26,7 @@ interface AppointmentModalProps {
 interface FormData {
   title: string
   description: string
-  date: string
-  time: string
+  startAt: string
   clientId: string
   collaboratorId: string
   idStatus: string
@@ -39,23 +38,16 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
 
-  const initialDate = appointment
-    ? format(parseISO(appointment.startAt), 'yyyy-MM-dd')
+  const initialStartAt = appointment
+    ? format(parseISO(appointment.startAt), "yyyy-MM-dd'T'HH:mm")
     : prefilledDate
-      ? format(prefilledDate, 'yyyy-MM-dd')
-      : format(new Date(), 'yyyy-MM-dd')
-
-  const initialTime = appointment
-    ? format(parseISO(appointment.startAt), 'HH:mm')
-    : prefilledDate
-      ? format(prefilledDate, 'HH:mm')
-      : '08:00'
+      ? format(prefilledDate, "yyyy-MM-dd'T'HH:mm")
+      : `${format(new Date(), 'yyyy-MM-dd')}T08:00`
 
   const [form, setForm] = useState<FormData>({
     title: appointment?.title ?? '',
     description: appointment?.description ?? '',
-    date: initialDate,
-    time: initialTime,
+    startAt: initialStartAt,
     clientId: appointment?.clientId?.toString() ?? prefilledClient?.id.toString() ?? '',
     collaboratorId: appointment?.collaboratorId?.toString() ?? (defaultCollaboratorId ? String(defaultCollaboratorId) : ''),
     idStatus: appointment?.idStatus?.toString() ?? '1',
@@ -81,8 +73,7 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
   function validate() {
     const errs: Partial<Record<keyof FormData, string>> = {}
     if (!form.title.trim()) errs.title = 'Título é obrigatório'
-    if (!form.date) errs.date = 'Data é obrigatória'
-    if (!form.time) errs.time = 'Hora é obrigatória'
+    if (!form.startAt) errs.startAt = 'Data e hora são obrigatórias'
     if (!form.clientId) errs.clientId = 'Cliente é obrigatório'
     if (!form.collaboratorId) errs.collaboratorId = 'Colaborador é obrigatório'
     return errs
@@ -93,7 +84,7 @@ export function AppointmentModal({ appointment, prefilledDate, prefilledClient, 
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); addToast('Preencha os campos obrigatórios corretamente.', 'danger'); return }
 
-    const startAt = new Date(`${form.date}T${form.time}:00`).toISOString()
+    const startAt = new Date(form.startAt).toISOString()
     const payload = {
       title: form.title.trim(),
       description: form.description.trim() || null,
@@ -136,45 +127,26 @@ return (
           error={errors.title}
         />
 
-        <div className="grid grid-cols-1 min-[366px]:grid-cols-2" style={{ gap: 12 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: 'white' }}>Data</label>
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => set('date', e.target.value)}
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: errors.date ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.2)',
-                borderRadius: 12,
-                padding: '8px 12px',
-                color: 'white',
-                fontSize: 14,
-                outline: 'none',
-                colorScheme: 'dark',
-              }}
-            />
-            {errors.date && <span style={{ fontSize: 12, color: '#f87171' }}>{errors.date}</span>}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: 'white' }}>Hora</label>
-            <input
-              type="time"
-              value={form.time}
-              onChange={(e) => set('time', e.target.value)}
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: errors.time ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.2)',
-                borderRadius: 12,
-                padding: '8px 12px',
-                color: 'white',
-                fontSize: 14,
-                outline: 'none',
-                colorScheme: 'dark',
-              }}
-            />
-            {errors.time && <span style={{ fontSize: 12, color: '#f87171' }}>{errors.time}</span>}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 14, fontWeight: 500, color: 'white' }}>Data e Hora</label>
+          <input
+            type="datetime-local"
+            value={form.startAt}
+            onChange={(e) => set('startAt', e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: errors.startAt ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.2)',
+              borderRadius: 12,
+              padding: '8px 12px',
+              color: 'white',
+              fontSize: 14,
+              outline: 'none',
+              colorScheme: 'dark',
+              width: '100%',
+              boxSizing: 'border-box',
+            }}
+          />
+          {errors.startAt && <span style={{ fontSize: 12, color: '#f87171' }}>{errors.startAt}</span>}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

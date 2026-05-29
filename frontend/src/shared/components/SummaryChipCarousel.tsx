@@ -9,6 +9,7 @@ export interface ChipData {
   accent?: 'gold' | 'blue' | 'success'
   date?: string
   summary: ReactNode
+  onClick?: () => void
 }
 
 interface SummaryChipCarouselProps {
