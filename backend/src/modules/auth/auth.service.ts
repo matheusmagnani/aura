@@ -201,6 +201,15 @@ export async function updateProfileService({ userId, companyId, name, email }: U
 }
 
 export async function uploadAvatarService(userId: number, avatar: string) {
+  const current = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { avatar: true },
+  })
+
+  if (current?.avatar) {
+    await deleteFromS3(current.avatar)
+  }
+
   const user = await prisma.user.update({
     where: { id: userId },
     data: { avatar },

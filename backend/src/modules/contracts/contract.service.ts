@@ -167,6 +167,20 @@ function tiptapToHtml(json: any, title: string): string {
 </html>`
 }
 
+// ─── S3 image cleanup ────────────────────────────────────────────────────────
+
+export function extractImageUrlsFromContent(node: any, found: string[] = []): string[] {
+  if (!node) return found
+  if (node.type === 'image' && node.attrs?.src) found.push(node.attrs.src)
+  for (const child of node.content ?? []) extractImageUrlsFromContent(child, found)
+  return found
+}
+
+export async function deleteContentImagesFromS3(content: any): Promise<void> {
+  const urls = extractImageUrlsFromContent(content)
+  await Promise.allSettled(urls.map((url) => deleteFromS3(url)))
+}
+
 // ─── Variable extraction ──────────────────────────────────────────────────────
 
 function extractVariables(node: any, found: Set<string> = new Set()): Set<string> {
@@ -229,9 +243,23 @@ function substituteVariablesInNode(node: any, vars: Record<string, string>): any
 
 // ─── PDF generation ───────────────────────────────────────────────────────────
 
-async function generatePdf(html: string): Promise<Buffer> {
+// ─── Browser singleton ────────────────────────────────────────────────────────
+
+let browserInstance: Awaited<ReturnType<typeof puppeteer.launch>> | null = null
+
+async function getBrowser() {
+  if (browserInstance) {
+    try {
+      // verify the browser is still alive
+      await browserInstance.version()
+      return browserInstance
+    } catch {
+      browserInstance = null
+    }
+  }
+
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
-  const browser = await puppeteer.launch({
+  browserInstance = await puppeteer.launch({
     headless: true,
     ...(executablePath ? { executablePath } : {}),
     args: [
@@ -242,13 +270,21 @@ async function generatePdf(html: string): Promise<Buffer> {
       '--single-process',
     ],
   })
+
+  browserInstance.on('disconnected', () => { browserInstance = null })
+
+  return browserInstance
+}
+
+async function generatePdf(html: string): Promise<Buffer> {
+  const browser = await getBrowser()
+  const page = await browser.newPage()
   try {
-    const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'load' })
     const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '20mm', bottom: '20mm', left: '20mm', right: '20mm' } })
     return Buffer.from(pdf)
   } finally {
-    await browser.close()
+    await page.close()
   }
 }
 
@@ -366,7 +402,10 @@ export async function deleteContractService(id: number, companyId: number, actor
   const contract = await prisma.contract.findFirst({ where: { id, companyId } })
   if (!contract) throw { statusCode: 404, message: 'Contrato não encontrado.' }
 
-  await deleteFromS3(contract.pdfUrl)
+  await Promise.all([
+    deleteFromS3(contract.pdfUrl),
+    deleteContentImagesFromS3(contract.content),
+  ])
 
   await prisma.contract.delete({ where: { id } })
 

@@ -99,7 +99,7 @@ export async function uploadContractImageController(request: FastifyRequest, rep
   }
 
   const ext = data.mimetype.split('/')[1].replace('jpeg', 'jpg').replace('svg+xml', 'svg')
-  const key = `contracts/images/${companyId}-${Date.now()}.${ext}`
+  const key = `contracts/models-images/${companyId}-${Date.now()}.${ext}`
   const buffer = await data.toBuffer()
 
   try {
