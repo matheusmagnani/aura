@@ -42,22 +42,23 @@ export const PageBreakExtension = Extension.create({
             if (dispatching) return
 
             const proseMirrorEl = editorView.dom as HTMLElement
-            // Direct DOM children of .ProseMirror correspond 1:1 with doc's top-level nodes
             const domBlocks = Array.from(proseMirrorEl.children) as HTMLElement[]
 
+            // getBoundingClientRect relative to ProseMirror cancels scroll and
+            // does not depend on offsetParent — block top = elRect.top - pmRect.top
+            const pmRect = proseMirrorEl.getBoundingClientRect()
+
             const decorations: Decoration[] = []
-            // .ProseMirror has position:relative → it IS the offsetParent.
-            // p.offsetTop starts at 0 (not at PAGE_PAD_V), so boundary = CONTENT_H only.
-            let pageEnd = CONTENT_H  // first boundary: 1003px
-            let cumulative = 0  // extra px added by decorations already decided
+            let pageEnd = CONTENT_H  // first boundary in ProseMirror-local coordinates
+            let cumulative = 0
             let blockIdx = 0
 
             editorView.state.doc.forEach((node, pos) => {
               const el = domBlocks[blockIdx++]
               if (!el) return
 
-              // Adjusted position (accounts for spacers already decided above)
-              const top = el.offsetTop + cumulative
+              const elRect = el.getBoundingClientRect()
+              const top = (elRect.top - pmRect.top) + cumulative
               const bottom = top + el.offsetHeight
 
               // Advance pageEnd past boundaries already covered by previous blocks

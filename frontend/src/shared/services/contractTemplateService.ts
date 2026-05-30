@@ -38,4 +38,8 @@ export const contractTemplateService = {
     })
     return res.data.url
   },
+
+  async deleteImage(url: string): Promise<void> {
+    await api.delete('/contracts/image', { data: { url } })
+  },
 }

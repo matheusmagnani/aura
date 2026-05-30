@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { ResizableImage } from './ResizableImageExtension'
@@ -8,7 +8,7 @@ import { Color } from '@tiptap/extension-color'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import { X } from '@phosphor-icons/react'
-import { type ContractTemplate } from '../../services/contractTemplateService'
+import { type ContractTemplate, contractTemplateService } from '../../services/contractTemplateService'
 import { VariableChipNode } from './VariableChipNode'
 import { ContractToolbar } from './ContractToolbar'
 import { VariablePickerPanel } from './VariablePickerPanel'
@@ -30,6 +30,17 @@ export function ContractStudio({ template, isOpen, onClose, onSave }: ContractSt
   const [saving, setSaving] = useState(false)
   const [pageCount, setPageCount] = useState(1)
   const editorWrapperRef = useRef<HTMLDivElement>(null)
+  const imageUrlsRef = useRef<Set<string>>(new Set())
+
+  const extractImageUrls = useCallback((doc: Record<string, unknown>): Set<string> => {
+    const urls = new Set<string>()
+    const walk = (node: any) => {
+      if (node?.type === 'image' && node.attrs?.src) urls.add(node.attrs.src)
+      for (const child of node?.content ?? []) walk(child)
+    }
+    walk(doc)
+    return urls
+  }, [])
 
   const editor = useEditor({
     extensions: [
@@ -45,7 +56,13 @@ export function ContractStudio({ template, isOpen, onClose, onSave }: ContractSt
       PageBreakExtension,
     ],
     content: template?.content ?? { type: 'doc', content: [{ type: 'paragraph' }] },
-    editorProps: { attributes: { style: 'outline: none;' } },
+    editorProps: { attributes: { style: 'outline: none; position: relative;' } },
+    onUpdate({ editor }) {
+      const current = extractImageUrls(editor.getJSON() as Record<string, unknown>)
+      const removed = [...imageUrlsRef.current].filter((url) => !current.has(url))
+      removed.forEach((url) => contractTemplateService.deleteImage(url).catch(() => {}))
+      imageUrlsRef.current = current
+    },
   })
 
   // Track wrapper height → derive page count
@@ -62,11 +79,11 @@ export function ContractStudio({ template, isOpen, onClose, onSave }: ContractSt
 
   useEffect(() => {
     if (isOpen) {
+      const content = template?.content ?? { type: 'doc', content: [{ type: 'paragraph' }] }
       setName(template?.name ?? '')
       setPageCount(1)
-      editor?.commands.setContent(
-        template?.content ?? { type: 'doc', content: [{ type: 'paragraph' }] },
-      )
+      editor?.commands.setContent(content)
+      imageUrlsRef.current = extractImageUrls(content as Record<string, unknown>)
     }
   }, [isOpen, template])
 

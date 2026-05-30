@@ -70,7 +70,7 @@ export function Sidebar() {
       </button>
 
       {/* Logo */}
-      <div className="h-[250px] flex-shrink-0 flex items-center justify-center">
+      <div className="h-[220px] flex-shrink-0 flex items-center justify-center">
         <div
           className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isCollapsed ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}
         >

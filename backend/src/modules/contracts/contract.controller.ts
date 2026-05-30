@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { uploadToS3, getStreamFromS3 } from '../../lib/s3'
+import { uploadToS3, getStreamFromS3, deleteFromS3 } from '../../lib/s3'
 import {
   listContractsService,
   getContractService,
@@ -108,5 +108,18 @@ export async function uploadContractImageController(request: FastifyRequest, rep
   } catch (error: any) {
     console.error('[S3 Upload Error]', error)
     return reply.status(500).send({ message: error?.message || 'Erro ao enviar imagem.' })
+  }
+}
+
+export async function deleteContractImageController(request: FastifyRequest, reply: FastifyReply) {
+  const schema = z.object({ url: z.string().url() })
+  const { url } = schema.parse(request.body)
+
+  try {
+    await deleteFromS3(url)
+    return reply.send({ ok: true })
+  } catch (error: any) {
+    console.error('[S3 Delete Error]', error)
+    return reply.status(500).send({ message: error?.message || 'Erro ao excluir imagem.' })
   }
 }
