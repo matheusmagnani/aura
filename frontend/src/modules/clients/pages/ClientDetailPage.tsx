@@ -24,13 +24,14 @@ import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { StatusDot } from '../../../shared/components/StatusDot'
 import { useToast } from '../../../shared/hooks/useToast'
 import { formatPhone, formatZipCode, formatCPF, formatCNPJ, formatCurrency } from '../../../shared/utils/formatters'
-import { downloadPdf } from '../../../shared/utils/downloadFile'
+import { triggerDownload } from '../../../shared/utils/downloadFile'
 import { getApiError } from '../../../shared/utils/getApiError'
 import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
 import { ContractPreview } from '../../../shared/components/contract-studio/ContractPreview'
 import { useClientContractsPaginated, useCreateContract, useDeleteContract } from '../hooks/useContracts'
 import { Pagination } from '../../../shared/components/Pagination'
+import { contractService } from '../../../shared/services/contractService'
 import type { Contract } from '../../../shared/services/contractService'
 
 const MODULE = 'clients'
@@ -704,7 +705,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                                 <button onClick={() => setSelectedContract(c)} title="Visualizar" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                                   <Eye size={14} />
                                 </button>
-                                <button type="button" title="Baixar PDF" onClick={() => downloadPdf(c.pdfUrl, c.name)} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
+                                <button type="button" title="Baixar PDF" onClick={async () => { const url = await contractService.downloadUrl(c.id); triggerDownload(url, c.name) }} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                                   <DownloadSimple size={14} />
                                 </button>
                                 {(canDeleteContract || fromDashboard) && (
@@ -759,7 +760,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                       <button onClick={() => setSelectedContract(c)} title="Visualizar" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                         <Eye size={14} />
                       </button>
-                      <button type="button" title="Baixar PDF" onClick={() => downloadPdf(c.pdfUrl, c.name)} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
+                      <button type="button" title="Baixar PDF" onClick={async () => { const url = await contractService.downloadUrl(c.id); triggerDownload(url, c.name) }} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                         <DownloadSimple size={14} />
                       </button>
                       {(canDeleteContract || fromDashboard) && (

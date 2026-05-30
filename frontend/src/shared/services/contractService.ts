@@ -47,4 +47,9 @@ export const contractService = {
   async delete(id: number): Promise<void> {
     await api.delete(`/contracts/${id}`)
   },
+
+  async downloadUrl(id: number): Promise<string> {
+    const res = await api.get(`/contracts/${id}/download`, { responseType: 'blob' })
+    return URL.createObjectURL(res.data)
+  },
 }
