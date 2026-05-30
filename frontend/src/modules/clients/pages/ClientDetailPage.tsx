@@ -30,6 +30,7 @@ import { StatisticsStatusCards } from '../../../shared/components/StatisticsStat
 import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
 import { ContractPreview } from '../../../shared/components/contract-studio/ContractPreview'
 import { useClientContractsPaginated, useCreateContract, useDeleteContract } from '../hooks/useContracts'
+import { FullScreenLoading } from '../../../shared/components/FullScreenLoading'
 import { Pagination } from '../../../shared/components/Pagination'
 import { contractService } from '../../../shared/services/contractService'
 import type { Contract } from '../../../shared/services/contractService'
@@ -705,7 +706,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                                 <button onClick={() => setSelectedContract(c)} title="Visualizar" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                                   <Eye size={14} />
                                 </button>
-                                <button type="button" title="Baixar PDF" onClick={async () => { const url = await contractService.downloadUrl(c.id); triggerDownload(url, c.name) }} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
+                                <button type="button" title="Baixar PDF" onClick={async () => { const blob = await contractService.downloadBlob(c.id); await triggerDownload(blob, c.name) }} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                                   <DownloadSimple size={14} />
                                 </button>
                                 {(canDeleteContract || fromDashboard) && (
@@ -760,7 +761,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                       <button onClick={() => setSelectedContract(c)} title="Visualizar" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                         <Eye size={14} />
                       </button>
-                      <button type="button" title="Baixar PDF" onClick={async () => { const url = await contractService.downloadUrl(c.id); triggerDownload(url, c.name) }} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
+                      <button type="button" title="Baixar PDF" onClick={async () => { const blob = await contractService.downloadBlob(c.id); await triggerDownload(blob, c.name) }} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                         <DownloadSimple size={14} />
                       </button>
                       {(canDeleteContract || fromDashboard) && (
@@ -1035,6 +1036,8 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
         contract={selectedContract}
         onClose={() => setSelectedContract(null)}
       />
+
+      <FullScreenLoading visible={createContractMutation.isPending} label="Gerando contrato..." />
     </div>
   )
 }
