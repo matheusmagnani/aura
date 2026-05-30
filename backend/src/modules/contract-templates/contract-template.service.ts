@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/prisma'
 import { createLog, getActorName } from '../logs/log.service'
+import { deleteContentImagesFromS3, extractImageUrlsFromContent } from '../contracts/contract.service'
+import { deleteFromS3 } from '../../lib/s3'
 
 interface ContractTemplateInput {
   name: string
@@ -69,6 +71,13 @@ export async function updateContractTemplateService(
 
   const updated = await prisma.contractTemplate.update({ where: { id }, data })
 
+  if (data.content) {
+    const oldUrls = new Set(extractImageUrlsFromContent(template.content))
+    const newUrls = new Set(extractImageUrlsFromContent(data.content))
+    const removed = [...oldUrls].filter((url) => !newUrls.has(url))
+    await Promise.allSettled(removed.map((url) => deleteFromS3(url)))
+  }
+
   const prev: Record<string, unknown> = {}
   const changed: Record<string, unknown> = {}
   if (data.name && data.name !== template.name) {
@@ -108,10 +117,10 @@ export async function deleteContractTemplateService(
   })
   if (!template) throw { statusCode: 404, message: 'Modelo de contrato não encontrado.' }
 
-  await prisma.contractTemplate.update({
-    where: { id },
-    data: { deletedAt: new Date() },
-  })
+  await Promise.all([
+    prisma.contractTemplate.update({ where: { id }, data: { deletedAt: new Date() } }),
+    deleteContentImagesFromS3(template.content),
+  ])
 
   const userName = await getActorName(actor.userId)
   await createLog({

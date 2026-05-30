@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma'
 import bcrypt from 'bcryptjs'
 import { createLog, type LogActor } from '../logs/log.service'
+import { deleteFromS3 } from '../../lib/s3'
 
 const SELECT_COLLABORATOR = {
   id: true,
@@ -235,6 +236,10 @@ export async function deleteCollaboratorService(
     where: { id },
     data: { deletedAt: new Date(), active: false },
   })
+
+  if (user.avatar) {
+    await deleteFromS3(user.avatar)
+  }
 
   await createLog({
     companyId,

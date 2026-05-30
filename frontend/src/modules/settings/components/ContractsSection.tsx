@@ -6,6 +6,7 @@ import { ptBR } from 'date-fns/locale'
 import { SettingsSection } from './SettingsSection'
 import { ContractStudio } from '../../../shared/components/contract-studio/ContractStudio'
 import { ContractPreview } from '../../../shared/components/contract-studio/ContractPreview'
+import { Modal } from '../../../shared/components/Modal'
 import { useToast } from '../../../shared/hooks/useToast'
 import { getApiError } from '../../../shared/utils/getApiError'
 import {
@@ -30,7 +31,7 @@ export function ContractsSection({
   const [studioOpen, setStudioOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null)
   const [openMenuId, setOpenMenuId] = useState<number | null>(null)
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
+  const [deleteModalTemplate, setDeleteModalTemplate] = useState<ContractTemplate | null>(null)
   const [templatePage, setTemplatePage] = useState(0)
   const [menuPos, setMenuPos] = useState<{ top: number; right: number; openUp: boolean }>({ top: 0, right: 0, openUp: false })
   const menuRef = useRef<HTMLDivElement>(null)
@@ -45,7 +46,6 @@ export function ContractsSection({
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuId(null)
-        setDeleteConfirmId(null)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -69,7 +69,6 @@ export function ContractsSection({
     const openUp = window.innerHeight - rect.bottom < 80
     setMenuPos({ top: openUp ? rect.top : rect.bottom + 4, right: window.innerWidth - rect.right, openUp })
     setOpenMenuId(id)
-    setDeleteConfirmId(null)
   }
 
   async function handleStudioSave(name: string, content: Record<string, unknown>) {
@@ -87,12 +86,12 @@ export function ContractsSection({
     }
   }
 
-  function handleDelete(id: number) {
-    deleteMutation.mutate(id, {
+  function handleDelete() {
+    if (!deleteModalTemplate) return
+    deleteMutation.mutate(deleteModalTemplate.id, {
       onSuccess: () => {
         addToast('Modelo excluído!', 'success')
-        setOpenMenuId(null)
-        setDeleteConfirmId(null)
+        setDeleteModalTemplate(null)
       },
       onError: (err: any) => addToast(getApiError(err), 'danger'),
     })
@@ -187,30 +186,12 @@ export function ContractsSection({
                       >
                         <PencilSimple size={16} /> Editar
                       </button>
-                      {deleteConfirmId === t.id ? (
-                        <div style={{ display: 'flex', gap: 8, padding: '8px 12px' }}>
-                          <button
-                            onClick={() => handleDelete(t.id)}
-                            disabled={deleteMutation.isPending}
-                            style={{ flex: 1, padding: '6px 8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, background: 'rgba(248,113,113,0.2)', color: '#f87171' }}
-                          >
-                            Confirmar
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmId(null)}
-                            style={{ flex: 1, padding: '6px 8px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)' }}
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setDeleteConfirmId(t.id)}
-                          style={{ width: '100%', padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#f87171' }}
-                        >
-                          <Trash size={16} /> Excluir
-                        </button>
-                      )}
+                      <button
+                        onClick={() => { setDeleteModalTemplate(t); setOpenMenuId(null) }}
+                        style={{ width: '100%', padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#f87171' }}
+                      >
+                        <Trash size={16} /> Excluir
+                      </button>
                     </div>,
                     document.body
                   )}
@@ -274,6 +255,39 @@ export function ContractsSection({
         onClose={() => setStudioOpen(false)}
         onSave={handleStudioSave}
       />
+
+      <Modal
+        isOpen={!!deleteModalTemplate}
+        onClose={() => setDeleteModalTemplate(null)}
+        title="Excluir Modelo"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+            Tem certeza que deseja excluir o modelo{' '}
+            <strong style={{ color: '#fff' }}>{deleteModalTemplate?.name}</strong>?
+            <br />Esta ação não pode ser desfeita.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => setDeleteModalTemplate(null)}
+              style={{ padding: '8px 20px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 14, borderRadius: 8 }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              style={{ padding: '8px 20px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, cursor: 'pointer', color: '#f87171', fontSize: 14, fontWeight: 500, opacity: deleteMutation.isPending ? 0.6 : 1 }}
+            >
+              {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   )
 }
