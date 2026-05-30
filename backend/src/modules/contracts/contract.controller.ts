@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { uploadToS3 } from '../../lib/s3'
+import { uploadToS3, getStreamFromS3 } from '../../lib/s3'
 import {
   listContractsService,
   getContractService,
@@ -61,6 +61,26 @@ export async function deleteContractController(request: FastifyRequest, reply: F
   try {
     await deleteContractService(id, companyId, { userId })
     return reply.status(204).send()
+  } catch (error: any) {
+    if (error.statusCode) return reply.status(error.statusCode).send({ message: error.message })
+    throw error
+  }
+}
+
+export async function downloadContractController(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = z.object({ id: z.coerce.number() }).parse(request.params)
+  const { companyId } = request.user as { companyId: number }
+
+  try {
+    const contract = await getContractService(id, companyId)
+    const s3Response = await getStreamFromS3(contract.pdfUrl)
+
+    const filename = `${contract.name.replace(/[^a-zA-Z0-9\-_. ]/g, '_')}.pdf`
+    reply.header('Content-Type', 'application/pdf')
+    reply.header('Content-Disposition', `attachment; filename="${filename}"`)
+    if (s3Response.ContentLength) reply.header('Content-Length', s3Response.ContentLength)
+
+    return reply.send(s3Response.Body)
   } catch (error: any) {
     if (error.statusCode) return reply.status(error.statusCode).send({ message: error.message })
     throw error

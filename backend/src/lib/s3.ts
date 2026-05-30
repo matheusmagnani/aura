@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { env } from '../env'
 
 export const s3 = new S3Client({
@@ -26,4 +26,14 @@ export async function deleteFromS3(url: string): Promise<void> {
     Bucket: env.AWS_BUCKET_NAME,
     Key: key,
   }))
+}
+
+export async function getStreamFromS3(url: string) {
+  const key = url.split('.amazonaws.com/')[1]
+  if (!key) throw new Error('Invalid S3 URL')
+  const response = await s3.send(new GetObjectCommand({
+    Bucket: env.AWS_BUCKET_NAME,
+    Key: key,
+  }))
+  return response
 }

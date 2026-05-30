@@ -11,8 +11,9 @@ import { ResizableImage } from '../../../shared/components/contract-studio/Resiz
 import { VariableChipNode } from '../../../shared/components/contract-studio/VariableChipNode'
 import { FontSizeExtension } from '../../../shared/components/contract-studio/FontSizeExtension'
 import { PageBreakExtension, PAGE_H, PAGE_PAD_V, PAGE_PAD_H, PAGE_GAP } from '../../../shared/components/contract-studio/PageBreakExtension'
+import { contractService } from '../../../shared/services/contractService'
 import type { Contract } from '../../../shared/services/contractService'
-import { downloadPdf } from '../../../shared/utils/downloadFile'
+import { triggerDownload } from '../../../shared/utils/downloadFile'
 
 
 interface ContractViewModalProps {
@@ -128,7 +129,7 @@ export function ContractViewModal({ contract, onClose }: ContractViewModalProps)
       {/* Floating download button */}
       <button
         type="button"
-        onClick={() => downloadPdf(contract.pdfUrl, contract.name)}
+        onClick={async () => { const url = await contractService.downloadUrl(contract.id); triggerDownload(url, contract.name) }}
         style={{
           position: 'fixed',
           bottom: 28,
