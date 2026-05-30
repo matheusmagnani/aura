@@ -8,6 +8,7 @@ import {
   deleteContractController,
   downloadContractController,
   uploadContractImageController,
+  deleteContractImageController,
 } from './contract.controller'
 
 export async function contractRoutes(app: FastifyInstance) {
@@ -19,4 +20,5 @@ export async function contractRoutes(app: FastifyInstance) {
   app.post('/', { preHandler: [requirePermission('clients', 'create')] }, createContractController)
   app.delete('/:id', { preHandler: [requirePermission('clients', 'delete')] }, deleteContractController)
   app.post('/upload-image', { preHandler: [requirePermission('settings', 'edit')] }, uploadContractImageController)
+  app.delete('/image', { preHandler: [requirePermission('settings', 'edit')] }, deleteContractImageController)
 }
