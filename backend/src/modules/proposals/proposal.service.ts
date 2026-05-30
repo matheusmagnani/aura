@@ -1,6 +1,13 @@
 import { prisma } from '../../lib/prisma'
 import { createLog, type LogActor } from '../logs/log.service'
 
+const PROPOSAL_STATUS_LABELS: Record<number, string> = {
+  1: 'Pendente',
+  2: 'Enviada',
+  3: 'Aceita',
+  4: 'Recusada',
+}
+
 interface ListProposalsQuery {
   page: number
   limit: number
@@ -34,6 +41,7 @@ const PROPOSAL_ID_STATUSES = [1, 2, 3, 4] as const
 export async function getProposalStatusStatsService(
   query: {
     collaboratorId?: number
+    clientId?: number
     dateFrom?: string
     dateTo?: string
     statusChangedFrom?: string
@@ -41,11 +49,12 @@ export async function getProposalStatusStatsService(
   },
   companyId: number,
 ) {
-  const { collaboratorId, dateFrom, dateTo, statusChangedFrom, statusChangedTo } = query
+  const { collaboratorId, clientId, dateFrom, dateTo, statusChangedFrom, statusChangedTo } = query
   const where = {
     companyId,
     deletedAt: null,
     ...(collaboratorId && { collaboratorId }),
+    ...(clientId && { clientId }),
     ...((dateFrom || dateTo) && {
       createdAt: {
         ...(dateFrom && { gte: new Date(dateFrom) }),
@@ -210,8 +219,13 @@ export async function updateProposalService(
     const before: Record<string, unknown> = {}
     const after: Record<string, unknown> = {}
     for (const k of changedKeys) {
-      before[k] = k === 'value' ? Number((existing as any)[k]) : (existing as any)[k]
-      after[k] = k === 'value' ? Number(updateData[k]) : updateData[k]
+      if (k === 'idStatus') {
+        before['statusProposta'] = PROPOSAL_STATUS_LABELS[(existing as any)[k]] ?? String((existing as any)[k])
+        after['statusProposta'] = PROPOSAL_STATUS_LABELS[(updateData as any)[k]] ?? String((updateData as any)[k])
+      } else {
+        before[k] = k === 'value' ? Number((existing as any)[k]) : (existing as any)[k]
+        after[k] = k === 'value' ? Number(updateData[k]) : updateData[k]
+      }
     }
 
     createLog({

@@ -13,6 +13,7 @@ import { getActorName } from '../logs/log.service'
 export async function getProposalStatusStatsController(request: FastifyRequest, reply: FastifyReply) {
   const query = z.object({
     collaboratorId: z.coerce.number().optional(),
+    clientId: z.coerce.number().optional(),
     dateFrom: z.string().optional(),
     dateTo: z.string().optional(),
     statusChangedFrom: z.string().optional(),

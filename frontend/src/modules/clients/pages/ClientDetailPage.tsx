@@ -3,16 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, PencilSimple, Trash, Phone, Envelope, IdentificationCard, ClockCounterClockwise, CalendarBlank, UserCircle, Plus, CaretLeft, CaretRight, FileText, CurrencyCircleDollar } from '@phosphor-icons/react'
+import { ArrowLeft, PencilSimple, Trash, Phone, Envelope, IdentificationCard, ClockCounterClockwise, CalendarBlank, UserCircle, Plus, CaretLeft, CaretRight, FileText, CurrencyCircleDollar, Eye, DownloadSimple } from '@phosphor-icons/react'
 import { clientService } from '../../../shared/services/clientService'
 import { scheduleService, type Appointment } from '../../../shared/services/scheduleService'
 import { proposalService, type Proposal } from '../../../shared/services/proposalService'
+
 import { dashboardService } from '../../../shared/services/dashboardService'
 import { ClientFormModal } from '../components/ClientFormModal'
 import { AppointmentModal } from '../../schedule/components/AppointmentModal'
 import { AppointmentDetailModal } from '../../schedule/components/AppointmentDetailModal'
 import { ProposalModal } from '../../proposals/components/ProposalModal'
 import { ProposalDetailModal } from '../../proposals/components/ProposalDetailModal'
+import { GenerateContractModal } from '../components/GenerateContractModal'
+import { ContractViewModal } from '../components/ContractViewModal'
 import { CopyText } from '../../../shared/components/CopyText'
 import { Modal } from '../../../shared/components/Modal'
 import { EntityHistoryModal } from '../../../shared/components/EntityHistoryModal'
@@ -21,8 +24,13 @@ import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { StatusDot } from '../../../shared/components/StatusDot'
 import { useToast } from '../../../shared/hooks/useToast'
 import { formatPhone, formatZipCode, formatCPF, formatCNPJ, formatCurrency } from '../../../shared/utils/formatters'
+import { downloadPdf } from '../../../shared/utils/downloadFile'
 import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
+import { ContractPreview } from '../../../shared/components/contract-studio/ContractPreview'
+import { useClientContractsPaginated, useCreateContract, useDeleteContract } from '../hooks/useContracts'
+import { Pagination } from '../../../shared/components/Pagination'
+import type { Contract } from '../../../shared/services/contractService'
 
 const MODULE = 'clients'
 
@@ -92,17 +100,30 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [isEditAppointmentOpen, setIsEditAppointmentOpen] = useState(false)
   const [apptPage, setApptPage] = useState(0)
+  const [apptServerPage, setApptServerPage] = useState(1)
+  const [proposalServerPage, setProposalServerPage] = useState(1)
+  const [activeProposalStatuses, setActiveProposalStatuses] = useState<number[]>([])
+  const [contractServerPage, setContractServerPage] = useState(1)
   const [isProposalOpen, setIsProposalOpen] = useState(false)
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null)
   const [isEditProposalOpen, setIsEditProposalOpen] = useState(false)
-  const [activeProposalStatuses, setActiveProposalStatuses] = useState<string[]>([])
+
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768)
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false)
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
+  const [deleteContractConfirmId, setDeleteContractConfirmId] = useState<number | null>(null)
+  const [contractPage, setContractPage] = useState(0)
+  const [contractDesktopPage, setContractDesktopPage] = useState(0)
 
   useEffect(() => {
     const update = () => setIsMobileView(window.innerWidth < 768)
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
+
+  useEffect(() => { setApptPage(0) }, [apptServerPage])
+  useEffect(() => { setContractPage(0); setContractDesktopPage(0) }, [contractServerPage])
+  useEffect(() => { setProposalServerPage(1) }, [activeProposalStatuses])
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['client', Number(id), fromDashboard],
@@ -112,22 +133,48 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
     enabled: !!id,
   })
 
-  const { data: appointments = [], isLoading: isLoadingAppointments } = useQuery({
-    queryKey: ['client-appointments', Number(id), fromDashboard],
+  const { data: appointmentsResponse, isLoading: isLoadingAppointments } = useQuery({
+    queryKey: ['client-appointments', Number(id), fromDashboard, apptServerPage],
+    queryFn: async () => {
+      if (fromDashboard) {
+        const data = await dashboardService.appointments({ clientId: Number(id), collaboratorId: currentUserId })
+        return { data, total: data.length, page: 1, limit: data.length || 10, totalPages: 1 }
+      }
+      return scheduleService.listPaginated({ clientId: Number(id), page: apptServerPage, limit: 10 })
+    },
+    enabled: !!id,
+  })
+  const appointments = appointmentsResponse?.data ?? []
+  const appointmentsTotal = appointmentsResponse?.total ?? 0
+  const apptTotalPages = appointmentsResponse?.totalPages ?? 1
+
+  const { data: proposalsData, isLoading: isLoadingProposals } = useQuery({
+    queryKey: ['client-proposals', Number(id), fromDashboard, proposalServerPage, activeProposalStatuses],
     queryFn: () => fromDashboard
-      ? dashboardService.appointments({ clientId: Number(id), collaboratorId: currentUserId })
-      : scheduleService.list({ clientId: Number(id) }),
+      ? dashboardService.proposals({ clientId: Number(id), collaboratorId: currentUserId, limit: 10, page: proposalServerPage, statuses: activeProposalStatuses.length > 0 ? activeProposalStatuses : undefined })
+      : proposalService.list({ clientId: Number(id), limit: 10, page: proposalServerPage, statuses: activeProposalStatuses.length > 0 ? activeProposalStatuses : undefined }),
+    enabled: !!id,
+    placeholderData: (prev) => prev,
+  })
+  const proposals = proposalsData?.data ?? []
+  const proposalsTotalPages = proposalsData?.meta?.totalPages ?? 1
+  const proposalsTotal = proposalsData?.meta?.total ?? 0
+
+  const { data: proposalStats = [] } = useQuery({
+    queryKey: ['client-proposal-stats', Number(id)],
+    queryFn: () => proposalService.stats({ clientId: Number(id) }),
     enabled: !!id,
   })
 
-  const { data: proposalsData, isLoading: isLoadingProposals } = useQuery({
-    queryKey: ['client-proposals', Number(id), fromDashboard],
-    queryFn: () => fromDashboard
-      ? dashboardService.proposals({ clientId: Number(id), collaboratorId: currentUserId, limit: 50 })
-      : proposalService.list({ clientId: Number(id), limit: 50 }),
-    enabled: !!id,
-  })
-  const proposals = proposalsData?.data ?? []
+  const { data: contractsResponse, isLoading: isLoadingContracts } = useClientContractsPaginated(Number(id), contractServerPage, 10)
+  const contracts: Contract[] = contractsResponse?.data ?? []
+  const contractsTotalPages = contractsResponse?.totalPages ?? 1
+  const contractsTotal = contractsResponse?.total ?? 0
+  const createContractMutation = useCreateContract()
+  const deleteContractMutation = useDeleteContract()
+
+  const canCreateContract = useCanAccess(MODULE, 'create')
+  const canDeleteContract = useCanAccess(MODULE, 'delete')
 
   const deleteMutation = useMutation({
     mutationFn: () => fromDashboard
@@ -339,7 +386,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
             <CalendarBlank size={16} style={{ color: 'var(--color-app-accent)' }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(106,166,193,0.85)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Agendamentos</span>
             {!isLoadingAppointments && (
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>({appointments.length})</span>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>({appointmentsTotal})</span>
             )}
           </div>
           {canSchedule && (
@@ -465,6 +512,12 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
             )
           })()}
         </div>
+
+        {apptTotalPages > 1 && (
+          <div style={{ borderTop: '1px solid rgba(106,166,193,0.1)', marginTop: 12, paddingTop: 4 }}>
+            <Pagination compact page={apptServerPage} totalPages={apptTotalPages} total={appointmentsTotal} onPageChange={setApptServerPage} itemLabel="agendamento" />
+          </div>
+        )}
       </div>
 
       {/* Proposals card */}
@@ -474,7 +527,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
             <FileText size={16} style={{ color: 'var(--color-app-accent)' }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(106,166,193,0.85)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Propostas</span>
             {!isLoadingProposals && (
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>({proposals.length})</span>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>({proposalsTotal})</span>
             )}
           </div>
           {canCreateProposal && (
@@ -495,31 +548,25 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
           const PROPOSAL_STATUS_COLORS = PROPOSAL_COLORS
           const PROPOSAL_STATUS_LABELS = PROPOSAL_LABELS
 
-          const proposalStats = PROPOSAL_STATUS_ORDER
-            .map(s => ({
-              idStatus: s,
-              count: proposals.filter(p => p.idStatus === s).length,
-              totalValue: proposals.filter(p => p.idStatus === s).reduce((sum, p) => sum + Number(p.value), 0),
-            }))
-            .filter(s => s.count > 0)
+          const statsToShow = proposalStats
 
           return (
             <>
-              {proposalStats.length > 0 && (
+              {statsToShow.length > 0 && (
                 <div style={{ marginBottom: 10, flexShrink: 0 }}>
                   {/* Mobile — igual à dashboard: grid, valor total */}
                   <div className="md:hidden">
                     <StatisticsStatusCards
-                      items={proposalStats.map(s => ({
+                      items={statsToShow.map(s => ({
                         id: String(s.idStatus),
                         label: PROPOSAL_LABELS[s.idStatus],
                         color: PROPOSAL_COLORS[s.idStatus],
                         primaryValue: formatCurrency(s.totalValue),
                         secondaryValue: `${s.count} prop.`,
                       }))}
-                      activeIds={activeProposalStatuses}
+                      activeIds={activeProposalStatuses.map(String)}
                       onToggle={(id) => setActiveProposalStatuses(prev =>
-                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                        prev.includes(Number(id)) ? prev.filter(x => x !== Number(id)) : [...prev, Number(id)]
                       )}
                       compact
                     />
@@ -527,16 +574,16 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                   {/* Desktop — row compacto com valor em moeda */}
                   <div className="hidden md:block">
                     <StatisticsStatusCards
-                      items={proposalStats.map(s => ({
+                      items={statsToShow.map(s => ({
                         id: String(s.idStatus),
                         label: PROPOSAL_LABELS[s.idStatus],
                         color: PROPOSAL_COLORS[s.idStatus],
                         primaryValue: formatCurrency(s.totalValue),
                         secondaryValue: `${s.count} prop.`,
                       }))}
-                      activeIds={activeProposalStatuses}
+                      activeIds={activeProposalStatuses.map(String)}
                       onToggle={(id) => setActiveProposalStatuses(prev =>
-                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                        prev.includes(Number(id)) ? prev.filter(x => x !== Number(id)) : [...prev, Number(id)]
                       )}
                       layout="row"
                       compact
@@ -544,35 +591,22 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                   </div>
                 </div>
               )}
-              <div className="md:max-h-32" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {proposals.filter(p => activeProposalStatuses.length === 0 || activeProposalStatuses.includes(String(p.idStatus))).map((proposal) => {
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 128, overflowY: 'auto' }}>
+                {proposals.map((proposal) => {
                   const pColor = PROPOSAL_STATUS_COLORS[proposal.idStatus] ?? '#8A919C'
                   const pLabel = PROPOSAL_STATUS_LABELS[proposal.idStatus] ?? String(proposal.idStatus)
                   return (
                     <button
                       key={proposal.id}
                       onClick={() => setSelectedProposal(proposal)}
-                      style={{
-                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        gap: 8, padding: '7px 10px', borderRadius: 8,
-                        border: '1px solid rgba(106,166,193,0.15)',
-                        background: 'rgba(255,255,255,0.03)', cursor: 'pointer', textAlign: 'left', flexShrink: 0,
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.background = 'rgba(106,166,193,0.07)'
-                        e.currentTarget.style.borderColor = 'rgba(106,166,193,0.3)'
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
-                        e.currentTarget.style.borderColor = 'rgba(106,166,193,0.15)'
-                      }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(106,166,193,0.15)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', textAlign: 'left', flexShrink: 0 }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(106,166,193,0.07)'; e.currentTarget.style.borderColor = 'rgba(106,166,193,0.3)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(106,166,193,0.15)' }}
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                           <CurrencyCircleDollar size={11} style={{ color: 'var(--color-app-secondary)', flexShrink: 0 }} />
-                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-app-secondary)' }}>
-                            {formatCurrency(Number(proposal.value))}
-                          </span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-app-secondary)' }}>{formatCurrency(Number(proposal.value))}</span>
                         </div>
                         {proposal.collaborator && (
                           <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
@@ -582,12 +616,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 3,
-                          fontSize: 10, fontWeight: 500, color: pColor,
-                          background: `${pColor}22`, border: `1px solid ${pColor}44`,
-                          borderRadius: 999, padding: '1px 6px',
-                        }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 500, color: pColor, background: `${pColor}22`, border: `1px solid ${pColor}44`, borderRadius: 999, padding: '1px 6px' }}>
                           <span style={{ width: 4, height: 4, borderRadius: '50%', background: pColor, flexShrink: 0 }} />
                           {pLabel}
                         </span>
@@ -599,12 +628,229 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                   )
                 })}
               </div>
+              {proposalsTotalPages > 1 && (
+                <div style={{ borderTop: '1px solid rgba(106,166,193,0.1)', marginTop: 8, paddingTop: 4 }}>
+                  <Pagination compact page={proposalServerPage} totalPages={proposalsTotalPages} total={proposalsTotal} onPageChange={setProposalServerPage} itemLabel="proposta" />
+                </div>
+              )}
             </>
           )
         })()}
       </div>
 
       </div>{/* end appointments + proposals wrapper */}
+
+      {/* Contracts card */}
+      <div style={{ ...cardStyle, marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileText size={16} style={{ color: 'var(--color-app-accent)' }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(106,166,193,0.85)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Contratos</span>
+            {!isLoadingContracts && (
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>({contractsTotal})</span>
+            )}
+          </div>
+          {(canCreateContract || fromDashboard) && (
+            <button
+              onClick={() => setIsContractModalOpen(true)}
+              style={{ background: 'var(--color-app-accent)', border: 'none', borderRadius: 8, width: 32, height: 32, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            >
+              <Plus size={18} weight="bold" />
+            </button>
+          )}
+        </div>
+
+        {isLoadingContracts ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+            <div style={{ width: 28, height: 28, border: '2px solid rgba(106,166,193,0.3)', borderTopColor: 'var(--color-app-accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        ) : contracts.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(106,166,193,0.4)', fontSize: 13 }}>
+            Nenhum contrato gerado para este cliente.
+          </div>
+        ) : (
+          <>
+            {/* Mobile — carousel horizontal */}
+            {(() => {
+              const total = Math.max(1, contracts.length)
+              const safeIdx = Math.min(contractPage, total - 1)
+              return (
+                <div className="md:hidden">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button
+                      onClick={() => setContractPage(p => Math.max(0, p - 1))}
+                      disabled={safeIdx === 0}
+                      style={{ background: 'none', border: 'none', cursor: safeIdx === 0 ? 'default' : 'pointer', padding: 4, color: '#fff', opacity: safeIdx === 0 ? 0.15 : 0.35, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                    >
+                      <CaretLeft size={18} weight="bold" />
+                    </button>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', transform: `translateX(-${safeIdx * 100}%)`, transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
+                        {contracts.map((c) => (
+                          <div key={c.id} style={{ minWidth: '100%', borderRadius: 10, border: '1px solid rgba(106,166,193,0.18)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
+                            <div style={{ padding: '8px 8px 0', cursor: 'pointer' }} onClick={() => setSelectedContract(c)}>
+                              <ContractPreview content={c.content} />
+                            </div>
+                            <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-app-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {c.name}
+                              </p>
+                              <p style={{ fontSize: 11, color: 'var(--color-app-gray)', margin: 0 }}>
+                                {format(parseISO(c.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                              </p>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button onClick={() => setSelectedContract(c)} title="Visualizar" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
+                                  <Eye size={14} />
+                                </button>
+                                <button type="button" title="Baixar PDF" onClick={() => downloadPdf(c.pdfUrl, c.name)} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
+                                  <DownloadSimple size={14} />
+                                </button>
+                                {(canDeleteContract || fromDashboard) && (
+                                  <button onClick={() => setDeleteContractConfirmId(c.id)} title="Excluir" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(248,113,113,0.2)', background: 'rgba(248,113,113,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
+                                    <Trash size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setContractPage(p => Math.min(total - 1, p + 1))}
+                      disabled={safeIdx === total - 1}
+                      style={{ background: 'none', border: 'none', cursor: safeIdx === total - 1 ? 'default' : 'pointer', padding: 4, color: '#fff', opacity: safeIdx === total - 1 ? 0.15 : 0.35, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                    >
+                      <CaretRight size={18} weight="bold" />
+                    </button>
+                  </div>
+                  {total > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                      {Array.from({ length: total }).map((_, i) => (
+                        <button key={i} onClick={() => setContractPage(i)} style={{ width: i === safeIdx ? 16 : 6, height: 6, borderRadius: 999, border: 'none', padding: 0, cursor: 'pointer', background: i === safeIdx ? 'var(--color-app-accent)' : 'rgba(255,255,255,0.2)', transition: 'width 0.2s, background 0.2s' }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                </div>
+              )
+            })()}
+
+            {/* Desktop — grid (≤5) ou carousel paginado (>5) */}
+            {(() => {
+              const PER_PAGE = 5
+              const totalPages = Math.ceil(contracts.length / PER_PAGE)
+              const safePage = Math.min(contractDesktopPage, Math.max(0, totalPages - 1))
+              const visible = contracts.slice(safePage * PER_PAGE, safePage * PER_PAGE + PER_PAGE)
+              const contractCard = (c: Contract) => (
+                <div
+                  key={c.id}
+                  style={{ borderRadius: 10, border: '1px solid rgba(106,166,193,0.18)', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}
+                >
+                  <div style={{ padding: '8px 8px 0', cursor: 'pointer' }} onClick={() => setSelectedContract(c)}>
+                    <ContractPreview content={c.content} />
+                  </div>
+                  <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-app-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--color-app-gray)', margin: 0 }}>{format(parseISO(c.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</p>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => setSelectedContract(c)} title="Visualizar" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
+                        <Eye size={14} />
+                      </button>
+                      <button type="button" title="Baixar PDF" onClick={() => downloadPdf(c.pdfUrl, c.name)} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
+                        <DownloadSimple size={14} />
+                      </button>
+                      {(canDeleteContract || fromDashboard) && (
+                        <button onClick={() => setDeleteContractConfirmId(c.id)} title="Excluir" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(248,113,113,0.2)', background: 'rgba(248,113,113,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
+                          <Trash size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+              return (
+                <div className="hidden md:block">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      onClick={() => setContractDesktopPage(p => Math.max(0, p - 1))}
+                      disabled={safePage === 0 || totalPages <= 1}
+                      style={{ background: 'none', border: 'none', cursor: (safePage === 0 || totalPages <= 1) ? 'default' : 'pointer', padding: 4, color: '#fff', opacity: (safePage === 0 || totalPages <= 1) ? 0.15 : 0.45, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                    >
+                      <CaretLeft size={16} weight="bold" />
+                    </button>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', transform: `translateX(-${safePage * 100}%)`, transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
+                        {Array.from({ length: totalPages }).map((_, pageIdx) => (
+                          <div key={pageIdx} style={{ minWidth: '100%', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+                            {contracts.slice(pageIdx * PER_PAGE, pageIdx * PER_PAGE + PER_PAGE).map(contractCard)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setContractDesktopPage(p => Math.min(totalPages - 1, p + 1))}
+                      disabled={safePage === totalPages - 1 || totalPages <= 1}
+                      style={{ background: 'none', border: 'none', cursor: (safePage === totalPages - 1 || totalPages <= 1) ? 'default' : 'pointer', padding: 4, color: '#fff', opacity: (safePage === totalPages - 1 || totalPages <= 1) ? 0.15 : 0.45, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                    >
+                      <CaretRight size={16} weight="bold" />
+                    </button>
+                  </div>
+                  {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                      {Array.from({ length: totalPages }).map((_, i) => (
+                        <button key={i} onClick={() => setContractDesktopPage(i)} style={{ width: i === safePage ? 16 : 6, height: 6, borderRadius: 999, border: 'none', padding: 0, cursor: 'pointer', background: i === safePage ? 'var(--color-app-accent)' : 'rgba(255,255,255,0.2)', transition: 'width 0.2s, background 0.2s' }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          {contractsTotalPages > 1 && (
+            <div style={{ borderTop: '1px solid rgba(106,166,193,0.1)', marginTop: 12, paddingTop: 4 }}>
+              <Pagination compact page={contractServerPage} totalPages={contractsTotalPages} total={contractsTotal} onPageChange={setContractServerPage} itemLabel="contrato" />
+            </div>
+          )}
+          </>
+        )}
+      </div>
+
+      {/* Delete Contract Confirm Modal */}
+      <Modal isOpen={deleteContractConfirmId !== null} onClose={() => setDeleteContractConfirmId(null)} title="Excluir Contrato">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+            Tem certeza que deseja excluir o contrato{' '}
+            <strong style={{ color: '#fff' }}>{contracts.find(c => c.id === deleteContractConfirmId)?.name}</strong>?
+            <br />Esta ação não pode ser desfeita.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => setDeleteContractConfirmId(null)}
+              style={{ padding: '8px 20px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 14, borderRadius: 8 }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!deleteContractConfirmId) return
+                deleteContractMutation.mutate({ id: deleteContractConfirmId, clientId: Number(id) }, {
+                  onSuccess: () => { addToast('Contrato excluído!', 'success'); setDeleteContractConfirmId(null) },
+                  onError: () => addToast('Erro ao excluir contrato.', 'danger'),
+                })
+              }}
+              disabled={deleteContractMutation.isPending}
+              style={{ padding: '8px 20px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, cursor: 'pointer', color: '#f87171', fontSize: 14, fontWeight: 500, opacity: deleteContractMutation.isPending ? 0.6 : 1 }}
+            >
+              {deleteContractMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Edit Modal */}
       {isEditOpen && (
@@ -657,9 +903,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
             queryClient.invalidateQueries({ queryKey: ['client-appointments', Number(id)] })
           }}
           onUpdated={(updated) => {
-            queryClient.setQueryData<Appointment[]>(['client-appointments', Number(id), fromDashboard], (old = []) =>
-              old.map(a => a.id === updated.id ? updated : a)
-            )
+            queryClient.invalidateQueries({ queryKey: ['client-appointments', Number(id)] })
             setSelectedAppointment(updated)
           }}
           canEdit={canEditSchedule}
@@ -692,6 +936,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
           onSaved={() => {
             setIsProposalOpen(false)
             queryClient.invalidateQueries({ queryKey: ['client-proposals', Number(id)] })
+            queryClient.invalidateQueries({ queryKey: ['client-proposal-stats', Number(id)] })
             queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
           }}
           createFn={fromDashboard ? dashboardService.createProposal : undefined}
@@ -708,6 +953,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
           onDeleted={() => {
             setSelectedProposal(null)
             queryClient.invalidateQueries({ queryKey: ['client-proposals', Number(id)] })
+            queryClient.invalidateQueries({ queryKey: ['client-proposal-stats', Number(id)] })
             queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
           }}
           canEdit={canEditProposal}
@@ -725,6 +971,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
             setIsEditProposalOpen(false)
             setSelectedProposal(null)
             queryClient.invalidateQueries({ queryKey: ['client-proposals', Number(id)] })
+            queryClient.invalidateQueries({ queryKey: ['client-proposal-stats', Number(id)] })
             queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
           }}
           updateFn={fromDashboard ? dashboardService.updateProposal : undefined}
@@ -761,6 +1008,34 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
           </div>
         </div>
       </Modal>
+
+      {/* Generate Contract Modal */}
+      {client && (
+        <GenerateContractModal
+          isOpen={isContractModalOpen}
+          onClose={() => setIsContractModalOpen(false)}
+          clientId={client.id}
+          clientName={client.name}
+          onConfirm={async (proposalId, templateId) => {
+            await createContractMutation.mutateAsync(
+              { templateId, clientId: client.id, proposalId },
+              {
+                onSuccess: () => addToast('Contrato gerado com sucesso!', 'success'),
+                onError: (err: any) => {
+                  addToast(err?.response?.data?.message || 'Erro ao gerar contrato.', 'danger')
+                  throw err
+                },
+              }
+            )
+          }}
+        />
+      )}
+
+      {/* Contract View Modal */}
+      <ContractViewModal
+        contract={selectedContract}
+        onClose={() => setSelectedContract(null)}
+      />
     </div>
   )
 }

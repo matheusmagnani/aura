@@ -80,7 +80,7 @@ export const proposalService = {
     await api.delete(`/proposals/${id}`)
   },
 
-  async stats(params?: { collaboratorId?: number; dateFrom?: string; dateTo?: string; statusChangedFrom?: string; statusChangedTo?: string }): Promise<ProposalStatusStat[]> {
+  async stats(params?: { collaboratorId?: number; clientId?: number; dateFrom?: string; dateTo?: string; statusChangedFrom?: string; statusChangedTo?: string }): Promise<ProposalStatusStat[]> {
     const response = await api.get('/proposals/stats', { params })
     return response.data
   },

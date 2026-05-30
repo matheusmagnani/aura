@@ -29,6 +29,8 @@ model Company {
   appointments Appointment[]
   proposals    Proposal[]
   logs         Log[]
+  contractTemplates ContractTemplate[]
+  contracts    Contract[]
   deletedAt    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -90,6 +92,7 @@ model Client {
   clientStatus      ClientStatus? @relation(fields: [idStatus], references: [id])
   appointments      Appointment[]
   proposals         Proposal[]
+  contracts         Contract[]
   deletedAt         DateTime?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -168,7 +171,39 @@ model Proposal {
   client            Client    @relation(fields: [clientId], references: [id])
   collaboratorId    Int?
   collaborator      User?     @relation("ProposalCollaborator", fields: [collaboratorId], references: [id])
+  contracts         Contract[]
   deletedAt         DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+model ContractTemplate {
+  id          Int       @id @default(autoincrement())
+  name        String
+  content     Json
+  companyId   Int
+  company     Company   @relation(fields: [companyId], references: [id])
+  contracts   Contract[]
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([name, companyId])
+}
+
+model Contract {
+  id          Int              @id @default(autoincrement())
+  name        String
+  content     Json
+  pdfUrl      String
+  templateId  Int
+  template    ContractTemplate @relation(fields: [templateId], references: [id])
+  clientId    Int
+  client      Client           @relation(fields: [clientId], references: [id])
+  proposalId  Int
+  proposal    Proposal         @relation(fields: [proposalId], references: [id])
+  companyId   Int
+  company     Company          @relation(fields: [companyId], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }

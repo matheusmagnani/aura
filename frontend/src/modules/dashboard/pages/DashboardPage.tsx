@@ -876,7 +876,7 @@ export function DashboardPage() {
           </div>{/* fim body wrapper */}
           {proposalsData && proposalsData.meta.totalPages > 1 && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, padding: '4px 8px' }}>
-              <Pagination page={proposalPage} totalPages={proposalsData.meta.totalPages} total={proposalsData.meta.total} onPageChange={setProposalPage} itemLabel="proposta" />
+              <Pagination compact page={proposalPage} totalPages={proposalsData.meta.totalPages} total={proposalsData.meta.total} onPageChange={setProposalPage} itemLabel="proposta" />
             </div>
           )}
         </div>

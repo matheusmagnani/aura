@@ -12,6 +12,8 @@ interface ListAppointmentsQuery {
   dateTo?: string
   clientId?: number
   collaboratorId?: number
+  page?: number
+  limit?: number
 }
 
 interface AppointmentInput {
@@ -29,7 +31,7 @@ const appointmentInclude = {
 }
 
 export async function listAppointmentsService(query: ListAppointmentsQuery, companyId: number) {
-  const { dateFrom, dateTo, clientId, collaboratorId } = query
+  const { dateFrom, dateTo, clientId, collaboratorId, page, limit } = query
 
   const where = {
     companyId,
@@ -44,13 +46,25 @@ export async function listAppointmentsService(query: ListAppointmentsQuery, comp
     }),
   }
 
-  const appointments = await prisma.appointment.findMany({
+  if (page !== undefined && limit !== undefined) {
+    const [data, total] = await Promise.all([
+      prisma.appointment.findMany({
+        where,
+        include: appointmentInclude,
+        orderBy: { startAt: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.appointment.count({ where }),
+    ])
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) }
+  }
+
+  return prisma.appointment.findMany({
     where,
     include: appointmentInclude,
     orderBy: { startAt: 'asc' },
   })
-
-  return appointments
 }
 
 export async function getAppointmentByIdService(id: number, companyId: number) {

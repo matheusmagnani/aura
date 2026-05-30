@@ -78,6 +78,7 @@ const FIELD_LABELS: Record<string, string> = {
   collaboratorId: 'Colaborador',
   value: 'Valor',
   clientObservation: 'Observação',
+  statusProposta: 'Status',
 }
 
 // Labels legados (logs antigos guardavam status como string)
@@ -180,7 +181,7 @@ function ChangesTable({ metadata, module, collaboratorsMap, clientStatusesMap }:
   if (keys.length === 0) return null
 
   const isAppointmentChange = keys.some(k => k === 'startAt' || k === 'title')
-  const isProposalChange = keys.some(k => k === 'value' || k === 'clientObservation')
+  const isProposalChange = keys.some(k => k === 'value' || k === 'clientObservation' || k === 'statusProposta')
   const suffix = isAppointmentChange ? 'do agendamento' : isProposalChange ? 'da proposta' : (module ? MODULE_FIELD_SUFFIX[module] : undefined)
 
   return (
@@ -217,7 +218,7 @@ function LogCard({ log, collaboratorsMap, clientStatusesMap }: { log: Log; colla
   const color = ACTION_COLORS[log.action] ?? 'rgba(255,255,255,0.5)'
   const actionLabel = ACTION_LABELS[log.action] ?? log.action
   const moduleLabel = MODULE_LABELS[log.module] ?? log.module
-  const hasChanges = log.action === 'edit' && log.metadata?.before && log.metadata?.after
+  const hasChanges = log.action === 'edit' && log.metadata?.before && log.metadata?.after && log.module !== 'contract-templates'
 
   return (
     <div style={{ position: 'relative', paddingTop: 12 }}>

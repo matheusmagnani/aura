@@ -15,6 +15,8 @@ export async function listAppointmentsController(request: FastifyRequest, reply:
     dateTo: z.string().optional(),
     clientId: z.coerce.number().optional(),
     collaboratorId: z.coerce.number().optional(),
+    page: z.coerce.number().min(1).optional(),
+    limit: z.coerce.number().min(1).optional(),
   })
 
   const query = schema.parse(request.query)

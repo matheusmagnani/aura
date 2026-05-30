@@ -4,6 +4,7 @@ import { ClockCounterClockwise } from '@phosphor-icons/react'
 import { Modal } from './Modal'
 import { logService, type Log, type LogsResponse } from '../services/logService'
 import { collaboratorsService, type CollaboratorSelectItem } from '../services/collaboratorsService'
+import { clientStatusService } from '../services/clientStatusService'
 import { formatPhone, formatCPF, formatCNPJ, formatZipCode } from '../utils/formatters'
 
 const ACTION_LABELS: Record<string, string> = {
@@ -51,6 +52,8 @@ const FIELD_LABELS: Record<string, string> = {
   department: 'Departamento',
   roleId: 'Setor',
   notes: 'Observações',
+  idStatus: 'Status',
+  statusProposta: 'Status',
   startAt: 'Início do agendamento',
   title: 'Título',
   description: 'Descrição',
@@ -76,12 +79,17 @@ const MODULE_FIELD_SUFFIX: Record<string, string> = {
 
 const SUFFIX_EXCLUDED_KEYS = new Set(['startAt', 'color'])
 const APPOINTMENT_ONLY_KEYS = new Set(['title', 'startAt'])
-const PROPOSAL_ONLY_KEYS = new Set(['value', 'clientObservation'])
+const PROPOSAL_ONLY_KEYS = new Set(['value', 'clientObservation', 'statusProposta'])
 const HIDDEN_KEYS = new Set(['statusChangedAt'])
 
-function formatValue(key: string, value: unknown): string {
+function formatValue(key: string, value: unknown, clientStatusesMap?: Record<number, string>): string {
   if (value === null || value === undefined || value === '') return ''
   if (typeof value === 'boolean') return value ? 'Ativo' : 'Inativo'
+  if (key === 'idStatus') {
+    const num = typeof value === 'number' ? value : Number(value)
+    if (clientStatusesMap) return clientStatusesMap[num] ?? String(num)
+    return String(num)
+  }
   if (key === 'status') {
     if (value === 1 || value === 0 || value === '1' || value === '0')
       return value === 1 || value === '1' ? 'Ativo' : 'Inativo'
@@ -119,7 +127,7 @@ function formatISODate(value: unknown): string | null {
   })
 }
 
-function ValueDisplay({ fieldKey, value, collaboratorsMap }: { fieldKey: string; value: unknown; collaboratorsMap?: Record<number, string> }) {
+function ValueDisplay({ fieldKey, value, collaboratorsMap, clientStatusesMap }: { fieldKey: string; value: unknown; collaboratorsMap?: Record<number, string>; clientStatusesMap?: Record<number, string> }) {
   if (fieldKey === 'collaboratorId' && collaboratorsMap) {
     const id = typeof value === 'number' ? value : Number(value)
     return <>{collaboratorsMap[id] ?? (value === null || value === undefined ? '—' : String(value))}</>
@@ -127,7 +135,7 @@ function ValueDisplay({ fieldKey, value, collaboratorsMap }: { fieldKey: string;
   if (fieldKey === 'value') {
     return <>{Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</>
   }
-  const text = formatValue(fieldKey, value)
+  const text = formatValue(fieldKey, value, clientStatusesMap as Record<number, string> | undefined)
   if (isHexColor(value)) {
     return <span style={{ width: 12, height: 12, borderRadius: '50%', background: value, display: 'inline-block', border: '1px solid rgba(255,255,255,0.2)' }} />
   }
@@ -137,7 +145,7 @@ function ValueDisplay({ fieldKey, value, collaboratorsMap }: { fieldKey: string;
   return <>{formatted ?? text}</>
 }
 
-function ChangesTable({ metadata, module, collaboratorsMap }: { metadata: Record<string, unknown>; module?: string; collaboratorsMap?: Record<number, string> }) {
+function ChangesTable({ metadata, module, collaboratorsMap, clientStatusesMap }: { metadata: Record<string, unknown>; module?: string; collaboratorsMap?: Record<number, string>; clientStatusesMap?: Record<number, string> }) {
   const before = metadata.before as Record<string, unknown> | undefined
   const after = metadata.after as Record<string, unknown> | undefined
   if (!before || !after) return null
@@ -167,11 +175,11 @@ function ChangesTable({ metadata, module, collaboratorsMap }: { metadata: Record
             {FIELD_LABELS[k] ?? k}{suffix && FIELD_LABELS[k] && !SUFFIX_EXCLUDED_KEYS.has(k) ? ` ${suffix}` : ''}
           </span>
           <span key={`before-${k}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
-            <ValueDisplay fieldKey={k} value={before[k]} collaboratorsMap={collaboratorsMap} />
+            <ValueDisplay fieldKey={k} value={before[k]} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} />
           </span>
           <span key={`arrow-${k}`} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' as const }}>→</span>
           <span key={`after-${k}`} style={{ fontSize: 12, color: 'var(--color-app-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
-            <ValueDisplay fieldKey={k} value={after[k]} collaboratorsMap={collaboratorsMap} />
+            <ValueDisplay fieldKey={k} value={after[k]} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} />
           </span>
         </>
       ))}
@@ -179,10 +187,11 @@ function ChangesTable({ metadata, module, collaboratorsMap }: { metadata: Record
   )
 }
 
-function LogRow({ log, collaboratorsMap }: { log: Log; collaboratorsMap?: Record<number, string> }) {
+function LogRow({ log, collaboratorsMap, clientStatusesMap }: { log: Log; collaboratorsMap?: Record<number, string>; clientStatusesMap?: Record<number, string> }) {
   const color = ACTION_COLORS[log.action] ?? 'rgba(255,255,255,0.5)'
   const label = ACTION_LABELS[log.action] ?? log.action
-  const hasChanges = log.action === 'edit' && log.metadata?.before && log.metadata?.after
+  const hasChanges = log.action === 'edit' && log.metadata?.before && log.metadata?.after && log.module !== 'contract-templates'
+  const description = log.description?.replace(/ para .+$/, '') ?? log.description
 
   return (
     <div style={{
@@ -210,10 +219,10 @@ function LogRow({ log, collaboratorsMap }: { log: Log; collaboratorsMap?: Record
           {formatDate(log.createdAt)}
         </span>
       </div>
-      {!hasChanges && log.description && (
-        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{log.description}</span>
+      {!hasChanges && description && (
+        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{description}</span>
       )}
-      {hasChanges && log.metadata ? <ChangesTable metadata={log.metadata as Record<string, unknown>} module={log.module} collaboratorsMap={collaboratorsMap} /> : null}
+      {hasChanges && log.metadata ? <ChangesTable metadata={log.metadata as Record<string, unknown>} module={log.module} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} /> : null}
       <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>por {log.userName}</span>
     </div>
   )
@@ -245,6 +254,13 @@ export function EntityHistoryModal({ isOpen, onClose, module, entityId, entityNa
   })
 
   const collaboratorsMap = Object.fromEntries((collaboratorsData ?? []).map(c => [c.id, c.name])) as Record<number, string>
+
+  const { data: clientStatusesData = [] } = useQuery({
+    queryKey: ['client-statuses-select'],
+    queryFn: clientStatusService.list,
+    staleTime: 1000 * 60 * 5,
+  })
+  const clientStatusesMap = Object.fromEntries(clientStatusesData.map(s => [s.id, s.name])) as Record<number, string>
 
   const logs = data?.data ?? []
   const meta = data?.meta
@@ -285,7 +301,7 @@ export function EntityHistoryModal({ isOpen, onClose, module, entityId, entityNa
         {!isLoading && logs.length > 0 && (
           <div>
             {logs.map((log) => (
-              <LogRow key={log.id} log={log} collaboratorsMap={collaboratorsMap} />
+              <LogRow key={log.id} log={log} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} />
             ))}
           </div>
         )}

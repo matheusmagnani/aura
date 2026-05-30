@@ -26,6 +26,14 @@ export interface AppointmentPayload {
   collaboratorId?: number | null
 }
 
+export interface AppointmentsPaginatedResponse {
+  data: Appointment[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 export const scheduleService = {
   async list(params: {
     dateFrom?: string
@@ -33,6 +41,16 @@ export const scheduleService = {
     clientId?: number
     collaboratorId?: number
   }): Promise<Appointment[]> {
+    const response = await api.get('/schedule', { params })
+    return response.data
+  },
+
+  async listPaginated(params: {
+    clientId?: number
+    collaboratorId?: number
+    page: number
+    limit: number
+  }): Promise<AppointmentsPaginatedResponse> {
     const response = await api.get('/schedule', { params })
     return response.data
   },
