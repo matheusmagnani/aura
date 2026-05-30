@@ -5,9 +5,10 @@ import { CompanyInfoSection } from '../components/CompanyInfoSection'
 import { RolesSection } from '../components/RolesSection'
 import { PermissionsSection } from '../components/PermissionsSection'
 import { ClientStatusSection } from '../components/ClientStatusSection'
+import { ContractsSection } from '../components/ContractsSection'
 import { useExpandedSection } from '../hooks/useExpandedSection'
 
-type Section = 'company' | 'roles' | 'permissions' | 'clientStatuses'
+type Section = 'company' | 'roles' | 'permissions' | 'clientStatuses' | 'contracts'
 
 export function SettingsPage() {
   const { expanded, toggle } = useExpandedSection<Section>()
@@ -17,6 +18,7 @@ export function SettingsPage() {
     roles: useRef<HTMLDivElement>(null),
     permissions: useRef<HTMLDivElement>(null),
     clientStatuses: useRef<HTMLDivElement>(null),
+    contracts: useRef<HTMLDivElement>(null),
   }
 
   function handleToggle(section: Section) {
@@ -66,6 +68,12 @@ export function SettingsPage() {
           <ClientStatusSection
             isExpanded={expanded === 'clientStatuses'}
             onToggle={() => handleToggle('clientStatuses')}
+          />
+        </div>
+        <div ref={refs.contracts}>
+          <ContractsSection
+            isExpanded={expanded === 'contracts'}
+            onToggle={() => handleToggle('contracts')}
           />
         </div>
       </div>

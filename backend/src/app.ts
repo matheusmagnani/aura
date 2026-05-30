@@ -17,6 +17,8 @@ import { logRoutes } from './modules/logs/log.routes'
 import { scheduleRoutes } from './modules/schedule/schedule.routes'
 import { proposalRoutes } from './modules/proposals/proposal.routes'
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes'
+import { contractTemplateRoutes } from './modules/contract-templates/contract-template.routes'
+import { contractRoutes } from './modules/contracts/contract.routes'
 
 export const app = fastify()
 
@@ -85,3 +87,5 @@ app.register(logRoutes, { prefix: '/api/logs' })
 app.register(scheduleRoutes, { prefix: '/api/schedule' })
 app.register(proposalRoutes, { prefix: '/api/proposals' })
 app.register(dashboardRoutes, { prefix: '/api/dashboard' })
+app.register(contractTemplateRoutes, { prefix: '/api/contract-templates' })
+app.register(contractRoutes, { prefix: '/api/contracts' })

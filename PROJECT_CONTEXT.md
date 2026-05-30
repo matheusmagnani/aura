@@ -38,10 +38,12 @@
 - **collaborators** — CRUD de usuários da empresa (excluindo o usuário logado); inclui redefinição de senha pelo admin
 - **schedule** — CRUD de agendamentos por empresa; filtros por range de datas, clientId, collaboratorId; soft delete; logs de auditoria
 - **proposals** — CRUD de propostas por empresa; vinculadas a cliente (obrigatório) e colaborador (opcional); status: pending, sent, accepted, refused; filtros por status, clientId, collaboratorId; soft delete; logs de auditoria
+- **contract-templates** — CRUD de modelos de contrato por empresa; conteúdo armazenado como JSON TipTap; soft delete com restore; logs de auditoria; permissão `settings`
+- **contracts** — Contratos gerados para clientes; vinculados a cliente + proposta aceita (idStatus=3) + template; variáveis substituídas no backend; PDF gerado com puppeteer e salvo no S3; hard delete (remove S3 + DB); logs de auditoria; permissão `clients`
 
 ### Models (Prisma)
 
-- Company, User, Role, Permission, Client, Appointment, Proposal
+- Company, User, Role, Permission, Client, Appointment, Proposal, ContractTemplate, Contract
 - **Appointment** possui campos: `title` (obrigatório), `description?`, `startAt` (DateTime), `companyId`, `clientId?` (relação com Client), `collaboratorId?` (relação com User via "AppointmentCollaborator"), `deletedAt?`
 - **Proposal** possui campos: `value` (Decimal, obrigatório), `description?`, `clientObservation?`, `status` (String: `"pending"` | `"sent"` | `"accepted"` | `"refused"`, default `"pending"`), `companyId`, `clientId` (obrigatório, relação com Client), `collaboratorId?` (relação com User via "ProposalCollaborator"), `deletedAt?`
 - Client possui campos: `name` (obrigatório), `phone` (obrigatório), `email?`, `document?` (CPF ou CNPJ sem máscara), `documentType?` (String: `"CPF"` ou `"CNPJ"`), e campos de endereço: `address?`, `addressNumber?`, `addressComplement?`, `neighborhood?`, `city?`, `state?`, `zipCode?`. Também possui `userId?` (relação opcional com User — colaborador responsável).
@@ -51,7 +53,9 @@
 - Role pertence a uma Company (cada empresa tem seus próprios setores) — @@unique([name, companyId])
 - Role possui campo `status` (Int: 0 = inativo, 1 = ativo, default 1)
 - Permission pertence a um Role (roleId, module, action, allowed) — @@unique([roleId, module, action])
-- **Todas as tabelas possuem `deletedAt DateTime?`** — soft delete
+- **ContractTemplate** — `id`, `name`, `content` (Json TipTap), `companyId`, `deletedAt?` — @@unique([name, companyId])
+- **Contract** — `id`, `name`, `content` (Json TipTap com variáveis substituídas), `pdfUrl` (S3), `templateId`, `clientId`, `proposalId`, `companyId` — SEM `deletedAt` (hard delete)
+- **Todas as tabelas exceto Contract possuem `deletedAt DateTime?`** — soft delete
 
 ### Padrão de Soft Delete
 
@@ -160,6 +164,25 @@ Após registro bem-sucedido: **não** faz auto-login, retorna à tela de login c
 | POST | /api/proposals | Sim | Criar proposta (value*, clientId*, description?, clientObservation?, status?, collaboratorId?) |
 | PUT | /api/proposals/:id | Sim | Atualizar proposta (value, description, clientObservation, status, collaboratorId) |
 | DELETE | /api/proposals/:id | Sim | Excluir proposta (soft delete) |
+
+### Endpoints de Contract Templates
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| GET | /api/contract-templates | Sim | Listar modelos da empresa (deletedAt: null) — permissão settings/read |
+| POST | /api/contract-templates | Sim | Criar modelo (name*, content*) — permissão settings/create |
+| PUT | /api/contract-templates/:id | Sim | Atualizar modelo (name?, content?) — permissão settings/edit |
+| DELETE | /api/contract-templates/:id | Sim | Soft delete — permissão settings/delete |
+
+### Endpoints de Contracts
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| GET | /api/contracts?clientId= | Sim | Listar contratos do cliente — permissão clients/read |
+| GET | /api/contracts/:id | Sim | Buscar contrato por ID — permissão clients/read |
+| POST | /api/contracts | Sim | Gerar contrato (templateId*, clientId*, proposalId*) — substitui variáveis, gera PDF, sobe ao S3 — permissão clients/create |
+| DELETE | /api/contracts/:id | Sim | Hard delete: remove S3 + DB — permissão clients/delete |
+| POST | /api/contracts/upload-image | Sim | Upload de imagem para o editor (multipart) — retorna URL S3 — permissão settings/edit |
 
 ### Endpoints de Logs (Histórico)
 
@@ -271,6 +294,12 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - **EntityHistoryModal** — modal reutilizável que exibe o histórico de uma entidade específica. Props: `isOpen`, `onClose`, `module`, `entityId`, `entityName?`. Usa `logService.listByEntity()` com paginação
 - **ui/Checkbox** — checkbox acessível via @radix-ui/react-checkbox com animação de check, suporte a sizes `sm|md|lg`, e cores do projeto
 - **ui/Input** — input com label, ícone, X de limpar, toggle de visibilidade (password), error state (`border-red-500/50`). Em inputs de **senha**: apenas o olhinho (sem X)
+- **contract-studio/ContractStudio** — overlay full-screen para criação/edição de templates de contrato. Props: `template`, `isOpen`, `onClose`, `onSave`. Usa TipTap com extensões + VariableChipNode + ContractToolbar + VariablePickerPanel
+- **contract-studio/ContractPreview** — preview read-only de conteúdo TipTap em miniatura (prop `content`). Usado em cards de templates e contratos
+- **contract-studio/ContractToolbar** — toolbar TipTap com fonte, tamanho, formatação, cor, alinhamento, listas, upload de imagem
+- **contract-studio/VariablePickerPanel** — painel lateral com variáveis agrupadas para inserção no editor
+- **contract-studio/VariableChipNode** — TipTap custom node que renderiza variáveis como chips não-editáveis
+- **contract-studio/contractVariables** — `CONTRACT_VARIABLES[]` e `CONTRACT_VARIABLE_GROUPS` com todas as variáveis disponíveis
 
 ### Padrão de Validação de Formulários (Frontend)
 
@@ -294,6 +323,8 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 ### Services Compartilhados (shared/services/)
 
 - **logService.ts** — `list(params)`, `listByEntity(module, entityId, page?)`. Interface `Log` com todos os campos.
+- **contractTemplateService.ts** — `list()`, `create({name, content})`, `update(id, {name?, content?})`, `delete(id)`, `uploadImage(file)` → URL S3. Interface `ContractTemplate`
+- **contractService.ts** — `listByClient(clientId)`, `getById(id)`, `create({templateId, clientId, proposalId})`, `delete(id)`. Interface `Contract`
 
 ### Proposal Service (proposalService.ts)
 
@@ -321,7 +352,7 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - **LoginPage** — login + cadastro em 2 etapas (usuário e empresa) na mesma página, com animação de transição no mobile. Desktop: split layout; Mobile: coluna única + barra inferior animada
 - **DashboardPage** — dashboard do usuário com 3 seções: (1) Agenda com toggle Dia/Semana (DayView/WeekView, estado local independente do store compartilhado, filtrada por collaboratorId=userId para usuários comuns; admins veem tudo e podem filtrar por colaborador), (2) Listagem de Clientes do usuário com busca e paginação, (3) Listagem de Propostas do usuário com busca, filtro de status e paginação. Layout: Agenda full-width no topo → Clientes | Propostas em grid md:grid-cols-2 abaixo. Rota: `/dashboard`
 - **ClientsPage** — lista paginada de clientes com busca (nome/email/telefone), filtro de status, ações (editar, inativar, excluir). Clicar no nome/contato navega para `/clients/:id`
-- **ClientDetailPage** — detalhe do cliente com card header (nome, status, telefone, email, data de cadastro com copy), card de endereço (condicional), ações de editar, toggle status (ToggleLeft/Right) e excluir com confirmação. Botão "Histórico" abre `EntityHistoryModal`. Cards de agendamentos e propostas em linha (desktop) ou empilhados (mobile): agendamentos via query `client-appointments` | propostas via query `client-proposals` — ambos com carousel 143×143px; clicar abre `AppointmentDetailModal` / `ProposalDetailModal` com opções de editar/excluir respeitando permissões. Propostas mostram valor (formatCurrency), badge de status colorido, colaborador
+- **ClientDetailPage** — detalhe do cliente com card header (nome, status, telefone, email, data de cadastro com copy), card de endereço (condicional), ações de editar, toggle status (ToggleLeft/Right) e excluir com confirmação. Botão "Histórico" abre `EntityHistoryModal`. Cards de agendamentos e propostas em linha (desktop) ou empilhados (mobile): agendamentos via query `client-appointments` | propostas via query `client-proposals` — ambos com carousel 143×143px; clicar abre `AppointmentDetailModal` / `ProposalDetailModal` com opções de editar/excluir respeitando permissões. Propostas mostram valor (formatCurrency), badge de status colorido, colaborador. Card de Contratos full-width abaixo: grid de contratos com preview TipTap miniaturizado, botão "+" abre `GenerateContractModal` (2 etapas: proposta aceita → template); ações por contrato: visualizar (`ContractViewModal`), baixar PDF (link S3), excluir (hard delete)
 - **CollaboratorsPage** — lista paginada de colaboradores (usuários da empresa) com avatar, badge "Você", filtro de status, setor (role), ações (editar, inativar, excluir, redefinir senha, histórico). Usa `ListCard` no mobile e tabela div no desktop
 - **HistoryPage** — página somente leitura do histórico global da empresa. Filtros por módulo e ação, busca por texto, paginação. Acesso controlado por permissão `history/read`
 - **ProposalsPage** — lista paginada de propostas com busca, filtros por status e colaborador, ações (visualizar, editar, excluir, histórico). Visualizar abre `ProposalDetailModal`. Clicar no nome do cliente abre detalhe. Bulk delete de selecionados
@@ -336,6 +367,15 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - `/collaborators` — CollaboratorsPage (privada, module: collaborators)
 - `/history` — HistoryPage (privada, PermissionRoute module: history)
 - `/proposals` — ProposalsPage (privada, PermissionRoute module: proposals)
+- `/settings` — SettingsPage com 5 seções colapsáveis: Empresa, Setores, Permissões, Status de Clientes, **Modelos de Contrato** (ContractsSection)
+
+### Novas Dependências (Módulo de Contratos)
+
+**Frontend:**
+- `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-image`, `@tiptap/extension-font-family`, `@tiptap/extension-text-style`, `@tiptap/extension-color`, `@tiptap/extension-underline`, `@tiptap/extension-text-align`, `@tiptap/extension-placeholder`
+
+**Backend:**
+- `puppeteer` — geração de PDF via headless Chromium (HTML-to-PDF)
 - `/` — redireciona para /dashboard
 
 ### Sistema de Logs (Audit Trail)
