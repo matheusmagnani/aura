@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CaretLeft, CaretRight, CurrencyCircleDollar, UserCircle } from '@phosphor-icons/react'
 import { Modal } from '../../../shared/components/Modal'
+import { FullScreenLoading } from '../../../shared/components/FullScreenLoading'
 import { ContractPreview } from '../../../shared/components/contract-studio/ContractPreview'
 import { proposalService, type Proposal } from '../../../shared/services/proposalService'
 import { contractTemplateService } from '../../../shared/services/contractTemplateService'
 import { formatCurrency } from '../../../shared/utils/formatters'
 import { PROPOSAL_COLORS, PROPOSAL_LABELS } from '../../../shared/constants/proposalStatus'
+import { useToast } from '../../../shared/hooks/useToast'
+import { getApiError } from '../../../shared/utils/getApiError'
 
 interface GenerateContractModalProps {
   isOpen: boolean
@@ -14,6 +17,7 @@ interface GenerateContractModalProps {
   clientId: number
   clientName: string
   onConfirm: (proposalId: number, templateId: number) => Promise<void>
+  initialProposalId?: number
 }
 
 export function GenerateContractModal({
@@ -22,12 +26,14 @@ export function GenerateContractModal({
   clientId,
   clientName,
   onConfirm,
+  initialProposalId,
 }: GenerateContractModalProps) {
-  const [step, setStep] = useState<1 | 2>(1)
-  const [selectedProposalId, setSelectedProposalId] = useState<number | null>(null)
+  const [step, setStep] = useState<1 | 2>(initialProposalId ? 2 : 1)
+  const [selectedProposalId, setSelectedProposalId] = useState<number | null>(initialProposalId ?? null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [templatePage, setTemplatePage] = useState(0)
+  const { addToast } = useToast()
 
   const { data: proposalsData } = useQuery({
     queryKey: ['client-proposals-accepted', clientId],
@@ -47,8 +53,8 @@ export function GenerateContractModal({
   const acceptedProposals = proposalsData ?? []
 
   function handleClose() {
-    setStep(1)
-    setSelectedProposalId(null)
+    setStep(initialProposalId ? 2 : 1)
+    setSelectedProposalId(initialProposalId ?? null)
     setSelectedTemplateId(null)
     onClose()
   }
@@ -64,6 +70,8 @@ export function GenerateContractModal({
     try {
       await onConfirm(selectedProposalId, selectedTemplateId)
       handleClose()
+    } catch (err: any) {
+      addToast(getApiError(err), 'danger')
     } finally {
       setLoading(false)
     }
@@ -72,12 +80,13 @@ export function GenerateContractModal({
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId) ?? null
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title={
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {step === 2 && (
+          {step === 2 && !initialProposalId && (
             <button
               type="button"
               onClick={() => setStep(1)}
@@ -298,5 +307,8 @@ export function GenerateContractModal({
         </div>
       )}
     </Modal>
+
+      <FullScreenLoading visible={loading} label="Gerando contrato..." />
+    </>
   )
 }

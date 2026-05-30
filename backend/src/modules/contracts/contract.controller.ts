@@ -33,15 +33,15 @@ export async function getContractController(request: FastifyRequest, reply: Fast
 }
 
 export async function createContractController(request: FastifyRequest, reply: FastifyReply) {
-  const schema = z.object({
-    templateId: z.number().int().positive(),
-    clientId: z.number().int().positive(),
-    proposalId: z.number().int().positive(),
-  })
-  const data = schema.parse(request.body)
-  const { companyId, userId } = request.user as { companyId: number; userId: number }
-
   try {
+    const schema = z.object({
+      templateId: z.number().int().positive(),
+      clientId: z.number().int().positive(),
+      proposalId: z.number().int().positive(),
+    })
+    const data = schema.parse(request.body)
+    const { companyId, userId } = request.user as { companyId: number; userId: number }
+
     const contract = await createContractService(data, companyId, { userId })
     return reply.status(201).send(contract)
   } catch (error: any) {
@@ -50,6 +50,10 @@ export async function createContractController(request: FastifyRequest, reply: F
       if (error.missingFields) body.missingFields = error.missingFields
       return reply.status(error.statusCode).send(body)
     }
+    if (error?.name === 'ZodError') {
+      return reply.status(400).send({ message: 'Dados inválidos.', issues: error.errors })
+    }
+    console.error('[createContract] Unhandled error:', error?.message, error?.stack)
     throw error
   }
 }

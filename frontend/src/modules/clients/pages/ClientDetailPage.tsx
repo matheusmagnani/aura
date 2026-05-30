@@ -14,6 +14,7 @@ import { AppointmentModal } from '../../schedule/components/AppointmentModal'
 import { AppointmentDetailModal } from '../../schedule/components/AppointmentDetailModal'
 import { ProposalModal } from '../../proposals/components/ProposalModal'
 import { ProposalDetailModal } from '../../proposals/components/ProposalDetailModal'
+import { ProposalContractPrompt } from '../../proposals/components/ProposalContractPrompt'
 import { GenerateContractModal } from '../components/GenerateContractModal'
 import { ContractViewModal } from '../components/ContractViewModal'
 import { CopyText } from '../../../shared/components/CopyText'
@@ -30,7 +31,6 @@ import { StatisticsStatusCards } from '../../../shared/components/StatisticsStat
 import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
 import { ContractPreview } from '../../../shared/components/contract-studio/ContractPreview'
 import { useClientContractsPaginated, useCreateContract, useDeleteContract } from '../hooks/useContracts'
-import { FullScreenLoading } from '../../../shared/components/FullScreenLoading'
 import { Pagination } from '../../../shared/components/Pagination'
 import { contractService } from '../../../shared/services/contractService'
 import type { Contract } from '../../../shared/services/contractService'
@@ -110,6 +110,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
   const [isProposalOpen, setIsProposalOpen] = useState(false)
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null)
   const [isEditProposalOpen, setIsEditProposalOpen] = useState(false)
+  const [acceptedProposal, setAcceptedProposal] = useState<Proposal | null>(null)
 
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768)
   const [isContractModalOpen, setIsContractModalOpen] = useState(false)
@@ -942,6 +943,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
             queryClient.invalidateQueries({ queryKey: ['client-proposal-stats', Number(id)] })
             queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
           }}
+          onAccepted={setAcceptedProposal}
           createFn={fromDashboard ? dashboardService.createProposal : undefined}
           defaultCollaboratorId={fromDashboard ? currentUserId : undefined}
         />
@@ -977,10 +979,16 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
             queryClient.invalidateQueries({ queryKey: ['client-proposal-stats', Number(id)] })
             queryClient.invalidateQueries({ queryKey: ['proposal-status-stats'] })
           }}
+          onAccepted={setAcceptedProposal}
           updateFn={fromDashboard ? dashboardService.updateProposal : undefined}
           defaultCollaboratorId={fromDashboard ? currentUserId : undefined}
         />
       )}
+
+      <ProposalContractPrompt
+        proposal={acceptedProposal}
+        onClose={() => setAcceptedProposal(null)}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal isOpen={isDeleteConfirm} onClose={() => setIsDeleteConfirm(false)} title="Excluir Cliente">
@@ -1037,7 +1045,6 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
         onClose={() => setSelectedContract(null)}
       />
 
-      <FullScreenLoading visible={createContractMutation.isPending} label="Gerando contrato..." />
     </div>
   )
 }

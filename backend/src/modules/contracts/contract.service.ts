@@ -402,10 +402,7 @@ export async function deleteContractService(id: number, companyId: number, actor
   const contract = await prisma.contract.findFirst({ where: { id, companyId } })
   if (!contract) throw { statusCode: 404, message: 'Contrato não encontrado.' }
 
-  await Promise.all([
-    deleteFromS3(contract.pdfUrl),
-    deleteContentImagesFromS3(contract.content),
-  ])
+  await deleteFromS3(contract.pdfUrl)
 
   await prisma.contract.delete({ where: { id } })
 

@@ -20,20 +20,17 @@ export async function uploadToS3(key: string, buffer: Buffer, mimetype: string):
 }
 
 export async function deleteFromS3(url: string): Promise<void> {
-  const key = url.split('.amazonaws.com/')[1]
-  if (!key) return
-  await s3.send(new DeleteObjectCommand({
-    Bucket: env.AWS_BUCKET_NAME,
-    Key: key,
-  }))
+  // URL format: https://{bucket}.s3.{region}.amazonaws.com/{key}
+  const match = url.match(/^https?:\/\/([^.]+)\.s3\.[^/]+\.amazonaws\.com\/(.+)$/)
+  if (!match) return
+  const [, bucket, key] = match
+  await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
 }
 
 export async function getStreamFromS3(url: string) {
-  const key = url.split('.amazonaws.com/')[1]
-  if (!key) throw new Error('Invalid S3 URL')
-  const response = await s3.send(new GetObjectCommand({
-    Bucket: env.AWS_BUCKET_NAME,
-    Key: key,
-  }))
+  const match = url.match(/^https?:\/\/([^.]+)\.s3\.[^/]+\.amazonaws\.com\/(.+)$/)
+  if (!match) throw new Error('Invalid S3 URL')
+  const [, bucket, key] = match
+  const response = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }))
   return response
 }

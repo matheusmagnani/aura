@@ -3,6 +3,10 @@
 
   <br /><br />
 
+  ### ✅ Acesse em produção → [aura.beetsbr.com](https://aura.beetsbr.com/)
+
+  <br />
+
   <h3>CRM - Plataforma SaaS Multi-tenant de gestão empresarial, voltada para empresas que trabalham com representantes de venda.</h3>
 
   <p>Agenda · Clientes · Propostas · Equipe · Permissões</p>

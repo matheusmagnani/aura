@@ -50,6 +50,7 @@ app.setErrorHandler((error: FastifyError | ZodError, _request, reply) => {
     })
   }
 
+  console.error('[500] Unhandled error:', error?.message ?? error, error?.stack)
   app.log.error({ err: error, message: error?.message, stack: error?.stack }, 'Unhandled error')
   return reply.status(500).send({
     statusCode: 500,

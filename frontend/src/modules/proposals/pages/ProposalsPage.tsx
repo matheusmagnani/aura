@@ -17,6 +17,7 @@ import { proposalService, type Proposal, type ProposalStatusStat } from '../../.
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { ProposalModal } from '../components/ProposalModal'
 import { ProposalDetailModal } from '../components/ProposalDetailModal'
+import { ProposalContractPrompt } from '../components/ProposalContractPrompt'
 import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
@@ -156,6 +157,7 @@ export function ProposalsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingProposal, setEditingProposal] = useState<Proposal | undefined>(undefined)
   const [viewingProposal, setViewingProposal] = useState<Proposal | undefined>(undefined)
+  const [acceptedProposal, setAcceptedProposal] = useState<Proposal | null>(null)
   const [isEditFromDetail, setIsEditFromDetail] = useState(false)
   const [historyTarget, setHistoryTarget] = useState<Proposal | undefined>(undefined)
   const [deleteTarget, setDeleteTarget] = useState<Proposal | undefined>(undefined)
@@ -583,8 +585,14 @@ export function ProposalsPage() {
           proposal={editingProposal}
           onClose={() => { setShowForm(false); setEditingProposal(undefined); setIsEditFromDetail(false) }}
           onSaved={handleSaved}
+          onAccepted={setAcceptedProposal}
         />
       )}
+
+      <ProposalContractPrompt
+        proposal={acceptedProposal}
+        onClose={() => setAcceptedProposal(null)}
+      />
 
       {viewingProposal && !isEditFromDetail && (
         <ProposalDetailModal

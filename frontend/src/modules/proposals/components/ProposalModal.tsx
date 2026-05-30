@@ -19,6 +19,7 @@ interface ProposalModalProps {
   filterClientUserId?: number
   onClose: () => void
   onSaved: () => void
+  onAccepted?: (proposal: Proposal) => void
   createFn?: (data: any) => Promise<Proposal>
   updateFn?: (id: number, data: any) => Promise<Proposal>
 }
@@ -43,7 +44,7 @@ function maskCurrency(value: string): string {
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId, filterClientUserId, onClose, onSaved, createFn, updateFn }: ProposalModalProps) {
+export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId, filterClientUserId, onClose, onSaved, onAccepted, createFn, updateFn }: ProposalModalProps) {
   const { addToast } = useToast()
   const currentUser = useAuthStore(s => s.user)
   const [saving, setSaving] = useState(false)
@@ -107,15 +108,17 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
 
     setSaving(true)
     try {
+      let result: Proposal
       if (proposal) {
-        await (updateFn ?? proposalService.update)(proposal.id, payload)
+        result = await (updateFn ?? proposalService.update)(proposal.id, payload)
         addToast('Proposta atualizada!', 'success')
       } else {
-        await (createFn ?? proposalService.create)(payload)
+        result = await (createFn ?? proposalService.create)(payload)
         addToast('Proposta criada!', 'success')
       }
       onSaved()
       onClose()
+      if (result.idStatus === 3) onAccepted?.(result)
     } catch (err: any) {
       addToast(getApiError(err), 'danger')
     } finally {
