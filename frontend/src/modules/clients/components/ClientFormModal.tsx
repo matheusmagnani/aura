@@ -7,6 +7,7 @@ import { clientService, type Client } from '../../../shared/services/clientServi
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { clientStatusService } from '../../../shared/services/clientStatusService'
 import { useToast } from '../../../shared/hooks/useToast'
+import { getApiError } from '../../../shared/utils/getApiError'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { useCepSearch } from '../../../shared/hooks/useCepSearch'
 import { formatPhone, formatZipCode, formatCPF, formatCNPJ } from '../../../shared/utils/formatters'
@@ -175,7 +176,7 @@ export function ClientFormModal({ client, defaultCollaboratorId, onClose, onSave
       addToast(client ? 'Cliente atualizado!' : 'Cliente criado!', 'success')
       onSaved()
     } catch (err: any) {
-      addToast(err?.response?.data?.message || 'Erro ao salvar cliente', 'danger')
+      addToast(getApiError(err), 'danger')
     } finally {
       setSaving(false)
     }

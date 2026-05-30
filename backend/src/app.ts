@@ -50,7 +50,7 @@ app.setErrorHandler((error: FastifyError | ZodError, _request, reply) => {
     })
   }
 
-  app.log.error(error)
+  app.log.error({ err: error, message: error?.message, stack: error?.stack }, 'Unhandled error')
   return reply.status(500).send({
     statusCode: 500,
     error: 'Internal Server Error',

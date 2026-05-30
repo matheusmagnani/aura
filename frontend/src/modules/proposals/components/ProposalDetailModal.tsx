@@ -5,6 +5,7 @@ import { PencilSimple, Trash, User, UserCircle, AlignLeft, CurrencyCircleDollar,
 import { Modal } from '../../../shared/components/Modal'
 import { proposalService, type Proposal } from '../../../shared/services/proposalService'
 import { useToast } from '../../../shared/hooks/useToast'
+import { getApiError } from '../../../shared/utils/getApiError'
 import { formatCurrency } from '../../../shared/utils/formatters'
 
 const STATUS_LABELS: Record<number, string> = {
@@ -70,7 +71,7 @@ export function ProposalDetailModal({
       onDeleted()
       onClose()
     } catch (err: any) {
-      addToast(err?.response?.data?.message ?? 'Erro ao excluir proposta', 'danger')
+      addToast(getApiError(err), 'danger')
       setIsDeleteConfirm(false)
     } finally {
       setDeleting(false)

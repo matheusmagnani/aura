@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { TextAlignLeft, TextAlignCenter, TextAlignRight } from '@phosphor-icons/react'
+import { TextAlignLeft, TextAlignCenter, TextAlignRight, DotsSixVertical } from '@phosphor-icons/react'
 
 export function ResizableImageView({ editor, node, updateAttributes, selected }: NodeViewProps) {
   const { src, alt, title, width, align = 'left' } = node.attrs
@@ -72,7 +72,7 @@ export function ResizableImageView({ editor, node, updateAttributes, selected }:
 
         {selected && editor.isEditable && (
           <>
-            {/* Alignment + size toolbar */}
+            {/* Alignment + size toolbar (with drag handle) */}
             <div
               contentEditable={false}
               style={{
@@ -92,6 +92,21 @@ export function ResizableImageView({ editor, node, updateAttributes, selected }:
                 whiteSpace: 'nowrap',
               }}
             >
+              {/* Drag handle */}
+              <div
+                data-drag-handle
+                style={{
+                  cursor: 'grab',
+                  color: 'rgba(106,166,193,0.6)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  paddingRight: 4,
+                  marginRight: 2,
+                  borderRight: '1px solid rgba(106,166,193,0.25)',
+                }}
+              >
+                <DotsSixVertical size={14} weight="bold" />
+              </div>
               {alignments.map(({ value, icon }) => (
                 <button
                   key={value}

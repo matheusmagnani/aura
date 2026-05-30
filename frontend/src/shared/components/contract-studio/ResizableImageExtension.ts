@@ -3,6 +3,8 @@ import { ReactNodeViewRenderer } from '@tiptap/react'
 import { ResizableImageView } from './ResizableImageView'
 
 export const ResizableImage = Image.extend({
+  draggable: true,
+
   addAttributes() {
     return {
       ...this.parent?.(),

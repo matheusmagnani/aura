@@ -7,6 +7,7 @@ import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useCepSearch } from '../../../shared/hooks/useCepSearch'
 import { validateCNPJ } from '../../../shared/utils/validateDocuments'
+import { getApiError } from '../../../shared/utils/getApiError'
 import { Input } from '../../../shared/components/ui/Input'
 import { Select } from '../../../shared/components/ui/Select'
 import { Button } from '../../../shared/components/ui/Button'
@@ -228,7 +229,7 @@ export function LoginPage() {
         switchMode('login')
       }
     } catch (error: any) {
-      showToast(error.response?.data?.message || 'Erro ao criar conta.', 'danger')
+      showToast(getApiError(error), 'danger')
     } finally {
       setRegisterLoading(false)
     }
