@@ -20,6 +20,7 @@ import { AppointmentDetailModal } from '../../schedule/components/AppointmentDet
 import { ClientFormModal } from '../../clients/components/ClientFormModal'
 import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { ProposalModal } from '../../proposals/components/ProposalModal'
+import { ProposalContractPrompt } from '../../proposals/components/ProposalContractPrompt'
 import { ProposalDetailModal } from '../../proposals/components/ProposalDetailModal'
 import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
 import { PageHeader } from '../../../shared/components/PageHeader'
@@ -348,6 +349,7 @@ export function DashboardPage() {
   const [proposalFilterDateRange, setProposalFilterDateRange] = useState<DateRange>({})
   const [proposalFilterStatusChangedRange, setProposalFilterStatusChangedRange] = useState<DateRange>({})
   const [proposalModalOpen, setProposalModalOpen] = useState(false)
+  const [acceptedProposal, setAcceptedProposal] = useState<import('../../../shared/services/proposalService').Proposal | null>(null)
   const [editingProposal, setEditingProposal] = useState<Proposal | undefined>()
   const [proposalDetailOpen, setProposalDetailOpen] = useState(false)
   const [detailProposal, setDetailProposal] = useState<Proposal | undefined>()
@@ -1021,10 +1023,16 @@ export function DashboardPage() {
           filterClientUserId={userId}
           onClose={() => setProposalModalOpen(false)}
           onSaved={() => { setProposalModalOpen(false); handleProposalSaved() }}
+          onAccepted={setAcceptedProposal}
           createFn={dashboardService.createProposal}
           updateFn={dashboardService.updateProposal}
         />
       )}
+
+      <ProposalContractPrompt
+        proposal={acceptedProposal}
+        onClose={() => setAcceptedProposal(null)}
+      />
 
       {proposalDetailOpen && detailProposal && (
         <ProposalDetailModal

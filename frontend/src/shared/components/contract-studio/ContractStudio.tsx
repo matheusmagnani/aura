@@ -7,7 +7,7 @@ import { TextStyle } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
-import { X } from '@phosphor-icons/react'
+import { X, DesktopTower, WarningCircle } from '@phosphor-icons/react'
 import { type ContractTemplate, contractTemplateService } from '../../services/contractTemplateService'
 import { VariableChipNode } from './VariableChipNode'
 import { ContractToolbar } from './ContractToolbar'
@@ -82,8 +82,8 @@ export function ContractStudio({ template, isOpen, onClose, onSave }: ContractSt
       const content = template?.content ?? { type: 'doc', content: [{ type: 'paragraph' }] }
       setName(template?.name ?? '')
       setPageCount(1)
-      editor?.commands.setContent(content)
       imageUrlsRef.current = extractImageUrls(content as Record<string, unknown>)
+      queueMicrotask(() => editor?.commands.setContent(content))
     }
   }, [isOpen, template])
 
@@ -109,6 +109,14 @@ export function ContractStudio({ template, isOpen, onClose, onSave }: ContractSt
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', background: 'var(--color-app-bg)' }}>
+
+      {/* Mobile warning */}
+      <div className="md:hidden flex items-center gap-3 flex-shrink-0" style={{ background: 'var(--color-app-secondary)', padding: '10px 20px' }}>
+        <DesktopTower size={20} weight="bold" style={{ color: 'var(--color-app-primary)', flexShrink: 0 }} />
+        <p style={{ fontSize: 13, color: 'var(--color-app-primary)', margin: 0, lineHeight: 1.4, fontWeight: 500 }}>
+          Para uma melhor experiência, acesse esta área pelo computador.
+        </p>
+      </div>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid rgba(106,166,193,0.2)', background: 'var(--color-app-primary)', flexShrink: 0 }}>

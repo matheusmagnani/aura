@@ -45,7 +45,7 @@ export function ContractViewModal({ contract, onClose }: ContractViewModalProps)
 
   useEffect(() => {
     if (editor && contract?.content) {
-      editor.commands.setContent(contract.content)
+      queueMicrotask(() => editor.commands.setContent(contract.content))
     }
   }, [editor, contract])
 
