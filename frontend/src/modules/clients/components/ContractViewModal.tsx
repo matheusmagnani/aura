@@ -129,7 +129,7 @@ export function ContractViewModal({ contract, onClose }: ContractViewModalProps)
       {/* Floating download button */}
       <button
         type="button"
-        onClick={async () => { const url = await contractService.downloadUrl(contract.id); triggerDownload(url, contract.name) }}
+        onClick={async () => { const blob = await contractService.downloadBlob(contract.id); await triggerDownload(blob, contract.name) }}
         style={{
           position: 'fixed',
           bottom: 28,

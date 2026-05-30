@@ -48,8 +48,8 @@ export const contractService = {
     await api.delete(`/contracts/${id}`)
   },
 
-  async downloadUrl(id: number): Promise<string> {
+  async downloadBlob(id: number): Promise<Blob> {
     const res = await api.get(`/contracts/${id}/download`, { responseType: 'blob' })
-    return URL.createObjectURL(res.data)
+    return res.data
   },
 }
