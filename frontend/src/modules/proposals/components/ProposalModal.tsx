@@ -7,6 +7,7 @@ import { proposalService, type Proposal } from '../../../shared/services/proposa
 import { PROPOSAL_STATUS_ORDER, PROPOSAL_LABELS } from '../../../shared/constants/proposalStatus'
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { useToast } from '../../../shared/hooks/useToast'
+import { getApiError } from '../../../shared/utils/getApiError'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
 const STATUS_OPTIONS = PROPOSAL_STATUS_ORDER.map(s => ({ value: String(s), label: PROPOSAL_LABELS[s] }))
@@ -116,7 +117,7 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
       onSaved()
       onClose()
     } catch (err: any) {
-      addToast(err?.response?.data?.message ?? 'Erro ao salvar proposta', 'danger')
+      addToast(getApiError(err), 'danger')
     } finally {
       setSaving(false)
     }

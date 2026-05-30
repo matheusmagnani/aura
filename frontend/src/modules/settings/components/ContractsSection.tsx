@@ -7,6 +7,7 @@ import { SettingsSection } from './SettingsSection'
 import { ContractStudio } from '../../../shared/components/contract-studio/ContractStudio'
 import { ContractPreview } from '../../../shared/components/contract-studio/ContractPreview'
 import { useToast } from '../../../shared/hooks/useToast'
+import { getApiError } from '../../../shared/utils/getApiError'
 import {
   useContractTemplates,
   useCreateContractTemplate,
@@ -81,7 +82,7 @@ export function ContractsSection({
         addToast('Modelo criado!', 'success')
       }
     } catch (err: any) {
-      addToast(err?.response?.data?.message || 'Erro ao salvar modelo.', 'danger')
+      addToast(getApiError(err), 'danger')
       throw err
     }
   }
@@ -93,7 +94,7 @@ export function ContractsSection({
         setOpenMenuId(null)
         setDeleteConfirmId(null)
       },
-      onError: (err: any) => addToast(err?.response?.data?.message || 'Erro ao excluir.', 'danger'),
+      onError: (err: any) => addToast(getApiError(err), 'danger'),
     })
   }
 

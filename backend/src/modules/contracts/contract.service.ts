@@ -167,6 +167,51 @@ function tiptapToHtml(json: any, title: string): string {
 </html>`
 }
 
+// ─── Variable extraction ──────────────────────────────────────────────────────
+
+function extractVariables(node: any, found: Set<string> = new Set()): Set<string> {
+  if (!node) return found
+  if (node.type === 'variableChip') {
+    const key = node.attrs?.variable ?? ''
+    if (key) found.add(key)
+    return found
+  }
+  if (node.content) {
+    for (const child of node.content) extractVariables(child, found)
+  }
+  return found
+}
+
+const VARIABLE_LABELS: Record<string, string> = {
+  '{{cliente.nome}}': 'Nome do cliente',
+  '{{cliente.email}}': 'E-mail do cliente',
+  '{{cliente.telefone}}': 'Telefone do cliente',
+  '{{cliente.cpf_cnpj}}': 'CPF/CNPJ do cliente',
+  '{{cliente.endereco}}': 'Endereço do cliente',
+  '{{empresa.nome}}': 'Nome da empresa',
+  '{{empresa.cnpj}}': 'CNPJ da empresa',
+  '{{empresa.email}}': 'E-mail da empresa',
+  '{{empresa.telefone}}': 'Telefone da empresa',
+  '{{empresa.endereco}}': 'Endereço da empresa',
+  '{{proposta.valor}}': 'Valor da proposta',
+  '{{proposta.descricao}}': 'Descrição da proposta',
+  '{{proposta.observacoes}}': 'Observações da proposta',
+}
+
+function checkMissingVars(
+  usedVars: Set<string>,
+  vars: Record<string, string>,
+): string[] {
+  const missing: string[] = []
+  for (const key of usedVars) {
+    const value = vars[key]
+    if (value === undefined || value === null || value.trim() === '') {
+      missing.push(VARIABLE_LABELS[key] ?? key)
+    }
+  }
+  return missing
+}
+
 // ─── Variable substitution ────────────────────────────────────────────────────
 
 function substituteVariablesInNode(node: any, vars: Record<string, string>): any {
@@ -185,9 +230,17 @@ function substituteVariablesInNode(node: any, vars: Record<string, string>): any
 // ─── PDF generation ───────────────────────────────────────────────────────────
 
 async function generatePdf(html: string): Promise<Buffer> {
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    ...(executablePath ? { executablePath } : {}),
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--single-process',
+    ],
   })
   try {
     const page = await browser.newPage()
@@ -259,6 +312,16 @@ export async function createContractService(
     '{{proposta.observacoes}}': proposal.clientObservation ?? '',
     '{{contrato.data}}': contractDate,
     '{{contrato.numero}}': contractNumber,
+  }
+
+  const usedVars = extractVariables(template.content)
+  const missingFields = checkMissingVars(usedVars, vars)
+  if (missingFields.length > 0) {
+    throw {
+      statusCode: 422,
+      message: 'Dados insuficientes para gerar o contrato.',
+      missingFields,
+    }
   }
 
   const renderedJson = substituteVariablesInNode(template.content, vars)

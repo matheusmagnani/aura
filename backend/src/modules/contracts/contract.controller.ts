@@ -45,7 +45,11 @@ export async function createContractController(request: FastifyRequest, reply: F
     const contract = await createContractService(data, companyId, { userId })
     return reply.status(201).send(contract)
   } catch (error: any) {
-    if (error.statusCode) return reply.status(error.statusCode).send({ message: error.message })
+    if (error.statusCode) {
+      const body: Record<string, unknown> = { message: error.message }
+      if (error.missingFields) body.missingFields = error.missingFields
+      return reply.status(error.statusCode).send(body)
+    }
     throw error
   }
 }

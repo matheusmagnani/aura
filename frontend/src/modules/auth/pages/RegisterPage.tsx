@@ -10,6 +10,7 @@ import {
 import { authService } from '../../../shared/services/authService'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { useToast } from '../../../shared/hooks/useToast'
+import { getApiError } from '../../../shared/utils/getApiError'
 
 export function RegisterPage() {
   const [companyName, setCompanyName] = useState('')
@@ -36,9 +37,7 @@ export function RegisterPage() {
       showToast('Conta criada com sucesso!', 'success')
       navigate('/dashboard')
     } catch (error: any) {
-      const msg =
-        error.response?.data?.message || 'Erro ao criar conta.'
-      showToast(msg, 'danger')
+      showToast(getApiError(error), 'danger')
     } finally {
       setLoading(false)
     }

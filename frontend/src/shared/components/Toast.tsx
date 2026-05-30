@@ -52,7 +52,7 @@ export function Toast() {
               }}
             >
               {icon}
-              <span style={{ flex: 1, fontSize: 'inherit', color: '#fff' }}>{toast.message}</span>
+              <span style={{ flex: 1, fontSize: 'inherit', color: '#fff', whiteSpace: 'pre-line' }}>{toast.message}</span>
               <button
                 onClick={() => removeToast(toast.id)}
                 style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}

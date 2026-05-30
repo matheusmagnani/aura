@@ -6,6 +6,7 @@ import { Modal } from '../../../shared/components/Modal'
 import { SettingsSection } from './SettingsSection'
 import { clientStatusService, type ClientStatus } from '../../../shared/services/clientStatusService'
 import { useToast } from '../../../shared/hooks/useToast'
+import { getApiError } from '../../../shared/utils/getApiError'
 
 const DEFAULT_COLOR = '#6AA6C1'
 
@@ -43,7 +44,7 @@ export function ClientStatusSection({ isExpanded: isExpandedProp, onToggle: onTo
       queryClient.invalidateQueries({ queryKey: ['client-statuses'] })
       closeModal()
     },
-    onError: (err: any) => addToast(err?.response?.data?.message || 'Erro ao criar status', 'danger'),
+    onError: (err: any) => addToast(getApiError(err), 'danger'),
   })
 
   const updateMutation = useMutation({
@@ -55,7 +56,7 @@ export function ClientStatusSection({ isExpanded: isExpandedProp, onToggle: onTo
       queryClient.invalidateQueries({ queryKey: ['dashboard-client-status-stats'] })
       closeModal()
     },
-    onError: (err: any) => addToast(err?.response?.data?.message || 'Erro ao atualizar status', 'danger'),
+    onError: (err: any) => addToast(getApiError(err), 'danger'),
   })
 
   const deleteMutation = useMutation({
@@ -69,7 +70,7 @@ export function ClientStatusSection({ isExpanded: isExpandedProp, onToggle: onTo
       setDeleteConfirmId(null)
       setOpenMenuId(null)
     },
-    onError: (err: any) => addToast(err?.response?.data?.message || 'Erro ao excluir', 'danger'),
+    onError: (err: any) => addToast(getApiError(err), 'danger'),
   })
 
   const handleOpenMenu = (id: number, buttonEl: HTMLButtonElement) => {

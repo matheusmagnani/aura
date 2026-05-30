@@ -25,6 +25,7 @@ import { StatusDot } from '../../../shared/components/StatusDot'
 import { useToast } from '../../../shared/hooks/useToast'
 import { formatPhone, formatZipCode, formatCPF, formatCNPJ, formatCurrency } from '../../../shared/utils/formatters'
 import { downloadPdf } from '../../../shared/utils/downloadFile'
+import { getApiError } from '../../../shared/utils/getApiError'
 import { StatisticsStatusCards } from '../../../shared/components/StatisticsStatusCards'
 import { PROPOSAL_COLORS, PROPOSAL_LABELS, PROPOSAL_STATUS_ORDER } from '../../../shared/constants/proposalStatus'
 import { ContractPreview } from '../../../shared/components/contract-studio/ContractPreview'
@@ -1017,16 +1018,13 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
           clientId={client.id}
           clientName={client.name}
           onConfirm={async (proposalId, templateId) => {
-            await createContractMutation.mutateAsync(
-              { templateId, clientId: client.id, proposalId },
-              {
-                onSuccess: () => addToast('Contrato gerado com sucesso!', 'success'),
-                onError: (err: any) => {
-                  addToast(err?.response?.data?.message || 'Erro ao gerar contrato.', 'danger')
-                  throw err
-                },
-              }
-            )
+            try {
+              await createContractMutation.mutateAsync({ templateId, clientId: client.id, proposalId })
+              addToast('Contrato gerado com sucesso!', 'success')
+            } catch (err: any) {
+              addToast(getApiError(err), 'danger')
+              throw err
+            }
           }}
         />
       )}

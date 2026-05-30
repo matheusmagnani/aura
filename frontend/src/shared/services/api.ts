@@ -66,6 +66,8 @@ api.interceptors.response.use(
     if (data?.issues?.length) {
       message = data.issues.map((i: { field: string; message: string }) => i.message).join(', ')
     }
-    return Promise.reject(new Error(message))
+    const normalized = new Error(message) as Error & { response: typeof error.response }
+    normalized.response = error.response
+    return Promise.reject(normalized)
   },
 )

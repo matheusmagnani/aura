@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { authService } from '../services/authService'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useToast } from '../hooks/useToast'
+import { getApiError } from '../utils/getApiError'
 import { Modal } from './Modal'
 import { Input } from './ui/Input'
 import { queryClient } from '../../main'
@@ -117,7 +118,7 @@ export function Header() {
       setEditing(false)
       addToast('Dados atualizados com sucesso', 'success')
     } catch (err: any) {
-      addToast(err?.response?.data?.message || err.message || 'Erro ao salvar', 'danger')
+      addToast(getApiError(err), 'danger')
     } finally {
       setSaving(false)
     }
@@ -135,7 +136,7 @@ export function Header() {
       const result = await authService.uploadAvatar(file)
       updateUser({ avatar: result.avatar })
     } catch (err: any) {
-      addToast(err?.response?.data?.message || err.message || 'Erro ao enviar foto', 'danger')
+      addToast(getApiError(err), 'danger')
     }
     if (fileInputRef.current) fileInputRef.current.value = ''
     setAvatarMenuOpen(false)
@@ -146,7 +147,7 @@ export function Header() {
       await authService.removeAvatar()
       updateUser({ avatar: undefined })
     } catch (err: any) {
-      addToast(err?.response?.data?.message || err.message || 'Erro ao remover foto', 'danger')
+      addToast(getApiError(err), 'danger')
     }
     setAvatarMenuOpen(false)
   }
@@ -168,7 +169,7 @@ export function Header() {
       setPasswordModalOpen(false)
       addToast('Senha alterada com sucesso!', 'success')
     } catch (err: any) {
-      addToast(err?.response?.data?.message || err.message || 'Erro ao alterar senha', 'danger')
+      addToast(getApiError(err), 'danger')
     } finally {
       setSavingPassword(false)
     }
