@@ -2,10 +2,17 @@ import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   listContractTemplatesService,
+  selectContractTemplatesService,
   createContractTemplateService,
   updateContractTemplateService,
   deleteContractTemplateService,
 } from './contract-template.service'
+
+export async function selectContractTemplatesController(request: FastifyRequest, reply: FastifyReply) {
+  const { companyId } = request.user as { companyId: number }
+  const templates = await selectContractTemplatesService(companyId)
+  return reply.send(templates)
+}
 
 export async function listContractTemplatesController(request: FastifyRequest, reply: FastifyReply) {
   const { companyId } = request.user as { companyId: number }

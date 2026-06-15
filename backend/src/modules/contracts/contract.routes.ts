@@ -14,11 +14,11 @@ import {
 export async function contractRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)
 
-  app.get('/', { preHandler: [requirePermission('clients', 'read')] }, listContractsController)
-  app.get('/:id', { preHandler: [requirePermission('clients', 'read')] }, getContractController)
-  app.get('/:id/download', { preHandler: [requirePermission('clients', 'read')] }, downloadContractController)
-  app.post('/', { preHandler: [requirePermission('clients', 'create')] }, createContractController)
-  app.delete('/:id', { preHandler: [requirePermission('clients', 'delete')] }, deleteContractController)
+  app.get('/', listContractsController)
+  app.get('/:id', getContractController)
+  app.get('/:id/download', downloadContractController)
+  app.post('/', createContractController)
+  app.delete('/:id', deleteContractController)
   app.post('/upload-image', { preHandler: [requirePermission('settings', 'edit')] }, uploadContractImageController)
   app.delete('/image', { preHandler: [requirePermission('settings', 'edit')] }, deleteContractImageController)
 }

@@ -45,8 +45,8 @@ export function GenerateContractModal({
   })
 
   const { data: templates = [] } = useQuery({
-    queryKey: ['contract-templates'],
-    queryFn: contractTemplateService.list,
+    queryKey: ['contract-templates-select'],
+    queryFn: contractTemplateService.select,
     enabled: isOpen && step === 2,
   })
 

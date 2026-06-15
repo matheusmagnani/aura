@@ -265,7 +265,7 @@ function LogCard({ log, collaboratorsMap, clientStatusesMap }: { log: Log; colla
         {/* Cliente + Módulo */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-            {log.entityName && log.action !== 'create' ? `de ${log.entityName}` : ''}
+            {log.entityName && log.action !== 'create' && log.module !== 'contract-templates' ? `de ${log.entityName}` : ''}
           </span>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{moduleLabel}</span>
         </div>

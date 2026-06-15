@@ -3,6 +3,7 @@ import { authenticate } from '../../middlewares/auth'
 import { requirePermission } from '../../middlewares/permission'
 import {
   listContractTemplatesController,
+  selectContractTemplatesController,
   createContractTemplateController,
   updateContractTemplateController,
   deleteContractTemplateController,
@@ -11,6 +12,7 @@ import {
 export async function contractTemplateRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)
 
+  app.get('/select', selectContractTemplatesController)
   app.get('/', { preHandler: [requirePermission('settings', 'read')] }, listContractTemplatesController)
   app.post('/', { preHandler: [requirePermission('settings', 'create')] }, createContractTemplateController)
   app.put('/:id', { preHandler: [requirePermission('settings', 'edit')] }, updateContractTemplateController)

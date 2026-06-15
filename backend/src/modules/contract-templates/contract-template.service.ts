@@ -15,6 +15,14 @@ export async function listContractTemplatesService(companyId: number) {
   })
 }
 
+export async function selectContractTemplatesService(companyId: number) {
+  return prisma.contractTemplate.findMany({
+    where: { companyId, deletedAt: null },
+    select: { id: true, name: true, content: true },
+    orderBy: { name: 'asc' },
+  })
+}
+
 export async function createContractTemplateService(
   data: ContractTemplateInput,
   companyId: number,

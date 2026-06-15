@@ -177,8 +177,6 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
   const createContractMutation = useCreateContract()
   const deleteContractMutation = useDeleteContract()
 
-  const canCreateContract = useCanAccess(MODULE, 'create')
-  const canDeleteContract = useCanAccess(MODULE, 'delete')
 
   const deleteMutation = useMutation({
     mutationFn: () => fromDashboard
@@ -654,14 +652,12 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>({contractsTotal})</span>
             )}
           </div>
-          {(canCreateContract || fromDashboard) && (
-            <button
-              onClick={() => setIsContractModalOpen(true)}
-              style={{ background: 'var(--color-app-accent)', border: 'none', borderRadius: 8, width: 32, height: 32, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-            >
-              <Plus size={18} weight="bold" />
-            </button>
-          )}
+          <button
+            onClick={() => setIsContractModalOpen(true)}
+            style={{ background: 'var(--color-app-accent)', border: 'none', borderRadius: 8, width: 32, height: 32, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          >
+            <Plus size={18} weight="bold" />
+          </button>
         </div>
 
         {isLoadingContracts ? (
@@ -710,11 +706,9 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                                 <button type="button" title="Baixar PDF" onClick={async () => { const blob = await contractService.downloadBlob(c.id); await triggerDownload(blob, c.name) }} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                                   <DownloadSimple size={14} />
                                 </button>
-                                {(canDeleteContract || fromDashboard) && (
-                                  <button onClick={() => setDeleteContractConfirmId(c.id)} title="Excluir" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(248,113,113,0.2)', background: 'rgba(248,113,113,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
+                                <button onClick={() => setDeleteContractConfirmId(c.id)} title="Excluir" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(248,113,113,0.2)', background: 'rgba(248,113,113,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
                                     <Trash size={14} />
                                   </button>
-                                )}
                               </div>
                             </div>
                           </div>
@@ -765,11 +759,9 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                       <button type="button" title="Baixar PDF" onClick={async () => { const blob = await contractService.downloadBlob(c.id); await triggerDownload(blob, c.name) }} style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(106,166,193,0.2)', background: 'rgba(106,166,193,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-app-accent)' }}>
                         <DownloadSimple size={14} />
                       </button>
-                      {(canDeleteContract || fromDashboard) && (
-                        <button onClick={() => setDeleteContractConfirmId(c.id)} title="Excluir" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(248,113,113,0.2)', background: 'rgba(248,113,113,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
-                          <Trash size={14} />
-                        </button>
-                      )}
+                      <button onClick={() => setDeleteContractConfirmId(c.id)} title="Excluir" style={{ flex: 1, padding: '5px', borderRadius: 6, border: '1px solid rgba(248,113,113,0.2)', background: 'rgba(248,113,113,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
+                        <Trash size={14} />
+                      </button>
                     </div>
                   </div>
                 </div>
