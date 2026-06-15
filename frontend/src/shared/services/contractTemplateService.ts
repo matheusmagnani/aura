@@ -16,6 +16,11 @@ export const contractTemplateService = {
     return res.data
   },
 
+  async select(): Promise<Pick<ContractTemplate, 'id' | 'name' | 'content'>[]> {
+    const res = await api.get('/contract-templates/select')
+    return res.data
+  },
+
   async create(data: { name: string; content: Record<string, unknown> }): Promise<ContractTemplate> {
     const res = await api.post('/contract-templates', data)
     return res.data

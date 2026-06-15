@@ -15,6 +15,7 @@ export function useCreateRole() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
       queryClient.invalidateQueries({ queryKey: ['roles-all'] })
+      queryClient.invalidateQueries({ queryKey: ['roles-select'] })
     },
   })
 }
@@ -27,6 +28,7 @@ export function useUpdateRole() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
       queryClient.invalidateQueries({ queryKey: ['roles-all'] })
+      queryClient.invalidateQueries({ queryKey: ['roles-select'] })
     },
   })
 }
@@ -38,6 +40,7 @@ export function useDeleteRole() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
       queryClient.invalidateQueries({ queryKey: ['roles-all'] })
+      queryClient.invalidateQueries({ queryKey: ['roles-select'] })
     },
   })
 }

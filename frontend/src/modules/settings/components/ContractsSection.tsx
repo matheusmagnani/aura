@@ -249,12 +249,14 @@ export function ContractsSection({
         })()}
       </SettingsSection>
 
-      <ContractStudio
-        isOpen={studioOpen}
-        template={editingTemplate}
-        onClose={() => setStudioOpen(false)}
-        onSave={handleStudioSave}
-      />
+      {studioOpen && (
+        <ContractStudio
+          isOpen={studioOpen}
+          template={editingTemplate}
+          onClose={() => setStudioOpen(false)}
+          onSave={handleStudioSave}
+        />
+      )}
 
       <Modal
         isOpen={!!deleteModalTemplate}
