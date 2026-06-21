@@ -24,6 +24,18 @@ interface ProposalModalProps {
   updateFn?: (id: number, data: any) => Promise<Proposal>
 }
 
+const PAYMENT_OPTIONS = [
+  { value: 'money', label: 'Dinheiro' },
+  { value: 'pix', label: 'Pix' },
+  { value: 'boleto', label: 'Boleto' },
+  { value: 'card', label: 'Cartão' },
+]
+
+const DEADLINE_TYPE_OPTIONS = [
+  { value: 'business', label: 'úteis' },
+  { value: 'calendar', label: 'corridos' },
+]
+
 interface FormData {
   clientId: string
   value: string
@@ -31,6 +43,11 @@ interface FormData {
   collaboratorId: string
   idStatus: string
   clientObservation: string
+  deadlineDays: string
+  deadlineType: string
+  signalValue: string
+  signalPaymentMethod: string
+  remainingPaymentMethod: string
 }
 
 function parseCurrency(raw: string): number {
@@ -52,6 +69,10 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
 
   const initialValue = proposal ? Number(proposal.value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''
 
+  const initialSignalValue = proposal?.signalValue
+    ? Number(proposal.signalValue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : ''
+
   const [form, setForm] = useState<FormData>({
     clientId: proposal?.clientId.toString() ?? prefilledClient?.id.toString() ?? '',
     value: initialValue,
@@ -59,6 +80,11 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
     collaboratorId: proposal?.collaboratorId?.toString() ?? (defaultCollaboratorId ? String(defaultCollaboratorId) : ''),
     idStatus: proposal?.idStatus != null ? String(proposal.idStatus) : '1',
     clientObservation: proposal?.clientObservation ?? '',
+    deadlineDays: proposal?.deadlineDays?.toString() ?? '',
+    deadlineType: proposal?.deadlineType ?? 'business',
+    signalValue: initialSignalValue,
+    signalPaymentMethod: proposal?.signalPaymentMethod ?? '',
+    remainingPaymentMethod: proposal?.remainingPaymentMethod ?? '',
   })
 
   const { data: collaboratorsData } = useQuery({
@@ -79,7 +105,22 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
   }
 
   function handleValueChange(raw: string) {
-    set('value', maskCurrency(raw))
+    const masked = maskCurrency(raw)
+    setForm(prev => {
+      const newTotal = parseCurrency(masked)
+      const signal = parseCurrency(prev.signalValue)
+      const clampedSignal = signal > newTotal && newTotal > 0 ? masked : prev.signalValue
+      return { ...prev, value: masked, signalValue: clampedSignal }
+    })
+    setErrors(prev => { const e = { ...prev }; delete e.value; return e })
+  }
+
+  function handleSignalChange(raw: string) {
+    const masked = maskCurrency(raw)
+    const signal = parseCurrency(masked)
+    const total = parseCurrency(form.value)
+    const clamped = total > 0 && signal > total ? maskCurrency(String(Math.round(total * 100))) : masked
+    set('signalValue', clamped)
   }
 
   function validate() {
@@ -97,12 +138,18 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); addToast('Preencha os campos obrigatórios corretamente.', 'danger'); return }
 
+    const signalNum = parseCurrency(form.signalValue)
     const payload = {
       value: parseCurrency(form.value),
       description: form.description.trim() || null,
       clientObservation: form.clientObservation.trim() || null,
       idStatus: form.idStatus ? Number(form.idStatus) : 1,
       collaboratorId: form.collaboratorId ? Number(form.collaboratorId) : null,
+      deadlineDays: form.deadlineDays ? parseInt(form.deadlineDays, 10) : null,
+      deadlineType: form.deadlineDays ? (form.deadlineType || 'business') : null,
+      signalValue: signalNum > 0 ? signalNum : null,
+      signalPaymentMethod: signalNum > 0 ? (form.signalPaymentMethod || null) : null,
+      remainingPaymentMethod: form.remainingPaymentMethod || null,
       ...(proposal ? {} : { clientId: Number(form.clientId) }),
     }
 
@@ -246,6 +293,95 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
             rows={3}
             style={{ ...inputStyle(), resize: 'vertical' }}
           />
+        </div>
+
+        {/* Prazo */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Prazo de entrega</label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.deadlineDays}
+              onChange={(e) => set('deadlineDays', e.target.value.replace(/\D/g, ''))}
+              placeholder="Ex: 30"
+              style={{ ...inputStyle(), width: 90, flexShrink: 0 }}
+            />
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>dias</span>
+            <div style={{ flex: 1 }}>
+              <Select
+                value={form.deadlineType}
+                onChange={(v) => set('deadlineType', v)}
+                options={DEADLINE_TYPE_OPTIONS}
+                placeholder="Tipo"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Pagamento */}
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Pagamento</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 36, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 14 }}>
+
+            {/* Sinal */}
+            <div className="flex flex-col md:flex-row md:items-end" style={{ gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>Sinal (opcional)</div>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ position: 'absolute', left: 10, fontSize: 13, color: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }}>R$</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={form.signalValue}
+                    onChange={(e) => handleSignalChange(e.target.value)}
+                    placeholder="0,00"
+                    style={{ ...inputStyle(), paddingLeft: 32, fontSize: 13 }}
+                  />
+                </div>
+              </div>
+              {parseCurrency(form.signalValue) > 0 && (
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>Forma de pagamento do sinal</div>
+                  <Select
+                    value={form.signalPaymentMethod}
+                    onChange={(v) => set('signalPaymentMethod', v)}
+                    options={PAYMENT_OPTIONS}
+                    placeholder="Forma de pagamento"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Restante */}
+            <div className="flex flex-col md:flex-row md:items-end" style={{ gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>
+                  {parseCurrency(form.signalValue) > 0 ? 'Restante' : 'Total'}
+                </div>
+                <div style={{ padding: '8px 2px', fontSize: 14, fontWeight: 600, color: 'var(--color-app-secondary)' }}>
+                  {(() => {
+                    const total = parseCurrency(form.value)
+                    const signal = parseCurrency(form.signalValue)
+                    const remaining = signal > 0 ? total - signal : total
+                    return remaining > 0
+                      ? `R$ ${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : 'R$ 0,00'
+                  })()}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>Forma de pagamento</div>
+                <Select
+                  value={form.remainingPaymentMethod}
+                  onChange={(v) => set('remainingPaymentMethod', v)}
+                  options={PAYMENT_OPTIONS}
+                  placeholder="Forma de pagamento"
+                />
+              </div>
+            </div>
+
+          </div>
         </div>
 
         {/* Footer */}

@@ -16,7 +16,7 @@ export interface Client {
   zipCode: string | null
   companyId: number
   userId: number | null
-  user: { id: number; name: string; avatar: string | null } | null
+  user: { id: number; name: string; avatar: string | null; color: string | null } | null
   idStatus: number | null
   clientStatus: { id: number; name: string; color: string } | null
   createdAt: string

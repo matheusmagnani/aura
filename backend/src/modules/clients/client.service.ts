@@ -101,7 +101,7 @@ export async function listClientsService(query: ListClientsQuery, companyId: num
   }
 
   const include = {
-    user: { select: { id: true, name: true, avatar: true } },
+    user: { select: { id: true, name: true, avatar: true, color: true } },
     clientStatus: { select: { id: true, name: true, color: true } },
   }
 
@@ -186,7 +186,7 @@ export async function getClientByIdService(id: number, companyId: number) {
   const client = await prisma.client.findFirst({
     where: { id, companyId, deletedAt: null },
     include: {
-      user: { select: { id: true, name: true, avatar: true } },
+      user: { select: { id: true, name: true, avatar: true, color: true } },
       clientStatus: { select: { id: true, name: true, color: true } },
     },
   })
@@ -202,7 +202,7 @@ export async function createClientService(data: ClientInput, companyId: number, 
   const client = await prisma.client.create({
     data: { ...stripClientData(data as unknown as Record<string, unknown>) as unknown as ClientInput, companyId },
     include: {
-      user: { select: { id: true, name: true, avatar: true } },
+      user: { select: { id: true, name: true, avatar: true, color: true } },
       clientStatus: { select: { id: true, name: true, color: true } },
     },
   })
@@ -235,7 +235,7 @@ export async function updateClientService(id: number, data: Partial<ClientInput>
     where: { id },
     data: strippedData,
     include: {
-      user: { select: { id: true, name: true, avatar: true } },
+      user: { select: { id: true, name: true, avatar: true, color: true } },
       clientStatus: { select: { id: true, name: true, color: true } },
     },
   })

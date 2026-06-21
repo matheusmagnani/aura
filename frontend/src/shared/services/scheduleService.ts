@@ -11,7 +11,7 @@ export interface Appointment {
   clientId: number | null
   client: { id: number; name: string } | null
   collaboratorId: number | null
-  collaborator: { id: number; name: string; avatar: string | null } | null
+  collaborator: { id: number; name: string; avatar: string | null; color: string | null } | null
   deletedAt: string | null
   createdAt: string
   updatedAt: string

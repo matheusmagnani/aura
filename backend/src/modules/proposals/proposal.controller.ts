@@ -60,6 +60,8 @@ export async function getProposalByIdController(request: FastifyRequest, reply: 
 }
 
 export async function createProposalController(request: FastifyRequest, reply: FastifyReply) {
+  const PAYMENT_METHODS = ['money', 'pix', 'boleto', 'card'] as const
+  const DEADLINE_TYPES = ['business', 'calendar'] as const
   const schema = z.object({
     value: z.number({ required_error: 'Valor é obrigatório' }).positive('Valor deve ser positivo'),
     description: z.string().nullable().optional(),
@@ -67,6 +69,11 @@ export async function createProposalController(request: FastifyRequest, reply: F
     idStatus: z.number().int().min(1).max(4).optional(),
     clientId: z.number({ required_error: 'Cliente é obrigatório' }).int().positive('Cliente é obrigatório'),
     collaboratorId: z.number().nullable().optional(),
+    deadlineDays: z.number().int().positive().nullable().optional(),
+    deadlineType: z.enum(DEADLINE_TYPES).nullable().optional(),
+    signalValue: z.number().min(0).nullable().optional(),
+    signalPaymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
+    remainingPaymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
   })
 
   const data = schema.parse(request.body)
@@ -84,12 +91,19 @@ export async function createProposalController(request: FastifyRequest, reply: F
 
 export async function updateProposalController(request: FastifyRequest, reply: FastifyReply) {
   const { id } = z.object({ id: z.coerce.number() }).parse(request.params)
+  const PAYMENT_METHODS = ['money', 'pix', 'boleto', 'card'] as const
+  const DEADLINE_TYPES = ['business', 'calendar'] as const
   const schema = z.object({
     value: z.number().positive().optional(),
     description: z.string().nullable().optional(),
     clientObservation: z.string().nullable().optional(),
     idStatus: z.number().int().min(1).max(4).optional(),
     collaboratorId: z.number().nullable().optional(),
+    deadlineDays: z.number().int().positive().nullable().optional(),
+    deadlineType: z.enum(DEADLINE_TYPES).nullable().optional(),
+    signalValue: z.number().min(0).nullable().optional(),
+    signalPaymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
+    remainingPaymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
   })
 
   const data = schema.parse(request.body)

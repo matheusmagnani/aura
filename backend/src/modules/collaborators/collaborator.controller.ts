@@ -15,7 +15,7 @@ export async function listCollaboratorsSelectController(request: FastifyRequest,
   const { companyId } = request.user as { companyId: number }
   const data = await prisma.user.findMany({
     where: { companyId, deletedAt: null, active: true },
-    select: { id: true, name: true },
+    select: { id: true, name: true, color: true },
     orderBy: { name: 'asc' },
   })
   return reply.send(data)
@@ -56,6 +56,7 @@ export async function createCollaboratorController(request: FastifyRequest, repl
     email: z.string().email('E-mail inválido'),
     password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
     roleId: z.number({ required_error: 'Setor é obrigatório' }),
+    color: z.string().nullable().optional(),
   })
 
   const data = schema.parse(request.body)
@@ -78,6 +79,7 @@ export async function updateCollaboratorController(request: FastifyRequest, repl
     email: z.string().email('E-mail inválido').optional(),
     roleId: z.number({ required_error: 'Setor é obrigatório' }).optional(),
     active: z.boolean().optional(),
+    color: z.string().nullable().optional(),
   })
 
   const data = schema.parse(request.body)

@@ -75,6 +75,11 @@ export function AppointmentCard({ appointment, variant, onClick, draggable: isDr
           {appointment.client.name}
         </div>
       )}
+      {appointment.collaborator && (
+        <div style={{ fontSize: 11, color: appointment.collaborator.color ?? 'rgba(255,255,255,0.45)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+          {appointment.collaborator.name}
+        </div>
+      )}
     </div>
   )
 }

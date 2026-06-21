@@ -508,6 +508,7 @@ export function LoginPage() {
                       options={UF_OPTIONS_SELECT}
                       placeholder="UF"
                       error={errors.state}
+                      typeahead
                     />
                   </div>
                 </div>

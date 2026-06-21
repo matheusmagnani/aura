@@ -37,6 +37,7 @@ function ToolBtn({
     <button
       type="button"
       title={title}
+      onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       style={{
         display: 'flex',
@@ -59,23 +60,15 @@ function ToolBtn({
 
 function Divider() {
   return (
-    <div
-      style={{
-        width: 1,
-        height: 20,
-        background: 'rgba(106,166,193,0.25)',
-        margin: '0 4px',
-        flexShrink: 0,
-      }}
-    />
+    <div style={{ width: 1, height: 20, background: 'rgba(106,166,193,0.25)', margin: '0 4px', flexShrink: 0 }} />
   )
 }
 
 export function ContractToolbar({ editor }: ContractToolbarProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const colorRef = useRef<HTMLInputElement>(null)
   const addToast = useToast((s) => s.addToast)
 
-  // Force re-render whenever the editor selection or content changes
   const [, forceUpdate] = useState(0)
   useEffect(() => {
     const update = () => forceUpdate(n => n + 1)
@@ -101,6 +94,7 @@ export function ContractToolbar({ editor }: ContractToolbarProps) {
 
   const currentFont = editor.getAttributes('textStyle').fontFamily ?? 'Arial'
   const currentSize = editor.getAttributes('textStyle').fontSize ?? '12pt'
+  const currentColor = editor.getAttributes('textStyle').color
 
   return (
     <div
@@ -115,147 +109,88 @@ export function ContractToolbar({ editor }: ContractToolbarProps) {
         flexShrink: 0,
       }}
     >
-      {/* Font family */}
       <select
         value={currentFont}
+        onMouseDown={(e) => e.preventDefault()}
         onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
         style={{
-          height: 30,
-          fontSize: '0.8rem',
-          padding: '0 6px',
-          borderRadius: 6,
-          border: '1px solid rgba(106,166,193,0.3)',
-          background: 'var(--color-app-bg)',
-          color: 'var(--color-app-secondary)',
-          cursor: 'pointer',
-          minWidth: 130,
+          height: 30, fontSize: '0.8rem', padding: '0 6px', borderRadius: 6,
+          border: '1px solid rgba(106,166,193,0.3)', background: 'var(--color-app-bg)',
+          color: 'var(--color-app-secondary)', cursor: 'pointer', minWidth: 130,
         }}
       >
-        {FONTS.map((f) => (
-          <option key={f} value={f} style={{ fontFamily: f }}>
-            {f}
-          </option>
-        ))}
+        {FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
       </select>
 
-      {/* Font size */}
       <select
         value={currentSize}
-        onChange={(e) =>
-          editor.chain().focus().setFontSize(e.target.value).run()
-        }
+        onMouseDown={(e) => e.preventDefault()}
+        onChange={(e) => editor.chain().focus().setFontSize(e.target.value).run()}
         style={{
-          height: 30,
-          fontSize: '0.8rem',
-          padding: '0 6px',
-          borderRadius: 6,
-          border: '1px solid rgba(106,166,193,0.3)',
-          background: 'var(--color-app-bg)',
-          color: 'var(--color-app-secondary)',
-          cursor: 'pointer',
-          minWidth: 70,
+          height: 30, fontSize: '0.8rem', padding: '0 6px', borderRadius: 6,
+          border: '1px solid rgba(106,166,193,0.3)', background: 'var(--color-app-bg)',
+          color: 'var(--color-app-secondary)', cursor: 'pointer', minWidth: 70,
         }}
       >
-        {SIZES.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
+        {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
 
       <Divider />
 
-      <ToolBtn
-        active={editor.isActive('bold')}
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        title="Negrito"
-      >
+      <ToolBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Negrito">
         <TextB size={16} weight="bold" />
       </ToolBtn>
-      <ToolBtn
-        active={editor.isActive('italic')}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        title="Itálico"
-      >
+      <ToolBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Itálico">
         <TextItalic size={16} />
       </ToolBtn>
-      <ToolBtn
-        active={editor.isActive('underline')}
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-        title="Sublinhado"
-      >
+      <ToolBtn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Sublinhado">
         <TextUnderline size={16} />
       </ToolBtn>
 
-      {/* Text color */}
-      <label
-        title="Cor do texto"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 30,
-          height: 30,
-          borderRadius: 6,
-          cursor: 'pointer',
-          background: 'transparent',
-          position: 'relative',
-        }}
-      >
-        <span style={{ fontSize: 14, fontWeight: 700, color: editor.getAttributes('textStyle').color ?? 'var(--color-app-secondary)' }}>A</span>
+      <div style={{ position: 'relative' }}>
+        <button
+          type="button"
+          title="Cor do texto"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => colorRef.current?.click()}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 30, height: 30, borderRadius: 6, cursor: 'pointer',
+            background: 'transparent', border: 'none',
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 700, color: currentColor ?? 'var(--color-app-secondary)' }}>A</span>
+        </button>
         <input
+          ref={colorRef}
           type="color"
           defaultValue="#e6c284"
           onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
-          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+          style={{ position: 'absolute', top: '100%', left: 0, opacity: 0, width: 1, height: 1, pointerEvents: 'none' }}
         />
-      </label>
+      </div>
 
       <Divider />
 
-      <ToolBtn
-        active={editor.isActive({ textAlign: 'left' })}
-        onClick={() => editor.chain().focus().setTextAlign('left').run()}
-        title="Alinhar à esquerda"
-      >
+      <ToolBtn active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Alinhar à esquerda">
         <TextAlignLeft size={16} />
       </ToolBtn>
-      <ToolBtn
-        active={editor.isActive({ textAlign: 'center' })}
-        onClick={() => editor.chain().focus().setTextAlign('center').run()}
-        title="Centralizar"
-      >
+      <ToolBtn active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Centralizar">
         <TextAlignCenter size={16} />
       </ToolBtn>
-      <ToolBtn
-        active={editor.isActive({ textAlign: 'right' })}
-        onClick={() => editor.chain().focus().setTextAlign('right').run()}
-        title="Alinhar à direita"
-      >
+      <ToolBtn active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Alinhar à direita">
         <TextAlignRight size={16} />
       </ToolBtn>
-      <ToolBtn
-        active={editor.isActive({ textAlign: 'justify' })}
-        onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-        title="Justificar"
-      >
+      <ToolBtn active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justificar">
         <TextAlignJustify size={16} />
       </ToolBtn>
 
       <Divider />
 
-      <ToolBtn
-        active={editor.isActive('bulletList')}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        title="Lista com marcadores"
-      >
+      <ToolBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Lista com marcadores">
         <ListBullets size={16} />
       </ToolBtn>
-      <ToolBtn
-        active={editor.isActive('orderedList')}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        title="Lista numerada"
-      >
+      <ToolBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Lista numerada">
         <ListNumbers size={16} />
       </ToolBtn>
 

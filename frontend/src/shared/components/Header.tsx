@@ -50,9 +50,17 @@ export function Header() {
   const { data: me } = useQuery({
     queryKey: ['auth-me'],
     queryFn: () => authService.me(),
-    enabled: expanded,
     staleTime: 1000 * 60 * 5,
   })
+
+  useEffect(() => {
+    if (me?.company) {
+      const fresh = me.company.tradeName || me.company.name
+      if (fresh && fresh !== storeUser?.companyName) {
+        updateUser({ companyName: fresh })
+      }
+    }
+  }, [me?.company])
 
   useEffect(() => {
     function calc() {

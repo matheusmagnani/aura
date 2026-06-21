@@ -15,6 +15,7 @@ export function useUpdateCompanyInfo() {
     mutationFn: (data: UpdateCompanyInfoDTO) => settingsService.updateCompanyInfo(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-info'] })
+      queryClient.invalidateQueries({ queryKey: ['auth-me'] })
     },
   })
 }

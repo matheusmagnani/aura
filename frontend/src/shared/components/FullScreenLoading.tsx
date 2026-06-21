@@ -32,9 +32,10 @@ function GradientSpinner() {
 interface FullScreenLoadingProps {
   visible: boolean
   label?: string
+  sublabel?: string
 }
 
-export function FullScreenLoading({ visible, label }: FullScreenLoadingProps) {
+export function FullScreenLoading({ visible, label, sublabel }: FullScreenLoadingProps) {
   if (!visible) return null
 
   return (
@@ -46,11 +47,18 @@ export function FullScreenLoading({ visible, label }: FullScreenLoadingProps) {
       gap: 16, pointerEvents: 'all',
     }}>
       <GradientSpinner />
-      {label && (
-        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.03em' }}>
-          {label}
-        </span>
-      )}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        {label && (
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.03em' }}>
+            {label}
+          </span>
+        )}
+        {sublabel && (
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.02em' }}>
+            {sublabel}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

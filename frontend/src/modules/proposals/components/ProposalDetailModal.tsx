@@ -1,12 +1,24 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { PencilSimple, Trash, User, UserCircle, AlignLeft, CurrencyCircleDollar, CalendarBlank, ChatText, Tag } from '@phosphor-icons/react'
+import { PencilSimple, Trash, User, UserCircle, AlignLeft, CurrencyCircleDollar, CalendarBlank, ChatText, Tag, Wallet, Timer } from '@phosphor-icons/react'
 import { Modal } from '../../../shared/components/Modal'
 import { proposalService, type Proposal } from '../../../shared/services/proposalService'
 import { useToast } from '../../../shared/hooks/useToast'
 import { getApiError } from '../../../shared/utils/getApiError'
 import { formatCurrency } from '../../../shared/utils/formatters'
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  money: 'Dinheiro',
+  pix: 'Pix',
+  boleto: 'Boleto',
+  card: 'Cartão',
+}
+
+const DEADLINE_TYPE_LABELS: Record<string, string> = {
+  business: 'úteis',
+  calendar: 'corridos',
+}
 
 const STATUS_LABELS: Record<number, string> = {
   1: 'Pendente',
@@ -110,9 +122,44 @@ export function ProposalDetailModal({
 
             {proposal.collaborator && (
               <DetailRow icon={<UserCircle size={16} />} label="Colaborador responsável">
-                {proposal.collaborator.name}
+                <span style={{ color: proposal.collaborator.color ?? 'inherit' }}>{proposal.collaborator.name}</span>
               </DetailRow>
             )}
+
+            {proposal.deadlineDays != null && (
+              <DetailRow icon={<Timer size={16} />} label="Prazo de entrega">
+                {proposal.deadlineDays} dia{proposal.deadlineDays !== 1 ? 's' : ''}{' '}
+                {proposal.deadlineType ? (DEADLINE_TYPE_LABELS[proposal.deadlineType] ?? proposal.deadlineType) : ''}
+              </DetailRow>
+            )}
+
+            {(Number(proposal.signalValue) > 0 || proposal.remainingPaymentMethod) && (() => {
+              const total = Number(proposal.value)
+              const signal = Number(proposal.signalValue ?? 0)
+              const hasSignal = signal > 0
+              const remaining = hasSignal ? total - signal : total
+              const paymentLabel = (key: string | null) => key ? (PAYMENT_METHOD_LABELS[key] ?? key) : null
+              return (
+                <DetailRow icon={<Wallet size={16} />} label="Pagamento">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {hasSignal && (
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
+                        Sinal: <span style={{ color: 'white', fontWeight: 500 }}>{formatCurrency(signal)}</span>
+                        {paymentLabel(proposal.signalPaymentMethod) && (
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}> · {paymentLabel(proposal.signalPaymentMethod)}</span>
+                        )}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
+                      {hasSignal ? 'Restante' : 'Total'}: <span style={{ color: 'white', fontWeight: 500 }}>{formatCurrency(remaining)}</span>
+                      {paymentLabel(proposal.remainingPaymentMethod) && (
+                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}> · {paymentLabel(proposal.remainingPaymentMethod)}</span>
+                      )}
+                    </div>
+                  </div>
+                </DetailRow>
+              )
+            })()}
 
             {proposal.description && (
               <DetailRow icon={<AlignLeft size={16} />} label="Descrição">

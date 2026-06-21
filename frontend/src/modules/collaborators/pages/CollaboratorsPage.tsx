@@ -9,6 +9,7 @@ import { MultiFilterSelect } from '../../../shared/components/MultiFilterSelect'
 import { Pagination } from '../../../shared/components/Pagination'
 import { ListCard } from '../../../shared/components/ListCard'
 import { Input } from '../../../shared/components/ui/Input'
+import { Select } from '../../../shared/components/ui/Select'
 import { EntityHistoryModal } from '../../../shared/components/EntityHistoryModal'
 import { collaboratorsService, type Collaborator } from '../../../shared/services/collaboratorsService'
 import { roleService } from '../../../shared/services/roleService'
@@ -189,6 +190,7 @@ function CollaboratorFormModal({
   const [email, setEmail] = useState(collaborator?.email ?? '')
   const [password, setPassword] = useState('')
   const [roleId, setRoleId] = useState<number | ''>(collaborator?.roleId ?? '')
+  const [color, setColor] = useState<string | null>(collaborator?.color ?? null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
@@ -223,9 +225,9 @@ function CollaboratorFormModal({
     setSaving(true)
     try {
       if (collaborator) {
-        await collaboratorsService.update(collaborator.id, { name, email, roleId: Number(roleId) })
+        await collaboratorsService.update(collaborator.id, { name, email, roleId: Number(roleId), color })
       } else {
-        await collaboratorsService.create({ name, email, password, roleId: Number(roleId) })
+        await collaboratorsService.create({ name, email, password, roleId: Number(roleId), color })
       }
       addToast(collaborator ? 'Colaborador atualizado!' : 'Colaborador criado!', 'success')
       onSaved()
@@ -264,25 +266,46 @@ function CollaboratorFormModal({
             error={errors.password}
           />
         )}
+        <Select
+          label="Setor"
+          value={roleId === '' ? '' : String(roleId)}
+          onChange={(v) => { setRoleId(v === '' ? '' : Number(v)); clearError('roleId') }}
+          options={roles.map(r => ({ value: String(r.id), label: r.name }))}
+          placeholder="Selecione um setor"
+          error={errors.roleId}
+        />
+
         <div>
-          <label style={{ fontSize: 14, fontWeight: 500, color: '#fff', display: 'block', marginBottom: 8 }}>Setor</label>
-          <select
-            value={roleId}
-            onChange={(e) => { setRoleId(e.target.value === '' ? '' : Number(e.target.value)); clearError('roleId') }}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)',
-              border: `1px solid ${errors.roleId ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.2)'}`,
-              borderRadius: 12, padding: '8px 12px',
-              color: roleId === '' ? 'rgba(255,255,255,0.4)' : '#fff',
-              fontSize: 14, outline: 'none', cursor: 'pointer',
-            }}
-          >
-            <option value="" disabled>Selecione um setor</option>
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-          {errors.roleId && <span style={{ fontSize: 12, color: '#f87171', marginTop: 4, display: 'block' }}>{errors.roleId}</span>}
+          <label style={{ fontSize: 14, fontWeight: 500, color: '#fff', display: 'block', marginBottom: 8 }}>Cor de identificação</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <label style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+              <span style={{
+                display: 'block', width: 40, height: 40, borderRadius: '50%',
+                background: color ?? 'rgba(255,255,255,0.1)',
+                border: color ? `3px solid rgba(255,255,255,0.15)` : '3px solid rgba(255,255,255,0.2)',
+                boxShadow: color ? `0 0 0 2px ${color}55` : 'none',
+                transition: 'box-shadow 0.2s',
+              }} />
+              <input
+                type="color"
+                value={color ?? '#6AA6C1'}
+                onChange={e => setColor(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+              />
+            </label>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
+              {color ? color.toUpperCase() : 'Sem cor'}
+            </span>
+            {color && (
+              <button
+                type="button"
+                onClick={() => setColor(null)}
+                style={{ fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0 }}
+              >
+                Remover
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
@@ -668,7 +691,7 @@ export function CollaboratorsPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <Avatar name={c.name} avatar={c.avatar} size={34} />
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontWeight: 500, color: '#fff', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p style={{ fontWeight: 500, color: c.color ?? '#fff', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {c.name}
                   </p>
                   <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -731,7 +754,7 @@ export function CollaboratorsPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 <Avatar name={c.name} avatar={c.avatar} size={26} />
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontWeight: 500, color: '#fff', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p style={{ fontWeight: 500, color: c.color ?? '#fff', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {c.name}
                   </p>
                   {c.role && (

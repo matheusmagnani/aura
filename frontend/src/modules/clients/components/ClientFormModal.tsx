@@ -313,6 +313,7 @@ export function ClientFormModal({ client, defaultCollaboratorId, onClose, onSave
             onChange={v => handleChange('state', v)}
             options={STATES}
             placeholder="UF"
+            typeahead
           />
         </div>
 

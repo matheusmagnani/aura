@@ -150,7 +150,7 @@ export function GenerateContractModal({
                         </span>
                       </div>
                       {p.collaborator && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: p.collaborator.color ?? 'rgba(255,255,255,0.35)' }}>
                           <UserCircle size={10} />
                           <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                             {p.collaborator.name}
@@ -308,7 +308,7 @@ export function GenerateContractModal({
       )}
     </Modal>
 
-      <FullScreenLoading visible={loading} label="Gerando contrato..." />
+      <FullScreenLoading visible={loading} label="Gerando contrato..." sublabel="Isso pode levar alguns minutos, por favor aguarde." />
     </>
   )
 }

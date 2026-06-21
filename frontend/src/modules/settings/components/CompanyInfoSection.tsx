@@ -6,6 +6,7 @@ import { SettingsSection } from './SettingsSection'
 import { useCompanyInfo, useUpdateCompanyInfo } from '../hooks/useSettings'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useCepSearch } from '../../../shared/hooks/useCepSearch'
+import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
 interface FormData {
   name: string
@@ -24,6 +25,12 @@ interface FormData {
 }
 
 const DEPARTMENTS = ['Tecnologia', 'Marketing', 'Financeiro', 'Recursos Humanos', 'Comercial', 'Jurídico', 'Operações', 'Logística', 'Outros']
+
+const STATES = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
+  'MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN',
+  'RS','RO','RR','SC','SP','SE','TO',
+].map(s => ({ value: s, label: s }))
 
 const initialFormData: FormData = {
   name: '', tradeName: '', cnpj: '', department: '',
@@ -59,6 +66,7 @@ export function CompanyInfoSection({ isExpanded: isExpandedProp, onToggle: onTog
   const updateCompanyInfo = useUpdateCompanyInfo()
   const { addToast } = useToast()
   const { fetchAddress, isLoading: isLoadingCep } = useCepSearch()
+  const updateUser = useAuthStore((s) => s.updateUser)
 
   const fetchAddressByCep = useCallback(async (cep: string) => {
     const result = await fetchAddress(cep)
@@ -101,7 +109,7 @@ export function CompanyInfoSection({ isExpanded: isExpandedProp, onToggle: onTog
       v = formatZipCode(value)
       const clean = value.replace(/\D/g, '')
       if (clean.length === 8) fetchAddressByCep(clean)
-    } else if (field === 'state') v = value.toUpperCase().slice(0, 2)
+    }
     setFormData(prev => ({ ...prev, [field]: v }))
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }))
   }
@@ -128,7 +136,6 @@ export function CompanyInfoSection({ isExpanded: isExpandedProp, onToggle: onTog
     if (!formData.neighborhood.trim()) errs.neighborhood = 'Bairro é obrigatório'
     if (!formData.city.trim()) errs.city = 'Cidade é obrigatória'
     if (!formData.state.trim()) errs.state = 'UF é obrigatória'
-    else if (formData.state.length !== 2) errs.state = 'UF deve ter 2 caracteres'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -151,6 +158,7 @@ export function CompanyInfoSection({ isExpanded: isExpandedProp, onToggle: onTog
         state: formData.state,
         zipCode: formData.zipCode,
       })
+      updateUser({ companyName: formData.tradeName || formData.name })
       addToast('Informações da empresa atualizadas!', 'success')
       setIsEditing(false)
     } catch (err: any) {
@@ -341,13 +349,15 @@ export function CompanyInfoSection({ isExpanded: isExpandedProp, onToggle: onTog
             error={errors.city}
             disabled={!isEditing}
           />
-          <Input
+          <Select
             label="UF"
-            placeholder="UF"
             value={formData.state}
-            onChange={(e) => handleChange('state', e.target.value)}
+            onChange={(v) => handleChange('state', v)}
+            options={STATES}
+            placeholder="UF"
             error={errors.state}
             disabled={!isEditing}
+            typeahead
           />
         </div>
 

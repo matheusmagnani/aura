@@ -5,6 +5,7 @@ export interface Collaborator {
   name: string
   email: string
   avatar: string | null
+  color: string | null
   active: boolean
   companyId: number
   roleId: number | null
@@ -23,6 +24,7 @@ export interface CollaboratorPayload {
   email: string
   password: string
   roleId?: number
+  color?: string | null
 }
 
 export interface UpdateCollaboratorPayload {
@@ -30,11 +32,13 @@ export interface UpdateCollaboratorPayload {
   email?: string
   roleId?: number | null
   active?: boolean
+  color?: string | null
 }
 
 export interface CollaboratorSelectItem {
   id: number
   name: string
+  color?: string | null
 }
 
 export const collaboratorsService = {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ClockCounterClockwise, X, CalendarBlank } from '@phosphor-icons/react'
 import { MultiFilterSelect } from '../../../shared/components/MultiFilterSelect'
@@ -79,6 +79,11 @@ const FIELD_LABELS: Record<string, string> = {
   value: 'Valor',
   clientObservation: 'Observação',
   statusProposta: 'Status',
+  deadlineDays: 'Prazo (dias)',
+  deadlineType: 'Tipo de prazo',
+  signalValue: 'Valor do sinal',
+  signalPaymentMethod: 'Forma de pagamento do sinal',
+  remainingPaymentMethod: 'Forma de pagamento restante',
 }
 
 // Labels legados (logs antigos guardavam status como string)
@@ -181,8 +186,11 @@ function ChangesTable({ metadata, module, collaboratorsMap, clientStatusesMap }:
   if (keys.length === 0) return null
 
   const isAppointmentChange = keys.some(k => k === 'startAt' || k === 'title')
-  const isProposalChange = keys.some(k => k === 'value' || k === 'clientObservation' || k === 'statusProposta')
+  const PROPOSAL_KEYS = new Set(['value', 'clientObservation', 'statusProposta', 'deadlineDays', 'deadlineType', 'signalValue', 'signalPaymentMethod', 'remainingPaymentMethod'])
+  const isProposalChange = keys.some(k => PROPOSAL_KEYS.has(k))
   const suffix = isAppointmentChange ? 'do agendamento' : isProposalChange ? 'da proposta' : (module ? MODULE_FIELD_SUFFIX[module] : undefined)
+  // Keys whose labels are already self-descriptive and don't need a suffix
+  const NO_SUFFIX_KEYS = new Set(['startAt', 'color', 'deadlineDays', 'deadlineType', 'signalValue', 'signalPaymentMethod', 'remainingPaymentMethod'])
 
   return (
     <div style={{
@@ -197,18 +205,18 @@ function ChangesTable({ metadata, module, collaboratorsMap, clientStatusesMap }:
       padding: '6px 8px',
     }}>
       {keys.map((k) => (
-        <>
-          <span key={`label-${k}`} style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {FIELD_LABELS[k] ?? k}{suffix && FIELD_LABELS[k] && k !== 'startAt' && k !== 'color' ? ` ${suffix}` : ''}
+        <Fragment key={k}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {FIELD_LABELS[k] ?? k}{suffix && FIELD_LABELS[k] && !NO_SUFFIX_KEYS.has(k) ? ` ${suffix}` : ''}
           </span>
-          <span key={`before-${k}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
             <ValueDisplay fieldKey={k} value={before[k]} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} module={module} />
           </span>
-          <span key={`arrow-${k}`} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' as const }}>→</span>
-          <span key={`after-${k}`} style={{ fontSize: 12, color: 'var(--color-app-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center' as const }}>→</span>
+          <span style={{ fontSize: 12, color: 'var(--color-app-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' as const }}>
             <ValueDisplay fieldKey={k} value={after[k]} collaboratorsMap={collaboratorsMap} clientStatusesMap={clientStatusesMap} module={module} />
           </span>
-        </>
+        </Fragment>
       ))}
     </div>
   )
