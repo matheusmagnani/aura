@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, PencilSimple, Trash, Phone, Envelope, IdentificationCard, ClockCounterClockwise, CalendarBlank, UserCircle, Plus, CaretLeft, CaretRight, FileText, CurrencyCircleDollar, Eye, DownloadSimple } from '@phosphor-icons/react'
+import { ArrowLeft, PencilSimple, Trash, Phone, Envelope, IdentificationCard, ClockCounterClockwise, CalendarBlank, UserCircle, Plus, CaretLeft, CaretRight, FileText, CurrencyCircleDollar, Eye, DownloadSimple, ChatTeardropText } from '@phosphor-icons/react'
 import { clientService } from '../../../shared/services/clientService'
 import { scheduleService, type Appointment } from '../../../shared/services/scheduleService'
 import { proposalService, type Proposal } from '../../../shared/services/proposalService'
@@ -20,6 +20,7 @@ import { ContractViewModal } from '../components/ContractViewModal'
 import { CopyText } from '../../../shared/components/CopyText'
 import { Modal } from '../../../shared/components/Modal'
 import { EntityHistoryModal } from '../../../shared/components/EntityHistoryModal'
+import { FollowUpModal } from '../../../shared/components/FollowUpModal'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { StatusDot } from '../../../shared/components/StatusDot'
@@ -99,6 +100,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteConfirm, setIsDeleteConfirm] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [isFollowUpOpen, setIsFollowUpOpen] = useState(false)
   const [isScheduleOpen, setIsScheduleOpen] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [isEditAppointmentOpen, setIsEditAppointmentOpen] = useState(false)
@@ -238,6 +240,15 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => setIsFollowUpOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'none', border: '1px solid rgba(230,194,132,0.25)', borderRadius: 8, cursor: 'pointer', color: 'var(--color-app-secondary)', fontSize: 13 }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(230,194,132,0.08)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+          >
+            <ChatTeardropText size={16} />
+            <span className="hidden md:inline">Follow Up</span>
+          </button>
           <button
             onClick={() => setIsHistoryOpen(true)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'none', border: '1px solid rgba(106,166,193,0.25)', borderRadius: 8, cursor: 'pointer', color: 'var(--color-app-accent)', fontSize: 13 }}
@@ -472,7 +483,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                               {format(parseISO(appt.startAt), 'HH:mm')}
                             </span>
                             {appt.collaborator && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: appt.collaborator.color ?? 'rgba(255,255,255,0.3)' }}>
                                 <UserCircle size={11} />
                                 <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{appt.collaborator.name}</span>
                               </span>
@@ -611,7 +622,7 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
                           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-app-secondary)' }}>{formatCurrency(Number(proposal.value))}</span>
                         </div>
                         {proposal.collaborator && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: proposal.collaborator.color ?? 'rgba(255,255,255,0.35)' }}>
                             <UserCircle size={10} />
                             <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{proposal.collaborator.name}</span>
                           </span>
@@ -860,6 +871,14 @@ export function ClientDetailPage({ fromDashboard = false }: { fromDashboard?: bo
           }}
           updateFn={fromDashboard ? dashboardService.updateClient : undefined}
           defaultCollaboratorId={fromDashboard ? currentUserId : undefined}
+        />
+      )}
+
+      {isFollowUpOpen && client && (
+        <FollowUpModal
+          clientId={client.id}
+          clientName={client.name}
+          onClose={() => setIsFollowUpOpen(false)}
         />
       )}
 

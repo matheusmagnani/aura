@@ -19,13 +19,13 @@ interface AppointmentDetailModalProps {
   updateFn?: (id: number, data: any) => Promise<Appointment>
 }
 
-function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function DetailRow({ icon, label, value, valueColor }: { icon: React.ReactNode; label: string; value: string; valueColor?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
       <div style={{ color: 'var(--color-app-accent)', marginTop: 2, flexShrink: 0 }}>{icon}</div>
       <div>
         <div style={{ fontSize: 11, color: 'var(--color-app-gray)', fontWeight: 500, marginBottom: 2 }}>{label}</div>
-        <div style={{ fontSize: 14, color: 'white' }}>{value}</div>
+        <div style={{ fontSize: 14, color: valueColor ?? 'white' }}>{value}</div>
       </div>
     </div>
   )
@@ -180,7 +180,7 @@ export function AppointmentDetailModal({
             <DetailRow icon={<User size={16} />} label="Cliente" value={appointment.client.name} />
           )}
           {appointment.collaborator && (
-            <DetailRow icon={<UserCircle size={16} />} label="Colaborador" value={appointment.collaborator.name} />
+            <DetailRow icon={<UserCircle size={16} />} label="Colaborador" value={appointment.collaborator.name} valueColor={appointment.collaborator.color ?? undefined} />
           )}
           {appointment.description && (
             <DetailRow icon={<AlignLeft size={16} />} label="Descrição" value={appointment.description} />

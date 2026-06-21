@@ -3,7 +3,7 @@ import { useClientsFilterStore } from '../stores/useClientsFilterStore'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { UsersThree, PencilSimple, Trash, List, X, Tag, TrashSimple, ClockCounterClockwise, CalendarBlank } from '@phosphor-icons/react'
+import { UsersThree, PencilSimple, Trash, List, X, Tag, TrashSimple, ClockCounterClockwise, CalendarBlank, ChatTeardropText } from '@phosphor-icons/react'
 import { PageHeader } from '../../../shared/components/PageHeader'
 import { MultiFilterSelect } from '../../../shared/components/MultiFilterSelect'
 import { DateRangePicker, type DateRange } from '../../../shared/components/DateRangePicker'
@@ -18,13 +18,14 @@ import { StatisticsStatusCards } from '../../../shared/components/StatisticsStat
 import { collaboratorsService } from '../../../shared/services/collaboratorsService'
 import { ClientFormModal } from '../components/ClientFormModal'
 import { EntityHistoryModal } from '../../../shared/components/EntityHistoryModal'
+import { FollowUpModal } from '../../../shared/components/FollowUpModal'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useCanAccess } from '../../../shared/hooks/useMyPermissions'
 import { formatPhone } from '../../../shared/utils/formatters'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 
 const MODULE = 'clients'
-const DESKTOP_COLS = '44px minmax(0,0.8fr) minmax(0,1fr) minmax(0,130px) 60px'
+const DESKTOP_COLS = '44px minmax(0,0.8fr) minmax(0,0.7fr) minmax(0,1fr) minmax(0,130px) 60px'
 
 function StatusBadge({ status }: { status: { name: string; color: string } | null }) {
   if (!status) return <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>—</span>
@@ -60,11 +61,12 @@ function Checkbox({ checked }: { checked: boolean }) {
   )
 }
 
-function ActionMenu({ client, onEdit, onDelete, onHistory, canEdit, canDelete }: {
+function ActionMenu({ client, onEdit, onDelete, onHistory, onFollowUp, canEdit, canDelete }: {
   client: Client
   onEdit: (c: Client) => void
   onDelete: (c: Client) => void
   onHistory: (c: Client) => void
+  onFollowUp: (c: Client) => void
   canEdit: boolean
   canDelete: boolean
 }) {
@@ -110,6 +112,12 @@ function ActionMenu({ client, onEdit, onDelete, onHistory, canEdit, canDelete }:
       background: 'var(--color-app-primary)', border: '1px solid rgba(230,194,132,0.2)',
       borderRadius: 10, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden',
     }}>
+      <button
+        onClick={() => { onFollowUp(client); setOpen(false) }}
+        style={{ width: '100%', padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-app-secondary)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}
+      >
+        <ChatTeardropText size={15} /> Follow Up
+      </button>
       <button
         onClick={() => { onHistory(client); setOpen(false) }}
         style={{ width: '100%', padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-app-accent)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}
@@ -177,6 +185,7 @@ export function ClientsPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [historyTarget, setHistoryTarget] = useState<Client | undefined>(undefined)
   const [deleteTarget, setDeleteTarget] = useState<Client | undefined>(undefined)
+  const [followUpTarget, setFollowUpTarget] = useState<Client | undefined>(undefined)
 
   const { data: statusStats = [] } = useQuery<ClientStatusStat[]>({
     queryKey: ['client-status-stats', search, filterUserIds, filterDateRange, filterAppointmentDateRange],
@@ -470,6 +479,7 @@ export function ClientsPage() {
           </button>
           {[
             { label: 'Cliente', align: 'left' },
+            { label: 'Colaborador', align: 'center' },
             { label: 'Cadastrado', align: 'center' },
             { label: 'Status', align: 'center' },
             { label: 'Ação', align: 'center' },
@@ -527,6 +537,12 @@ export function ClientsPage() {
                   </p>
                 </div>
 
+                <div style={{ display: 'flex', justifyContent: 'center', minWidth: 0 }}>
+                  <span style={{ fontSize: 13, color: client.user?.color ?? 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {client.user?.name ?? '—'}
+                  </span>
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
                     {new Date(client.createdAt).toLocaleDateString('pt-BR')}
@@ -543,6 +559,7 @@ export function ClientsPage() {
                     onEdit={openEdit}
                     onDelete={c => setDeleteTarget(c)}
                     onHistory={c => setHistoryTarget(c)}
+                    onFollowUp={c => setFollowUpTarget(c)}
                     canEdit={canEdit}
                     canDelete={canDelete}
                   />
@@ -572,9 +589,14 @@ export function ClientsPage() {
                 <p style={{ fontWeight: 500, color: '#fff', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {client.name}
                 </p>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {formatPhone(client.phone)}
                 </p>
+                {client.user && (
+                  <p style={{ fontSize: 11, color: client.user.color ?? 'rgba(255,255,255,0.35)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {client.user.name}
+                  </p>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: client.clientStatus ? client.clientStatus.color : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
@@ -585,6 +607,7 @@ export function ClientsPage() {
                   onEdit={openEdit}
                   onDelete={c => setDeleteTarget(c)}
                   onHistory={c => setHistoryTarget(c)}
+                  onFollowUp={c => setFollowUpTarget(c)}
                   canEdit={canEdit}
                   canDelete={canDelete}
                 />
@@ -690,6 +713,14 @@ export function ClientsPage() {
           module="clients"
           entityId={historyTarget.id}
           entityName={historyTarget.name}
+        />
+      )}
+
+      {followUpTarget && (
+        <FollowUpModal
+          clientId={followUpTarget.id}
+          clientName={followUpTarget.name}
+          onClose={() => setFollowUpTarget(undefined)}
         />
       )}
 

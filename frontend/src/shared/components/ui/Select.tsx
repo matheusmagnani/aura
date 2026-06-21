@@ -20,6 +20,7 @@ interface SelectProps {
   variant?: 'default' | 'accent'
   dropdownAlign?: 'start' | 'center'
   className?: string
+  typeahead?: boolean
 }
 
 export function Select({
@@ -33,9 +34,13 @@ export function Select({
   variant = 'default',
   dropdownAlign = 'start',
   className,
+  typeahead = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [dropdownStyle, setDropdownStyle] = React.useState<React.CSSProperties>({})
+  const [typeaheadBuffer, setTypeaheadBuffer] = React.useState('')
+  const typeaheadTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const listRef = React.useRef<HTMLDivElement>(null)
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const wrapperRef = React.useRef<HTMLDivElement>(null)
 
@@ -73,6 +78,39 @@ export function Select({
       window.removeEventListener('resize', handleResize)
     }
   }, [isOpen])
+
+  // Typeahead: listen for keypresses while dropdown is open
+  React.useEffect(() => {
+    if (!isOpen || !typeahead) return
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key.length !== 1 || e.metaKey || e.ctrlKey) return
+
+      setTypeaheadBuffer(prev => {
+        const next = (prev + e.key).toUpperCase()
+
+        if (typeaheadTimer.current) clearTimeout(typeaheadTimer.current)
+        typeaheadTimer.current = setTimeout(() => setTypeaheadBuffer(''), 800)
+
+        const match = options.find(o => o.label.toUpperCase().startsWith(next))
+        if (match) {
+          const el = listRef.current?.querySelector<HTMLElement>(`[data-value="${match.value}"]`)
+          el?.scrollIntoView({ block: 'nearest' })
+
+          if (match.label.toUpperCase() === next) {
+            onChange(match.value)
+            setIsOpen(false)
+            return ''
+          }
+        }
+
+        return next
+      })
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, typeahead, options, onChange])
 
   function toggleDropdown() {
     if (disabled) return
@@ -114,12 +152,14 @@ export function Select({
           style={dropdownStyle}
           className="bg-app-primary border border-white/10 rounded-xl shadow-2xl overflow-hidden"
         >
-          <div className="max-h-52 overflow-y-auto">
+          <div ref={listRef} className="max-h-52 overflow-y-auto">
             {options.map(option => {
               const isSelected = option.value === value
+              const isHighlighted = typeahead && typeaheadBuffer && option.label.toUpperCase().startsWith(typeaheadBuffer)
               return (
                 <button
                   key={option.value}
+                  data-value={option.value}
                   type="button"
                   onClick={() => { onChange(option.value); setIsOpen(false) }}
                   style={{ padding: '0.75rem 1.25rem' }}
@@ -128,10 +168,14 @@ export function Select({
                     isAccent
                       ? isSelected
                         ? 'text-app-accent bg-app-accent/10'
-                        : 'text-white/80 hover:bg-app-accent/5'
+                        : isHighlighted
+                          ? 'text-white bg-white/10'
+                          : 'text-white/80 hover:bg-app-accent/5'
                       : isSelected
                         ? 'text-app-secondary bg-app-secondary/10'
-                        : 'text-white/80 hover:bg-white/5'
+                        : isHighlighted
+                          ? 'text-white bg-white/10'
+                          : 'text-white/80 hover:bg-white/5'
                   )}
                 >
                   <span className="flex items-center gap-2">

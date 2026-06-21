@@ -27,7 +27,7 @@ interface AppointmentInput {
 
 const appointmentInclude = {
   client: { select: { id: true, name: true } },
-  collaborator: { select: { id: true, name: true, avatar: true } },
+  collaborator: { select: { id: true, name: true, avatar: true, color: true } },
 }
 
 export async function listAppointmentsService(query: ListAppointmentsQuery, companyId: number) {

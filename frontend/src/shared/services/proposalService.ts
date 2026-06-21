@@ -11,7 +11,12 @@ export interface Proposal {
   clientId: number
   client: { id: number; name: string }
   collaboratorId: number | null
-  collaborator: { id: number; name: string; avatar: string | null } | null
+  collaborator: { id: number; name: string; avatar: string | null; color: string | null } | null
+  deadlineDays: number | null
+  deadlineType: string | null
+  signalValue: number | null
+  signalPaymentMethod: string | null
+  remainingPaymentMethod: string | null
   deletedAt: string | null
   createdAt: string
   updatedAt: string
@@ -29,6 +34,11 @@ export interface ProposalPayload {
   idStatus?: number
   clientId?: number
   collaboratorId?: number | null
+  deadlineDays?: number | null
+  deadlineType?: string | null
+  signalValue?: number | null
+  signalPaymentMethod?: string | null
+  remainingPaymentMethod?: string | null
 }
 
 export interface ProposalStatusStat {

@@ -858,7 +858,7 @@ export function DashboardPage() {
                     <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-app-secondary)', margin: 0 }}>
                       {formatCurrency(Number(proposal.value))}
                     </p>
-                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p style={{ fontSize: 11, color: proposal.collaborator?.color ?? 'rgba(255,255,255,0.35)', margin: 0, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {proposal.collaborator?.name ?? '—'}
                     </p>
                   </div>

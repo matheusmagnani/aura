@@ -8,6 +8,7 @@ const SELECT_COLLABORATOR = {
   name: true,
   email: true,
   avatar: true,
+  color: true,
   active: true,
   companyId: true,
   roleId: true,
@@ -29,6 +30,7 @@ interface CreateCollaboratorInput {
   email: string
   password: string
   roleId?: number
+  color?: string | null
 }
 
 interface UpdateCollaboratorInput {
@@ -36,6 +38,7 @@ interface UpdateCollaboratorInput {
   email?: string
   roleId?: number | null
   active?: boolean
+  color?: string | null
 }
 
 export async function listCollaboratorsService(
@@ -111,6 +114,7 @@ export async function createCollaboratorService(data: CreateCollaboratorInput, c
         name: data.name,
         password: hashed,
         roleId: data.roleId ?? null,
+        color: data.color ?? null,
         active: true,
         deletedAt: null,
         companyId,
@@ -125,6 +129,7 @@ export async function createCollaboratorService(data: CreateCollaboratorInput, c
         password: hashed,
         companyId,
         roleId: data.roleId ?? null,
+        color: data.color ?? null,
       },
       select: SELECT_COLLABORATOR,
     })
@@ -192,6 +197,9 @@ export async function updateCollaboratorService(
       ])
       before['setor'] = prevRole?.name ?? null
       after['setor'] = nextRole?.name ?? null
+    } else if (k === 'color') {
+      before['cor'] = prevVal
+      after['cor'] = nextVal
     } else {
       before[k] = prevVal
       after[k] = nextVal

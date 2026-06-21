@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { ResizableImage } from './ResizableImageExtension'
 import FontFamily from '@tiptap/extension-font-family'
@@ -7,7 +7,7 @@ import { TextStyle } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
-import { X, DesktopTower, WarningCircle } from '@phosphor-icons/react'
+import { X, DesktopTower } from '@phosphor-icons/react'
 import { type ContractTemplate, contractTemplateService } from '../../services/contractTemplateService'
 import { VariableChipNode } from './VariableChipNode'
 import { ContractToolbar } from './ContractToolbar'
@@ -15,7 +15,6 @@ import { VariablePickerPanel } from './VariablePickerPanel'
 import { PageBreakExtension, PAGE_H, PAGE_PAD_V, PAGE_PAD_H, PAGE_GAP } from './PageBreakExtension'
 import { FontSizeExtension } from './FontSizeExtension'
 
-// Gradient per page: gray margin zones, white content area
 const PAGE_BG = '#ffffff'
 
 interface ContractStudioProps {

@@ -39,15 +39,17 @@
 - **schedule** — CRUD de agendamentos por empresa; filtros por range de datas, clientId, collaboratorId; soft delete; logs de auditoria
 - **proposals** — CRUD de propostas por empresa; vinculadas a cliente (obrigatório) e colaborador (opcional); status: pending, sent, accepted, refused; filtros por status, clientId, collaboratorId; soft delete; logs de auditoria
 - **contract-templates** — CRUD de modelos de contrato por empresa; conteúdo armazenado como JSON TipTap; soft delete com restore; logs de auditoria; permissão `settings`
+- **follow-ups** — Notas de acompanhamento por cliente; GET `?clientId=X`, POST, DELETE /:id; permissão `clients`
 - **contracts** — Contratos gerados para clientes; vinculados a cliente + proposta aceita (idStatus=3) + template; variáveis substituídas no backend; PDF gerado com puppeteer e salvo no S3; hard delete (remove S3 + DB); logs de auditoria; permissão `clients`
 
 ### Models (Prisma)
 
 - Company, User, Role, Permission, Client, Appointment, Proposal, ContractTemplate, Contract
 - **Appointment** possui campos: `title` (obrigatório), `description?`, `startAt` (DateTime), `companyId`, `clientId?` (relação com Client), `collaboratorId?` (relação com User via "AppointmentCollaborator"), `deletedAt?`
-- **Proposal** possui campos: `value` (Decimal, obrigatório), `description?`, `clientObservation?`, `status` (String: `"pending"` | `"sent"` | `"accepted"` | `"refused"`, default `"pending"`), `companyId`, `clientId` (obrigatório, relação com Client), `collaboratorId?` (relação com User via "ProposalCollaborator"), `deletedAt?`
+- **Proposal** possui campos: `value` (Decimal, obrigatório), `description?`, `clientObservation?`, `idStatus` (Int: 1=Pendente, 2=Enviada, 3=Aceita, 4=Recusada, default 1), `deadlineDays?` (Int — prazo em dias), `deadlineType?` (String: `"business"` | `"calendar"` — dias úteis ou corridos), `signalValue?` (Decimal — valor do sinal; null/0 = sem sinal), `signalPaymentMethod?` (String: `"money"` | `"pix"` | `"boleto"` | `"card"`), `remainingPaymentMethod?` (mesmos valores — forma de pagamento do restante), `companyId`, `clientId` (obrigatório, relação com Client), `collaboratorId?` (relação com User via "ProposalCollaborator"), `deletedAt?`
 - Client possui campos: `name` (obrigatório), `phone` (obrigatório), `email?`, `document?` (CPF ou CNPJ sem máscara), `documentType?` (String: `"CPF"` ou `"CNPJ"`), e campos de endereço: `address?`, `addressNumber?`, `addressComplement?`, `neighborhood?`, `city?`, `state?`, `zipCode?`. Também possui `userId?` (relação opcional com User — colaborador responsável).
 - User possui campo `avatar` (String?) — caminho relativo do arquivo
+- User possui campo `color` (String?) — cor de identificação do colaborador (hex, ex: `#E6C284`)
 - User possui campo `roleId` (Int?) — setor do usuário (relação com Role)
 - Company possui campos de contato: email, phone, address, addressNumber, addressComplement, neighborhood, city, state, zipCode, department, tradeName, cnpj
 - Role pertence a uma Company (cada empresa tem seus próprios setores) — @@unique([name, companyId])
@@ -55,6 +57,7 @@
 - Permission pertence a um Role (roleId, module, action, allowed) — @@unique([roleId, module, action])
 - **ContractTemplate** — `id`, `name`, `content` (Json TipTap), `companyId`, `deletedAt?` — @@unique([name, companyId])
 - **Contract** — `id`, `name`, `content` (Json TipTap com variáveis substituídas), `pdfUrl` (S3), `templateId`, `clientId`, `proposalId`, `companyId` — SEM `deletedAt` (hard delete)
+- **FollowUp** — `id`, `content`, `clientId`, `companyId`, `userId?`, `userName` (snapshot), `deletedAt?` — notas de acompanhamento por cliente; soft delete; permissão `clients`
 - **Todas as tabelas exceto Contract possuem `deletedAt DateTime?`** — soft delete
 
 ### Padrão de Soft Delete
@@ -220,7 +223,9 @@ Após registro bem-sucedido: **não** faz auto-login, retorna à tela de login c
 ### Collaborators Service (collaboratorsService.ts)
 
 - `list`, `create`, `update`, `delete`, `resetPassword`
-- `Collaborator` interface inclui: id, name, email, avatar, active, companyId, roleId, role (id + name)
+- `Collaborator` interface inclui: id, name, email, avatar, color, active, companyId, roleId, role (id + name)
+- `CollaboratorSelectItem` inclui: id, name, color — retornado pelo `/collaborators/select`
+- Cor do colaborador é exibida em todos os lugares onde o nome aparece (ProposalsPage, DashboardPage, ClientDetailPage, AppointmentDetailModal, ProposalDetailModal, GenerateContractModal, CollaboratorsPage)
 
 ### Role Service (roleService.ts)
 

@@ -22,6 +22,24 @@ interface ListProposalsQuery {
   statusChangedTo?: string
 }
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  money: 'Dinheiro',
+  pix: 'Pix',
+  boleto: 'Boleto',
+  card: 'Cartão',
+}
+
+const DEADLINE_TYPE_LABELS: Record<string, string> = {
+  business: 'úteis',
+  calendar: 'corridos',
+}
+
+function formatDeadline(days: number | null | undefined, type: string | null | undefined): string {
+  if (!days) return ''
+  const typeLabel = type ? (DEADLINE_TYPE_LABELS[type] ?? type) : 'dias'
+  return `${days} dia${days !== 1 ? 's' : ''} ${typeLabel}`
+}
+
 interface ProposalInput {
   value: number
   description?: string | null
@@ -29,11 +47,16 @@ interface ProposalInput {
   idStatus?: number
   clientId: number
   collaboratorId?: number | null
+  deadlineDays?: number | null
+  deadlineType?: string | null
+  signalValue?: number | null
+  signalPaymentMethod?: string | null
+  remainingPaymentMethod?: string | null
 }
 
 const proposalInclude = {
   client: { select: { id: true, name: true } },
-  collaborator: { select: { id: true, name: true, avatar: true } },
+  collaborator: { select: { id: true, name: true, avatar: true, color: true } },
 }
 
 const PROPOSAL_ID_STATUSES = [1, 2, 3, 4] as const
@@ -159,6 +182,11 @@ export async function createProposalService(data: ProposalInput, companyId: numb
       companyId,
       clientId: data.clientId,
       collaboratorId: data.collaboratorId ?? null,
+      deadlineDays: data.deadlineDays ?? null,
+      deadlineType: data.deadlineType ?? null,
+      signalValue: data.signalValue ?? null,
+      signalPaymentMethod: data.signalPaymentMethod ?? null,
+      remainingPaymentMethod: data.remainingPaymentMethod ?? null,
     },
     include: proposalInclude,
   })
@@ -202,6 +230,11 @@ export async function updateProposalService(
     if (data.idStatus !== existing.idStatus) updateData.statusChangedAt = new Date()
   }
   if (data.collaboratorId !== undefined) updateData.collaboratorId = data.collaboratorId ?? null
+  if (data.deadlineDays !== undefined) updateData.deadlineDays = data.deadlineDays ?? null
+  if (data.deadlineType !== undefined) updateData.deadlineType = data.deadlineType ?? null
+  if (data.signalValue !== undefined) updateData.signalValue = data.signalValue ?? null
+  if (data.signalPaymentMethod !== undefined) updateData.signalPaymentMethod = data.signalPaymentMethod ?? null
+  if (data.remainingPaymentMethod !== undefined) updateData.remainingPaymentMethod = data.remainingPaymentMethod ?? null
 
   const updated = await prisma.proposal.update({
     where: { id },
@@ -209,9 +242,11 @@ export async function updateProposalService(
     include: proposalInclude,
   })
 
+  const DECIMAL_FIELDS = new Set(['value', 'signalValue'])
   const changedKeys = Object.keys(updateData).filter((k) => {
-    const newVal = k === 'value' ? Number(updateData[k]) : updateData[k]
-    const oldVal = k === 'value' ? Number((existing as any)[k]) : (existing as any)[k]
+    if (k === 'statusChangedAt') return false
+    const newVal = DECIMAL_FIELDS.has(k) ? Number(updateData[k]) : updateData[k]
+    const oldVal = DECIMAL_FIELDS.has(k) ? Number((existing as any)[k]) : (existing as any)[k]
     return newVal !== oldVal
   })
 
@@ -222,9 +257,15 @@ export async function updateProposalService(
       if (k === 'idStatus') {
         before['statusProposta'] = PROPOSAL_STATUS_LABELS[(existing as any)[k]] ?? String((existing as any)[k])
         after['statusProposta'] = PROPOSAL_STATUS_LABELS[(updateData as any)[k]] ?? String((updateData as any)[k])
+      } else if (k === 'signalPaymentMethod' || k === 'remainingPaymentMethod') {
+        before[k] = (existing as any)[k] ? (PAYMENT_METHOD_LABELS[(existing as any)[k]] ?? (existing as any)[k]) : null
+        after[k] = updateData[k] ? (PAYMENT_METHOD_LABELS[updateData[k] as string] ?? updateData[k]) : null
+      } else if (k === 'deadlineType') {
+        before[k] = (existing as any)[k] ? (DEADLINE_TYPE_LABELS[(existing as any)[k]] ?? (existing as any)[k]) : null
+        after[k] = updateData[k] ? (DEADLINE_TYPE_LABELS[updateData[k] as string] ?? updateData[k]) : null
       } else {
-        before[k] = k === 'value' ? Number((existing as any)[k]) : (existing as any)[k]
-        after[k] = k === 'value' ? Number(updateData[k]) : updateData[k]
+        before[k] = k === 'value' || k === 'signalValue' ? Number((existing as any)[k]) : (existing as any)[k]
+        after[k] = k === 'value' || k === 'signalValue' ? Number(updateData[k]) : updateData[k]
       }
     }
 

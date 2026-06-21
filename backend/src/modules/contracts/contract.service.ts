@@ -196,6 +196,18 @@ function extractVariables(node: any, found: Set<string> = new Set()): Set<string
   return found
 }
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  money: 'Dinheiro',
+  pix: 'Pix',
+  boleto: 'Boleto',
+  card: 'Cartão',
+}
+
+const DEADLINE_TYPE_LABELS: Record<string, string> = {
+  business: 'úteis',
+  calendar: 'corridos',
+}
+
 const VARIABLE_LABELS: Record<string, string> = {
   '{{cliente.nome}}': 'Nome do cliente',
   '{{cliente.email}}': 'E-mail do cliente',
@@ -210,7 +222,23 @@ const VARIABLE_LABELS: Record<string, string> = {
   '{{proposta.valor}}': 'Valor da proposta',
   '{{proposta.descricao}}': 'Descrição da proposta',
   '{{proposta.observacoes}}': 'Observações da proposta',
+  '{{proposta.prazo}}': 'Prazo de entrega',
+  '{{proposta.sinal}}': 'Valor do sinal',
+  '{{proposta.forma_pagamento_sinal}}': 'Forma de pagamento do sinal',
+  '{{proposta.restante}}': 'Valor restante',
+  '{{proposta.forma_pagamento_restante}}': 'Forma de pagamento restante',
 }
+
+// Variables that are optional — empty value is acceptable (proposal may not have them set)
+const OPTIONAL_VARS = new Set([
+  '{{proposta.prazo}}',
+  '{{proposta.sinal}}',
+  '{{proposta.forma_pagamento_sinal}}',
+  '{{proposta.restante}}',
+  '{{proposta.forma_pagamento_restante}}',
+  '{{proposta.descricao}}',
+  '{{proposta.observacoes}}',
+])
 
 function checkMissingVars(
   usedVars: Set<string>,
@@ -218,6 +246,7 @@ function checkMissingVars(
 ): string[] {
   const missing: string[] = []
   for (const key of usedVars) {
+    if (OPTIONAL_VARS.has(key)) continue
     const value = vars[key]
     if (value === undefined || value === null || value.trim() === '') {
       missing.push(VARIABLE_LABELS[key] ?? key)
@@ -230,10 +259,17 @@ function checkMissingVars(
 
 function substituteVariablesInNode(node: any, vars: Record<string, string>): any {
   if (!node) return node
-  // Custom variable chip node → replace with text node
   if (node.type === 'variableChip') {
     const key = node.attrs?.variable ?? ''
-    return { type: 'text', text: vars[key] ?? key }
+    const text = vars[key] ?? key
+    const marks: any[] = []
+    if (node.attrs?.bold) marks.push({ type: 'bold' })
+    if (node.attrs?.italic) marks.push({ type: 'italic' })
+    if (node.attrs?.underline) marks.push({ type: 'underline' })
+    if (node.attrs?.color || node.attrs?.fontFamily || node.attrs?.fontSize) {
+      marks.push({ type: 'textStyle', attrs: { color: node.attrs.color ?? null, fontFamily: node.attrs.fontFamily ?? null, fontSize: node.attrs.fontSize ?? null } })
+    }
+    return marks.length > 0 ? { type: 'text', text, marks } : { type: 'text', text }
   }
   if (node.content) {
     return { ...node, content: node.content.map((child: any) => substituteVariablesInNode(child, vars)) }
@@ -248,40 +284,103 @@ function substituteVariablesInNode(node: any, vars: Record<string, string>): any
 let browserInstance: Awaited<ReturnType<typeof puppeteer.launch>> | null = null
 
 async function getBrowser() {
-  if (browserInstance) {
-    try {
-      // verify the browser is still alive
-      await browserInstance.version()
-      return browserInstance
-    } catch {
-      browserInstance = null
-    }
+  if (browserInstance && !browserInstance.connected) {
+    browserInstance = null
   }
 
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
-  browserInstance = await puppeteer.launch({
-    headless: true,
-    ...(executablePath ? { executablePath } : {}),
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--single-process',
-    ],
-  })
-
-  browserInstance.on('disconnected', () => { browserInstance = null })
+  if (!browserInstance) {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
+    browserInstance = await puppeteer.launch({
+      headless: true,
+      ...(executablePath ? { executablePath } : {}),
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-sync',
+        '--disable-translate',
+        '--hide-scrollbars',
+        '--metrics-recording-only',
+        '--mute-audio',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-backgrounding-occluded-windows',
+      ],
+    })
+    browserInstance.on('disconnected', () => { browserInstance = null })
+    console.log('[PDF] Browser launched')
+  }
 
   return browserInstance
 }
 
+export async function warmupBrowser() {
+  try {
+    await getBrowser()
+    console.log('[PDF] Browser warmed up')
+  } catch (err: any) {
+    console.warn('[PDF] Browser warmup failed:', err?.message)
+  }
+}
+
+// Substitui URLs externas de imagens por data URLs base64 para evitar
+// que o puppeteer faça requisições de rede durante a geração do PDF.
+async function inlineImages(html: string): Promise<string> {
+  const urlRegex = /src="(https?:\/\/[^"]+)"/g
+  const urls = new Set<string>()
+  let m: RegExpExecArray | null
+  while ((m = urlRegex.exec(html)) !== null) urls.add(m[1])
+  if (urls.size === 0) return html
+
+  const results = await Promise.allSettled(
+    Array.from(urls).map(async (url) => {
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 8000)
+        try {
+          const res = await fetch(url, { signal: controller.signal })
+          if (!res.ok) return null
+          const buf = await res.arrayBuffer()
+          const mime = res.headers.get('content-type') || 'image/png'
+          const b64 = Buffer.from(buf).toString('base64')
+          return { url, dataUrl: `data:${mime};base64,${b64}` }
+        } finally {
+          clearTimeout(timer)
+        }
+      } catch {
+        return null
+      }
+    }),
+  )
+
+  let out = html
+  for (const r of results) {
+    if (r.status === 'fulfilled' && r.value) {
+      out = out.split(`src="${r.value.url}"`).join(`src="${r.value.dataUrl}"`)
+    }
+  }
+  return out
+}
+
 async function generatePdf(html: string): Promise<Buffer> {
+  const inlined = await inlineImages(html)
   const browser = await getBrowser()
   const page = await browser.newPage()
   try {
-    await page.setContent(html, { waitUntil: 'load' })
-    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '20mm', bottom: '20mm', left: '20mm', right: '20mm' } })
+    page.setDefaultNavigationTimeout(120_000)
+    page.setDefaultTimeout(120_000)
+    await page.setContent(inlined, { waitUntil: 'domcontentloaded' })
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20mm', bottom: '20mm', left: '20mm', right: '20mm' },
+      timeout: 0,
+    })
     return Buffer.from(pdf)
   } finally {
     await page.close()
@@ -332,7 +431,9 @@ export async function createContractService(
   const contractNumber = String(contractCount + 1).padStart(4, '0')
   const contractDate = formatDate(new Date())
 
-  const vars: Record<string, string> = {
+  let vars: Record<string, string>
+  try {
+    vars = {
     '{{cliente.nome}}': client.name,
     '{{cliente.email}}': client.email ?? '',
     '{{cliente.telefone}}': formatPhone(client.phone),
@@ -346,8 +447,21 @@ export async function createContractService(
     '{{proposta.valor}}': formatCurrency(proposal.value),
     '{{proposta.descricao}}': proposal.description ?? '',
     '{{proposta.observacoes}}': proposal.clientObservation ?? '',
+    '{{proposta.prazo}}': proposal.deadlineDays
+      ? `${proposal.deadlineDays} dia${proposal.deadlineDays !== 1 ? 's' : ''} ${proposal.deadlineType ? (DEADLINE_TYPE_LABELS[proposal.deadlineType] ?? proposal.deadlineType) : ''}`
+      : '',
+    '{{proposta.sinal}}': proposal.signalValue && Number(proposal.signalValue) > 0 ? formatCurrency(proposal.signalValue) : '',
+    '{{proposta.forma_pagamento_sinal}}': proposal.signalPaymentMethod ? (PAYMENT_METHOD_LABELS[proposal.signalPaymentMethod] ?? proposal.signalPaymentMethod) : '',
+    '{{proposta.restante}}': proposal.signalValue && Number(proposal.signalValue) > 0
+      ? formatCurrency(Number(proposal.value) - Number(proposal.signalValue))
+      : formatCurrency(proposal.value),
+    '{{proposta.forma_pagamento_restante}}': proposal.remainingPaymentMethod ? (PAYMENT_METHOD_LABELS[proposal.remainingPaymentMethod] ?? proposal.remainingPaymentMethod) : '',
     '{{contrato.data}}': contractDate,
     '{{contrato.numero}}': contractNumber,
+  }
+  } catch (err: any) {
+    console.error('[createContract] Error building vars:', err?.message, err?.stack)
+    throw { statusCode: 500, message: `Erro ao montar variáveis do contrato: ${err?.message ?? String(err)}` }
   }
 
   const usedVars = extractVariables(template.content)
@@ -364,36 +478,61 @@ export async function createContractService(
   const contractName = `Contrato ${contractNumber} - ${client.name} - ${contractDate.replace(/\//g, '-')}`
 
   const html = tiptapToHtml(renderedJson, contractName)
-  const pdfBuffer = await generatePdf(html)
+
+  let pdfBuffer: Buffer
+  try {
+    pdfBuffer = await generatePdf(html)
+  } catch (err: any) {
+    console.error('[createContract] PDF generation failed:', err?.message, err?.stack)
+    throw { statusCode: 500, message: `Erro ao gerar o PDF: ${err?.message ?? String(err)}` }
+  }
 
   const tempId = `${companyId}-${Date.now()}`
   const pdfKey = `contracts/pdfs/${tempId}.pdf`
-  const pdfUrl = await uploadToS3(pdfKey, pdfBuffer, 'application/pdf')
 
-  const contract = await prisma.contract.create({
-    data: {
-      name: contractName,
-      content: renderedJson,
-      pdfUrl,
-      templateId: data.templateId,
-      clientId: data.clientId,
-      proposalId: data.proposalId,
+  let pdfUrl: string
+  try {
+    pdfUrl = await uploadToS3(pdfKey, pdfBuffer, 'application/pdf')
+  } catch (err: any) {
+    console.error('[createContract] S3 upload failed:', err?.message, err?.stack)
+    throw { statusCode: 500, message: `Erro ao salvar o PDF: ${err?.message ?? String(err)}` }
+  }
+
+  let contract: Awaited<ReturnType<typeof prisma.contract.create>>
+  try {
+    contract = await prisma.contract.create({
+      data: {
+        name: contractName,
+        content: renderedJson,
+        pdfUrl,
+        templateId: data.templateId,
+        clientId: data.clientId,
+        proposalId: data.proposalId,
+        companyId,
+      },
+    })
+  } catch (err: any) {
+    console.error('[createContract] DB create failed:', err?.message, err?.stack)
+    throw { statusCode: 500, message: `Erro ao salvar o contrato no banco: ${err?.message ?? String(err)}` }
+  }
+
+  try {
+    const userName = await getActorName(actor.userId)
+    await createLog({
       companyId,
-    },
-  })
-
-  const userName = await getActorName(actor.userId)
-  await createLog({
-    companyId,
-    userId: actor.userId,
-    userName,
-    module: 'clients',
-    action: 'create',
-    entityId: data.clientId,
-    entityName: contract.name,
-    description: `Contrato "${contract.name}" gerado para ${client.name}`,
-    metadata: { contractId: contract.id, proposalId: data.proposalId, templateId: data.templateId },
-  })
+      userId: actor.userId,
+      userName,
+      module: 'clients',
+      action: 'create',
+      entityId: data.clientId,
+      entityName: contract.name,
+      description: `Contrato "${contract.name}" gerado para ${client.name}`,
+      metadata: { contractId: contract.id, proposalId: data.proposalId, templateId: data.templateId },
+    })
+  } catch (err: any) {
+    console.error('[createContract] Log creation failed (non-fatal):', err?.message)
+    // Log failure is non-fatal — contrato já foi salvo
+  }
 
   return contract
 }

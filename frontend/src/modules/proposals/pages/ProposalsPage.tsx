@@ -415,12 +415,13 @@ export function ProposalsPage() {
             {proposals.map((proposal) => (
               <div
                 key={proposal.id}
+                onClick={() => setViewingProposal(proposal)}
                 style={{
                   display: 'grid', gridTemplateColumns: DESKTOP_COLS,
                   padding: '12px 16px', background: 'rgba(23,27,36,0.5)',
                   borderRadius: 10, alignItems: 'center',
                   border: '1px solid rgba(230,194,132,0.2)',
-                  position: 'relative',
+                  position: 'relative', cursor: 'pointer',
                 }}
               >
                 <div style={{
@@ -430,7 +431,7 @@ export function ProposalsPage() {
                   opacity: selected.includes(proposal.id) ? 1 : 0,
                   clipPath: selected.includes(proposal.id) ? 'inset(0 0% 0 0)' : 'inset(0 100% 0 0)',
                 }} />
-                <button onClick={() => toggleOne(proposal.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                <button onClick={(e) => { e.stopPropagation(); toggleOne(proposal.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                   <Checkbox checked={selected.includes(proposal.id)} />
                 </button>
 
@@ -440,7 +441,7 @@ export function ProposalsPage() {
                   </span>
                 </div>
 
-                <div onClick={() => setViewingProposal(proposal)} style={{ minWidth: 0, cursor: 'pointer', textAlign: 'center' }}>
+                <div style={{ minWidth: 0, textAlign: 'center' }}>
                   <p style={{ fontWeight: 500, color: '#fff', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {proposal.client.name}
                   </p>
@@ -450,7 +451,7 @@ export function ProposalsPage() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 13, color: proposal.collaborator?.color ?? 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {proposal.collaborator?.name ?? '—'}
                   </span>
                 </div>
@@ -459,7 +460,7 @@ export function ProposalsPage() {
                   <StatusBadge status={proposal.idStatus} />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div onClick={e => e.stopPropagation()} style={{ display: 'flex', justifyContent: 'center' }}>
                   <ActionMenu
                     proposal={proposal}
                     onView={setViewingProposal}
