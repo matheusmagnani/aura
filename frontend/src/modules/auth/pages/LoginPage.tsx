@@ -17,7 +17,7 @@ import iconeEsquerdo from '../../../assets/icone_fundo_preto.png'
 import logoDesktop from '../../../assets/logo.png'
 
 type Mode = 'login' | 'register'
-type RegStep = 'user' | 'company'
+type RegStep = 'invite' | 'user' | 'company'
 
 const DEPARTMENTS = ['Tecnologia', 'Marketing', 'Financeiro', 'Recursos Humanos', 'Comercial', 'Jurídico', 'Operações', 'Logística', 'Outros']
 
@@ -51,6 +51,10 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
+
+  // Register — step 0 (invite)
+  const [inviteCode, setInviteCode] = useState('')
+  const [inviteLoading, setInviteLoading] = useState(false)
 
   // Register — step 1 (user)
   const [regName, setRegName] = useState('')
@@ -99,7 +103,20 @@ export function LoginPage() {
 
   function switchMode(to: Mode) {
     setMode(to)
-    if (to === 'register') setRegStep('user')
+    if (to === 'register') setRegStep('invite')
+  }
+
+  async function handleValidateInvite(e: React.FormEvent) {
+    e.preventDefault()
+    setInviteLoading(true)
+    try {
+      await authService.validateInvite(inviteCode)
+      setRegStep('user')
+    } catch (error: any) {
+      showToast(getApiError(error), 'danger')
+    } finally {
+      setInviteLoading(false)
+    }
   }
 
   async function handleMobileToRegister() {
@@ -110,7 +127,7 @@ export function LoginPage() {
     ])
     // Switch content while bar covers screen
     setMode('register')
-    setRegStep('user')
+    setRegStep('invite')
     // Phase 2: bar collapses back to bottom bar position
     await Promise.all([
       mobileBarControls.start({ height: 80, transition: { duration: 0.65, ease: [0.4, 0, 0.2, 1] } }),
@@ -205,6 +222,7 @@ export function LoginPage() {
     setRegisterLoading(true)
     try {
       await authService.register({
+        inviteCode,
         name: regName,
         email: regEmail,
         password: regPassword,
@@ -271,16 +289,37 @@ export function LoginPage() {
               <h1 className="text-2xl font-bold text-app-secondary">Criar conta</h1>
               <p className="text-white/70 mt-1 text-sm">Preencha os dados abaixo</p>
             </div>
-            <div className="flex items-center justify-center gap-3" style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
-              <button type="button" onClick={() => regStep === 'company' && setRegStep('user')} className="text-xs font-medium rounded-full transition-colors" style={{ background: regStep === 'user' ? 'var(--color-app-secondary)' : 'rgba(230,194,132,0.1)', color: regStep === 'user' ? 'var(--color-app-primary)' : 'rgba(230,194,132,0.5)', padding: '4px 16px' }}>
-                1. Usuário
-              </button>
-              <div className="w-6 h-px bg-app-secondary/30" />
-              <span className="text-xs font-medium rounded-full" style={{ background: regStep === 'company' ? 'var(--color-app-secondary)' : 'rgba(230,194,132,0.1)', color: regStep === 'company' ? 'var(--color-app-primary)' : 'rgba(230,194,132,0.5)', padding: '4px 16px' }}>
-                2. Empresa
-              </span>
-            </div>
+            {regStep !== 'invite' && (
+              <div className="flex items-center justify-center gap-3" style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+                <button type="button" onClick={() => regStep === 'company' && setRegStep('user')} className="text-xs font-medium rounded-full transition-colors" style={{ background: regStep === 'user' ? 'var(--color-app-secondary)' : 'rgba(230,194,132,0.1)', color: regStep === 'user' ? 'var(--color-app-primary)' : 'rgba(230,194,132,0.5)', padding: '4px 16px' }}>
+                  1. Usuário
+                </button>
+                <div className="w-6 h-px bg-app-secondary/30" />
+                <span className="text-xs font-medium rounded-full" style={{ background: regStep === 'company' ? 'var(--color-app-secondary)' : 'rgba(230,194,132,0.1)', color: regStep === 'company' ? 'var(--color-app-primary)' : 'rgba(230,194,132,0.5)', padding: '4px 16px' }}>
+                  2. Empresa
+                </span>
+              </div>
+            )}
           </div>
+          {regStep === 'invite' && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 0, paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+              <div style={{ width: '100%', maxWidth: 420 }}>
+                <form onSubmit={handleValidateInvite} className="flex flex-col gap-5">
+                  <Input label="Código de acesso" type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="" required />
+                  <div className="flex flex-col gap-4 mt-2">
+                    <Button type="submit" disabled={inviteLoading} size="lg" className="w-full" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', height: 'auto' }}>
+                      {inviteLoading && <CircleNotch size={18} className="animate-spin" />}
+                      Próximo
+                    </Button>
+                    <p className="text-center text-sm text-app-gray">
+                      <button type="button" onClick={handleMobileToLogin} className="hover:underline">Já tenho uma conta</button>
+                    </p>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+          {regStep !== 'invite' && (
           <div className="flex-1 flex justify-center" style={{ minHeight: 0 }}>
             <div className="form-scroll w-full flex flex-col overflow-y-auto" style={{ maxWidth: 420, paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingBottom: '6rem' }}>
               {regStep === 'user' && (
@@ -355,6 +394,7 @@ export function LoginPage() {
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* Login content — hidden instantly while bar covers screen */}
@@ -429,26 +469,51 @@ export function LoginPage() {
             </div>
 
             {/* Step indicators */}
-            <div className="flex items-center justify-center gap-3" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-              <button
-                type="button"
-                onClick={() => regStep === 'company' && setRegStep('user')}
-                className="text-xs font-medium rounded-full transition-colors"
-                style={{ background: regStep === 'user' ? 'var(--color-app-secondary)' : 'rgba(230,194,132,0.1)', color: regStep === 'user' ? 'var(--color-app-primary)' : 'rgba(230,194,132,0.5)', padding: '4px 16px' }}
-              >
-                1. Usuário
-              </button>
-              <div className="w-6 h-px bg-app-secondary/30" />
-              <span
-                className="text-xs font-medium rounded-full"
-                style={{ background: regStep === 'company' ? 'var(--color-app-secondary)' : 'rgba(230,194,132,0.1)', color: regStep === 'company' ? 'var(--color-app-primary)' : 'rgba(230,194,132,0.5)', padding: '4px 16px' }}
-              >
-                2. Empresa
-              </span>
-            </div>
+            {regStep !== 'invite' && (
+              <div className="flex items-center justify-center gap-3" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => regStep === 'company' && setRegStep('user')}
+                  className="text-xs font-medium rounded-full transition-colors"
+                  style={{ background: regStep === 'user' ? 'var(--color-app-secondary)' : 'rgba(230,194,132,0.1)', color: regStep === 'user' ? 'var(--color-app-primary)' : 'rgba(230,194,132,0.5)', padding: '4px 16px' }}
+                >
+                  1. Usuário
+                </button>
+                <div className="w-6 h-px bg-app-secondary/30" />
+                <span
+                  className="text-xs font-medium rounded-full"
+                  style={{ background: regStep === 'company' ? 'var(--color-app-secondary)' : 'rgba(230,194,132,0.1)', color: regStep === 'company' ? 'var(--color-app-primary)' : 'rgba(230,194,132,0.5)', padding: '4px 16px' }}
+                >
+                  2. Empresa
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Scrollable form area */}
+          {/* Invite form — absolute centered in full panel */}
+          {regStep === 'invite' && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 0, paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+              <div style={{ width: '100%', maxWidth: 420 }}>
+                <form onSubmit={handleValidateInvite} className="flex flex-col gap-5">
+                  <Input label="Código de acesso" type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="" required />
+                  <div className="flex flex-col gap-4 mt-2">
+                    <Button type="submit" disabled={inviteLoading} size="lg" className="w-full" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', height: 'auto' }}>
+                      {inviteLoading && <CircleNotch size={18} className="animate-spin" />}
+                      Próximo
+                    </Button>
+                    <p className="text-center text-sm text-app-gray">
+                      <button type="button" onClick={() => switchMode('login')} className="hover:underline">
+                        Já tenho uma conta
+                      </button>
+                    </p>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Scrollable form area (user / company) */}
+          {regStep !== 'invite' && (
           <div className="relative flex-1 flex justify-center" style={{ zIndex: 1, minHeight: 0 }}>
           <div className="form-scroll w-full flex flex-col pb-8 overflow-y-auto" style={{ maxWidth: 420, paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
 
@@ -542,6 +607,7 @@ export function LoginPage() {
             )}
           </div>
           </div>
+          )}
         </div>
 
         {/* Login form — RIGHT */}

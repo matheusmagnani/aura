@@ -3,6 +3,7 @@ import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import jwt from '@fastify/jwt'
 import multipart from '@fastify/multipart'
+import rateLimit from '@fastify/rate-limit'
 import { ZodError } from 'zod'
 import { env } from './env'
 import './lib/zodErrorMap'
@@ -77,6 +78,8 @@ app.register(jwt, {
 app.register(multipart, {
   limits: { fileSize: 5 * 1024 * 1024 },
 })
+
+app.register(rateLimit, { global: false })
 
 app.register(authRoutes, { prefix: '/api/auth' })
 app.register(roleRoutes, { prefix: '/api/roles' })

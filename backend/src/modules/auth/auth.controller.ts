@@ -1,13 +1,31 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { uploadToS3 } from '../../lib/s3'
-import { registerService, loginService, getMeService, updateProfileService, uploadAvatarService, removeAvatarService, changePasswordService } from './auth.service'
+import { registerService, validateInviteService, loginService, getMeService, updateProfileService, uploadAvatarService, removeAvatarService, changePasswordService } from './auth.service'
+
+export async function validateInviteController(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  const { code } = z.object({ code: z.string().min(1) }).parse(request.body)
+
+  try {
+    await validateInviteService(code)
+    return reply.send({ valid: true })
+  } catch (error: any) {
+    if (error.statusCode) {
+      return reply.status(error.statusCode).send({ message: error.message })
+    }
+    throw error
+  }
+}
 
 export async function registerController(
   request: FastifyRequest,
   reply: FastifyReply,
 ) {
   const schema = z.object({
+    inviteCode: z.string().min(1),
     companyName: z.string().min(1),
     name: z.string().min(1),
     email: z.string().email(),

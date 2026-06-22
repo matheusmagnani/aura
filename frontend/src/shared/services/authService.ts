@@ -7,6 +7,7 @@ interface LoginPayload {
 }
 
 interface RegisterPayload {
+  inviteCode: string
   companyName: string
   name: string
   email: string
@@ -85,6 +86,10 @@ export const authService = {
 
   getUser() {
     return useAuthStore.getState().user
+  },
+
+  async validateInvite(code: string): Promise<void> {
+    await api.post('/auth/validate-invite', { code })
   },
 
   async register(data: RegisterPayload): Promise<AuthResponse> {

@@ -6,6 +6,7 @@ const MODULES = ['schedule', 'clients', 'collaborators', 'settings', 'history', 
 const ACTIONS = ['read', 'create', 'edit', 'delete'] as const
 
 interface RegisterInput {
+  inviteCode: string
   companyName: string
   name: string
   email: string
@@ -29,7 +30,14 @@ interface LoginInput {
   password: string
 }
 
-export async function registerService({ companyName, name, email, password, tradeName, cnpj, department, companyEmail, phone, zipCode, address, addressNumber, addressComplement, neighborhood, city, state }: RegisterInput) {
+export async function validateInviteService(code: string) {
+  const invite = await prisma.inviteCode.findUnique({ where: { code } })
+  if (!invite || invite.usedAt) {
+    throw { statusCode: 400, message: 'Código inválido ou já utilizado.' }
+  }
+}
+
+export async function registerService({ inviteCode, companyName, name, email, password, tradeName, cnpj, department, companyEmail, phone, zipCode, address, addressNumber, addressComplement, neighborhood, city, state }: RegisterInput) {
   const existingUser = await prisma.user.findUnique({ where: { email } })
   if (existingUser) {
     throw { statusCode: 409, message: 'E-mail de usuário já cadastrado.' }
@@ -47,6 +55,12 @@ export async function registerService({ companyName, name, email, password, trad
   const hashedPassword = await bcrypt.hash(password, 10)
 
   const result = await prisma.$transaction(async (tx) => {
+    const invite = await tx.inviteCode.findUnique({ where: { code: inviteCode } })
+    if (!invite || invite.usedAt) {
+      throw { statusCode: 400, message: 'Código inválido ou já utilizado.' }
+    }
+    await tx.inviteCode.update({ where: { code: inviteCode }, data: { usedAt: new Date() } })
+
     const company = await tx.company.create({
       data: {
         name: companyName,
