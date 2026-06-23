@@ -306,7 +306,7 @@ export function SchedulePage() {
 
       {/* ── Conteúdo da view ────────────────────────────────── */}
       {/* Desktop: flex 1 + overflow hidden para semana, scroll para mês/ano */}
-      <div className="hidden md:flex md:flex-col" style={{ flex: 1, padding: view === 'week' ? 0 : '12px 16px 0', overflow: view === 'week' ? 'hidden' : 'auto' }}>
+      <div className="hidden md:flex md:flex-col" style={{ flex: 1, padding: view === 'week' ? 0 : '12px 16px 0', overflow: (view === 'week' && displayMode === 'grid') ? 'hidden' : 'auto' }}>
         {view === 'week' && <WeekView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} forceMode={displayMode} />}
         {view === 'month' && <MonthView currentDate={currentDate} appointments={appointments} onSlotClick={canCreate ? openCreate : undefined} onAppointmentClick={openDetail} onReschedule={canEdit ? handleReschedule : undefined} canEdit={canEdit} />}
         {view === 'year' && <YearView currentDate={currentDate} appointments={appointments} onMonthClick={handleMonthClick} />}
