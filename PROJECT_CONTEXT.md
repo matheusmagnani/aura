@@ -40,7 +40,7 @@
 - **proposals** — CRUD de propostas por empresa; vinculadas a cliente (obrigatório) e colaborador (opcional); status: pending, sent, accepted, refused; filtros por status, clientId, collaboratorId; soft delete; logs de auditoria
 - **contract-templates** — CRUD de modelos de contrato por empresa; conteúdo armazenado como JSON TipTap; soft delete com restore; logs de auditoria; permissão `settings`
 - **follow-ups** — Notas de acompanhamento por cliente; GET `?clientId=X`, POST, DELETE /:id; permissão `clients`
-- **contracts** — Contratos gerados para clientes; vinculados a cliente + proposta aceita (idStatus=3) + template; variáveis substituídas no backend; PDF gerado com puppeteer e salvo no S3; hard delete (remove S3 + DB); logs de auditoria; permissão `clients`
+- **contracts** — Contratos gerados para clientes; vinculados a cliente + proposta aceita (idStatus=3) + template; variáveis substituídas no backend; PDF gerado rodando o editor real na rota `/__pdf-render` via puppeteer e fatiando em páginas A4 (ver "Geração de PDF — Arquitetura"), salvo no S3; hard delete (remove S3 + DB); logs de auditoria; permissão `clients`
 
 ### Models (Prisma)
 
@@ -185,7 +185,29 @@ Após registro bem-sucedido: **não** faz auto-login, retorna à tela de login c
 | GET | /api/contracts/:id | Sim | Buscar contrato por ID — permissão clients/read |
 | POST | /api/contracts | Sim | Gerar contrato (templateId*, clientId*, proposalId*) — substitui variáveis, gera PDF, sobe ao S3 — permissão clients/create |
 | DELETE | /api/contracts/:id | Sim | Hard delete: remove S3 + DB — permissão clients/delete |
+| GET | /api/contracts/:id/download | Sim | Download do PDF gerado (stream S3) — Content-Type: application/pdf — permissão clients/read |
 | POST | /api/contracts/upload-image | Sim | Upload de imagem para o editor (multipart) — retorna URL S3 — permissão settings/edit |
+
+### Geração de PDF — Arquitetura (contract.service.ts)
+
+A geração roda o **editor real** (TipTap + PageBreakExtension) dentro do Puppeteer, em vez de reimplementar a paginação — a lógica de layout/paginação é a mesma do editor, sem um segundo algoritmo pra divergir.
+
+> **Preview = PDF (importante):** o `ContractViewModal` **não re-renderiza** o contrato no navegador — ele exibe o **próprio PDF gerado** (blob de `/contracts/:id/download`) num `<iframe>`. Motivo: o Chromium do puppeteer (servidor) e o do navegador do usuário são builds diferentes e renderizam texto com ~1% de diferença de métrica, deslocando a quebra de linha/distribuição por página perto dos limites — e isso **não** dá pra eliminar por CSS (`line-height`, `text-rendering: geometricPrecision`, `deviceScaleFactor`, `--font-render-hinting` foram todos testados sem efeito). Exibir o PDF real no preview é a única forma de garantir que o que se vê É o que se baixa. A contagem de páginas usa a mesma fórmula nos dois, então o nº de páginas bate.
+
+1. **Rota headless `/__pdf-render`** (`frontend/src/modules/contract-pdf/PdfRenderPage.tsx`): página pública, sem chrome, que monta o MESMO editor read-only do `ContractViewModal` (mesmas extensões, mesmo CSS `.tiptap`, mesmos overlays de imagem pinned). Expõe `window.__renderContractForPdf(content, padV, padH)` e, quando o `PageBreakExtension` estabiliza (fontes prontas + imagens decodificadas + altura do wrapper estável por ~8 frames), seta `window.__pdfReady = true`. O wrapper tem `data-pdf-wrapper`.
+
+2. **`generatePdf(content, padV, padH)`** — Puppeteer headless Chromium:
+   - Viewport 1000×1400 (maior que os 794px do conteúdo pra scrollbar nunca encolher a largura). `page.goto(${PDF_RENDERER_URL}/__pdf-render)` (`PDF_RENDERER_URL` = env, default `http://localhost:5173`; em produção apontar pro frontend deployado).
+   - Chama `__renderContractForPdf(content, padV, padH)` e aguarda `window.__pdfReady` (as fontes são self-hosted pelo frontend — o backend **não** injeta CSS de fonte).
+   - **Fatiamento (slicing)** (`page.evaluate`): `pageCount = ceil((wrapper.scrollHeight + PAGE_GAP) / (PAGE_H + PAGE_GAP))` — **mesma fórmula do preview**, então o PDF sempre tem o mesmo nº de páginas. Para cada página `p`, clona o wrapper e posiciona `position:absolute; top:-(p*PAGE_STRIDE)` dentro de um container fixo 794×1123 `overflow:hidden` com `break-after:page`. As margens `padV` (topo/base) caem naturalmente dentro do gap entre páginas do editor. Esconde o `#root` (mantendo no DOM pros `<style>` continuarem valendo pros clones) e injeta `@page{size:794px 1123px;margin:0}`.
+   - **PDF**: `page.pdf({ width:'794px', height:'1123px', preferCSSPageSize:true, margin:0 })`.
+   - Geometria (`PAGE_H=1123`, `PAGE_GAP=20`, `PAGE_STRIDE=1143`) **deve espelhar** `PageBreakExtension.ts`.
+
+3. **Fontes — TODAS self-hosted pelo frontend:** as fontes vivem em `frontend/public/contract-fonts/*.woff2` (todas as famílias curadas + os aliases web-safe; cópia de `backend/src/assets/fonts/`) e são declaradas em `frontend/src/styles/contract-fonts.css` (importado em `main.tsx`). Sem link do Google Fonts no `index.html`. Assim o **editor/Studio, o preview e a rota `/__pdf-render`** carregam exatamente os mesmos arquivos, e o puppeteer os busca por HTTP do próprio frontend → embute no PDF de forma confiável (sem depender de internet nem do Google, que **não** carrega de forma confiável dentro do puppeteer).
+   - **Geração do CSS:** `contract-fonts.css` é gerado a partir de `getContractFontsCss()` em **`backend/src/modules/contracts/contract.fonts.ts`** (fonte de verdade das famílias/faces/aliases), trocando `FONT_ORIGIN_PLACEHOLDER` por `/contract-fonts`. Ao mexer em fontes, regenerar esse CSS e copiar os `.woff2` novos pro `public/contract-fonts/`.
+   - **Force-load (crítico):** `PdfRenderPage` dá `document.fonts` `.load()` em **todas** as faces antes de sinalizar `__pdfReady`. Uma fonte usada só como *strut* de linha (ex.: o `Maven Pro` default dos parágrafos, quando o texto visível está em spans `Courier New`) não pinta glifo, então o Chromium pode não requisitá-la e o strut cai num fallback de altura diferente — desincronizando as alturas de linha. Carregá-las à força torna as métricas determinísticas.
+   - **Fontes disponíveis (`contract.fonts.ts`):** Sans (Maven Pro, Roboto, Open Sans, Lato, Montserrat, Poppins), Serif (Merriweather, Lora, PT Serif, Playfair Display), Mono (Roboto Mono, Source Code Pro). Nomes web-safe no dropdown (Arial, Times New Roman, Courier New, Georgia) → `FONT_ALIASES` → equivalentes métricos (Arimo, Tinos, Cousine, Gelasio). `FONT_FAMILIES` deve espelhar o array `FONTS` do `ContractToolbar.tsx`.
+   - **Nota:** o backend **não** roda mais servidor de fontes loopback nem injeta CSS (removido); `backend/src/assets/fonts/` permanece só como origem pra gerar o CSS/copiar pro frontend.
 
 ### Endpoints de Logs (Histórico)
 
@@ -299,12 +321,14 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - **EntityHistoryModal** — modal reutilizável que exibe o histórico de uma entidade específica. Props: `isOpen`, `onClose`, `module`, `entityId`, `entityName?`. Usa `logService.listByEntity()` com paginação
 - **ui/Checkbox** — checkbox acessível via @radix-ui/react-checkbox com animação de check, suporte a sizes `sm|md|lg`, e cores do projeto
 - **ui/Input** — input com label, ícone, X de limpar, toggle de visibilidade (password), error state (`border-red-500/50`). Em inputs de **senha**: apenas o olhinho (sem X)
-- **contract-studio/ContractStudio** — overlay full-screen para criação/edição de templates de contrato. Props: `template`, `isOpen`, `onClose`, `onSave`. Usa TipTap com extensões + VariableChipNode + ContractToolbar + VariablePickerPanel
+- **contract-studio/ContractStudio** — overlay full-screen para criação/edição de templates de contrato. Props: `template`, `isOpen`, `onClose`, `onSave`. Usa TipTap com extensões + VariableChipNode + ContractToolbar + VariablePickerPanel. CSS inclui `word-break: break-word` em `p`, `h1`, `h2`, `h3`
 - **contract-studio/ContractPreview** — preview read-only de conteúdo TipTap em miniatura (prop `content`). Usado em cards de templates e contratos
-- **contract-studio/ContractToolbar** — toolbar TipTap com fonte, tamanho, formatação, cor, alinhamento, listas, upload de imagem
+- **contract-studio/ContractToolbar** — toolbar TipTap com fonte, tamanho, formatação, cor, alinhamento, listas, upload de imagem e **importação de PDF** (botão FilePdf → `readFileAsHtml` → `setContent`, substitui o modelo após confirmação)
 - **contract-studio/VariablePickerPanel** — painel lateral com variáveis agrupadas para inserção no editor
 - **contract-studio/VariableChipNode** — TipTap custom node que renderiza variáveis como chips não-editáveis
 - **contract-studio/contractVariables** — `CONTRACT_VARIABLES[]` e `CONTRACT_VARIABLE_GROUPS` com todas as variáveis disponíveis
+- **contract-studio/PageBreakExtension** — plugin ProseMirror que simula quebras de página no editor. Exporta `PAGE_H=1123`, `PAGE_PAD_V=60`, `PAGE_PAD_H=72`, `PAGE_GAP=20`. Algoritmo: mede `getBoundingClientRect()` de cada bloco, calcula `marginTop` para empurrar blocos que cruzariam a borda da página. Corrige CSS margin collapsing via `collapseAdj = max(prevMarginBottom - existingDecoration, 0)`. Blocos pinned recebem `position:absolute`. ResizeObserver no elemento ProseMirror re-dispara ao mudar fonte; `document.fonts` listener re-dispara ao carregar web fonts
+- **contract-studio/PinnedBlockExtension** — adiciona attrs `pinned` (bool) e `pinnedVisualY` (number|null) a `paragraph` e `heading`. `pinnedVisualY` = `nodeEl.getBoundingClientRect().top - view.dom.getBoundingClientRect().top`. Imagens pinned: hidadas a `top:-9999px` pelo PageBreakExtension; ContractStudio e PdfRenderPage rendem overlays React na posição correta (o ContractViewModal agora exibe o PDF pronto, não re-renderiza)
 
 ### Padrão de Validação de Formulários (Frontend)
 
@@ -330,6 +354,7 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - **logService.ts** — `list(params)`, `listByEntity(module, entityId, page?)`. Interface `Log` com todos os campos.
 - **contractTemplateService.ts** — `list()`, `create({name, content})`, `update(id, {name?, content?})`, `delete(id)`, `uploadImage(file)` → URL S3. Interface `ContractTemplate`
 - **contractService.ts** — `listByClient(clientId)`, `getById(id)`, `create({templateId, clientId, proposalId})`, `delete(id)`. Interface `Contract`
+- **fileParser/** — leitor genérico de arquivos → HTML compatível com TipTap. Entrada única `readFileAsHtml(file, { uploadImage? })` faz dispatch por tipo. `pdfParser.ts` (pdfjs-dist): extrai texto (títulos por tamanho de fonte, negrito/itálico por nome de fonte — funciona em Word/Acrobat, não em PDFs de navegador) e imagens embutidas (raw pixel data → OffscreenCanvas → PNG → upload via callback → `<img>` no HTML). Deduplicação de imagens por fingerprint dos primeiros 64 bytes (logos repetidos em todas as páginas sobem apenas uma vez). Itens ordenados por posição y absoluta acumulada entre páginas. Adicionar novos formatos estendendo o dispatch
 
 ### Proposal Service (proposalService.ts)
 
@@ -357,7 +382,7 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - **LoginPage** — login + cadastro em 2 etapas (usuário e empresa) na mesma página, com animação de transição no mobile. Desktop: split layout; Mobile: coluna única + barra inferior animada
 - **DashboardPage** — dashboard do usuário com 3 seções: (1) Agenda com toggle Dia/Semana (DayView/WeekView, estado local independente do store compartilhado, filtrada por collaboratorId=userId para usuários comuns; admins veem tudo e podem filtrar por colaborador), (2) Listagem de Clientes do usuário com busca e paginação, (3) Listagem de Propostas do usuário com busca, filtro de status e paginação. Layout: Agenda full-width no topo → Clientes | Propostas em grid md:grid-cols-2 abaixo. Rota: `/dashboard`
 - **ClientsPage** — lista paginada de clientes com busca (nome/email/telefone), filtro de status, ações (editar, inativar, excluir). Clicar no nome/contato navega para `/clients/:id`
-- **ClientDetailPage** — detalhe do cliente com card header (nome, status, telefone, email, data de cadastro com copy), card de endereço (condicional), ações de editar, toggle status (ToggleLeft/Right) e excluir com confirmação. Botão "Histórico" abre `EntityHistoryModal`. Cards de agendamentos e propostas em linha (desktop) ou empilhados (mobile): agendamentos via query `client-appointments` | propostas via query `client-proposals` — ambos com carousel 143×143px; clicar abre `AppointmentDetailModal` / `ProposalDetailModal` com opções de editar/excluir respeitando permissões. Propostas mostram valor (formatCurrency), badge de status colorido, colaborador. Card de Contratos full-width abaixo: grid de contratos com preview TipTap miniaturizado, botão "+" abre `GenerateContractModal` (2 etapas: proposta aceita → template); ações por contrato: visualizar (`ContractViewModal`), baixar PDF (link S3), excluir (hard delete)
+- **ClientDetailPage** — detalhe do cliente com card header (nome, status, telefone, email, data de cadastro com copy), card de endereço (condicional), ações de editar, toggle status (ToggleLeft/Right) e excluir com confirmação. Botão "Histórico" abre `EntityHistoryModal`. Cards de agendamentos e propostas em linha (desktop) ou empilhados (mobile): agendamentos via query `client-appointments` | propostas via query `client-proposals` — ambos com carousel 143×143px; clicar abre `AppointmentDetailModal` / `ProposalDetailModal` com opções de editar/excluir respeitando permissões. Propostas mostram valor (formatCurrency), badge de status colorido, colaborador. Card de Contratos full-width abaixo: grid de contratos com preview TipTap miniaturizado, botão "+" abre `GenerateContractModal` (2 etapas: proposta aceita → template); ações por contrato: visualizar (`ContractViewModal` — exibe o PDF gerado num iframe, ver "Geração de PDF"), baixar PDF (link S3), excluir (hard delete)
 - **CollaboratorsPage** — lista paginada de colaboradores (usuários da empresa) com avatar, badge "Você", filtro de status, setor (role), ações (editar, inativar, excluir, redefinir senha, histórico). Usa `ListCard` no mobile e tabela div no desktop
 - **HistoryPage** — página somente leitura do histórico global da empresa. Filtros por módulo e ação, busca por texto, paginação. Acesso controlado por permissão `history/read`
 - **ProposalsPage** — lista paginada de propostas com busca, filtros por status e colaborador, ações (visualizar, editar, excluir, histórico). Visualizar abre `ProposalDetailModal`. Clicar no nome do cliente abre detalhe. Bulk delete de selecionados
@@ -373,11 +398,18 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - `/history` — HistoryPage (privada, PermissionRoute module: history)
 - `/proposals` — ProposalsPage (privada, PermissionRoute module: proposals)
 - `/settings` — SettingsPage com 5 seções colapsáveis: Empresa, Setores, Permissões, Status de Clientes, **Modelos de Contrato** (ContractsSection)
+- `/__pdf-render` — `PdfRenderPage` (pública, sem chrome). Superfície headless usada pelo backend (puppeteer) pra renderizar um contrato com o editor real e gerar o PDF. Não faz fetch; recebe o conteúdo via `window.__renderContractForPdf`. Ver "Geração de PDF — Arquitetura"
+
+### Variáveis de Ambiente (Backend)
+
+- `PDF_RENDERER_URL` — origem do frontend onde vive a rota `/__pdf-render` (default `http://localhost:5173`). Em produção, apontar pro frontend deployado (o puppeteer do backend precisa alcançá-lo)
+- `PUPPETEER_EXECUTABLE_PATH` — caminho do Chromium (opcional; usado em produção/Alpine)
 
 ### Novas Dependências (Módulo de Contratos)
 
 **Frontend:**
 - `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-image`, `@tiptap/extension-font-family`, `@tiptap/extension-text-style`, `@tiptap/extension-color`, `@tiptap/extension-underline`, `@tiptap/extension-text-align`, `@tiptap/extension-placeholder`
+- `pdfjs-dist` — parsing de PDF no client (importação de modelo no Contract Studio). Worker carregado via `pdfjs-dist/build/pdf.worker.min.mjs?url` (asset separado, lazy-loaded)
 
 **Backend:**
 - `puppeteer` — geração de PDF via headless Chromium (HTML-to-PDF)

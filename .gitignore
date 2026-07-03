@@ -5,3 +5,6 @@ dist/
 uploads/
 .DS_Store
 
+# Playwright MCP artifacts (screenshots, snapshots, console logs)
+.playwright-mcp/
+

@@ -382,7 +382,7 @@ export function ProposalModal({ proposal, prefilledClient, defaultCollaboratorId
             </div>
 
           </div>
-        </div>
+      </div>
 
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>

@@ -14,12 +14,28 @@ export const ResizableImage = Image.extend({
       },
       align: {
         default: 'left',
-        renderHTML: () => ({}), // handled by the NodeView wrapper
+        renderHTML: () => ({}),
+      },
+      marginTop: {
+        default: 0,
+        renderHTML: () => ({}),
+      },
+      marginBottom: {
+        default: 0,
+        renderHTML: () => ({}),
+      },
+      pinned: {
+        default: false,
+        renderHTML: () => ({}),
+      },
+      pinnedVisualY: {
+        default: null,
+        renderHTML: () => ({}),
       },
     }
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ResizableImageView)
+    return ReactNodeViewRenderer(ResizableImageView, { trackNodeViewPosition: true })
   },
 })

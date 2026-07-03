@@ -23,6 +23,7 @@ export const CONTRACT_VARIABLES: ContractVariable[] = [
   { key: '{{proposta.forma_pagamento_sinal}}', label: 'Forma de pagamento do sinal', group: 'Proposta' },
   { key: '{{proposta.restante}}', label: 'Valor restante', group: 'Proposta' },
   { key: '{{proposta.forma_pagamento_restante}}', label: 'Forma de pagamento restante', group: 'Proposta' },
+  { key: '{{proposta.pagamento}}', label: 'Pagamento completo', group: 'Proposta' },
   { key: '{{contrato.data}}', label: 'Data do contrato', group: 'Contrato' },
   { key: '{{contrato.numero}}', label: 'Número do contrato', group: 'Contrato' },
 ]

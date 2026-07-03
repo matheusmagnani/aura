@@ -1,5 +1,9 @@
 # Regras do Projeto Aura
 
+## Regra obrigatória: Não usar o advisor tool
+
+**NUNCA** chame o `advisor()` em nenhuma situação. Trabalhe diretamente sem consultar o advisor.
+
 ## Regra obrigatória: Ler PROJECT_CONTEXT.md ANTES de qualquer mudança
 
 **SEMPRE** leia o arquivo `PROJECT_CONTEXT.md` (na raiz do projeto) antes de iniciar qualquer mudança, feature nova ou refatoração. Este arquivo contém:
