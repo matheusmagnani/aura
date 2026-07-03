@@ -262,6 +262,10 @@ function substituteVariablesInNode(node: any, vars: Record<string, string>): any
   if (node.type === 'variableChip') {
     const key = node.attrs?.variable ?? ''
     const text = vars[key] ?? key
+    // ProseMirror proíbe nó de texto vazio. Uma variável opcional resolvida para ''
+    // criaria um nó inválido e faria o setContent rejeitar o documento INTEIRO
+    // (PDF branco). Nesse caso descartamos o nó; o pai filtra o null.
+    if (text.length === 0) return null
     const marks: any[] = []
     if (node.attrs?.bold) marks.push({ type: 'bold' })
     if (node.attrs?.italic) marks.push({ type: 'italic' })
@@ -272,7 +276,28 @@ function substituteVariablesInNode(node: any, vars: Record<string, string>): any
     return marks.length > 0 ? { type: 'text', text, marks } : { type: 'text', text }
   }
   if (node.content) {
-    return { ...node, content: node.content.map((child: any) => substituteVariablesInNode(child, vars)) }
+    return {
+      ...node,
+      content: node.content
+        .map((child: any) => substituteVariablesInNode(child, vars))
+        .filter((child: any) => child != null),
+    }
+  }
+  return node
+}
+
+// ProseMirror/TipTap rejeita nós de texto de comprimento zero ("Empty text nodes
+// are not allowed"), o que faz o setContent descartar o documento todo. Removemos
+// esses nós de forma defensiva antes de renderizar — cobre tanto o doc recém
+// substituído quanto docs já salvos com nós vazios (ex.: regeneratePdfService).
+function stripEmptyTextNodes(node: any): any {
+  if (!node) return node
+  if (node.type === 'text') return (node.text ?? '').length === 0 ? null : node
+  if (Array.isArray(node.content)) {
+    return {
+      ...node,
+      content: node.content.map(stripEmptyTextNodes).filter((n: any) => n != null),
+    }
   }
   return node
 }
@@ -349,6 +374,7 @@ async function generatePdf(content: any, padV: number, padH: number): Promise<Bu
   // src/styles/contract-fonts.css), so the PDF embeds the exact same woff2 files the
   // on-screen preview uses — no font CSS is injected here. This keeps the puppeteer
   // layout (line breaks, page distribution) identical to the preview.
+  const safeContent = stripEmptyTextNodes(content)
   const browser = await getBrowser()
   const page = await browser.newPage()
   try {
@@ -363,7 +389,7 @@ async function generatePdf(content: any, padV: number, padH: number): Promise<Bu
     // Hand the content to the real editor and wait until PageBreakExtension settles.
     await page.evaluate(
       (c: any, v: number, h: number) => (window as any).__renderContractForPdf(c, v, h),
-      content, padV, padH,
+      safeContent, padV, padH,
     )
     await page.waitForFunction('window.__pdfReady === true', { timeout: 120_000 })
     await page.evaluate(async () => {
