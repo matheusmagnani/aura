@@ -9,6 +9,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HeroUIProvider } from '@heroui/system'
 import { App } from './App'
 import './styles/globals.css'
+// Web-safe font aliases (Courier New=Cousine, Arial=Arimo, …) so the on-screen
+// editor/preview renders the same bundled fonts the PDF embeds.
+import './styles/contract-fonts.css'
 
 export const queryClient = new QueryClient({
   defaultOptions: {

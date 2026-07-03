@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, useAnimationControls } from 'framer-motion'
-import { CircleNotch } from '@phosphor-icons/react'
+import { motion, useAnimationControls, AnimatePresence } from 'framer-motion'
+import { CircleNotch, CalendarBlank, UsersThree, FileText, Scroll, UserGear } from '@phosphor-icons/react'
 import { authService } from '../../../shared/services/authService'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { useToast } from '../../../shared/hooks/useToast'
@@ -15,9 +15,84 @@ import { Button } from '../../../shared/components/ui/Button'
 import iconeDireito from '../../../assets/icone_fundo_azul.png'
 import iconeEsquerdo from '../../../assets/icone_fundo_preto.png'
 import logoDesktop from '../../../assets/logo.png'
+import logoBeets from '../../../assets/logo_beets_transparent.png'
 
 type Mode = 'login' | 'register'
 type RegStep = 'invite' | 'user' | 'company'
+
+const MODULES = [
+  {
+    id: 'agenda',
+    label: 'Agenda',
+    Icon: CalendarBlank,
+    description: 'Visualize atendimentos por dia, semana ou mês. Reagende compromissos com drag-and-drop e mantenha toda sua agenda organizada.',
+  },
+  {
+    id: 'clientes',
+    label: 'Clientes',
+    Icon: UsersThree,
+    description: 'Carteira de clientes com histórico completo de agendamentos, propostas e notas de acompanhamento vinculadas.',
+  },
+  {
+    id: 'propostas',
+    label: 'Propostas',
+    Icon: FileText,
+    description: 'Pipeline comercial com controle de status: pendente, enviada, aceita ou recusada. Gerencie valor, prazo e forma de pagamento.',
+  },
+  {
+    id: 'contratos',
+    label: 'Contratos',
+    Icon: Scroll,
+    description: 'Gere contratos a partir de templates com variáveis dinâmicas preenchidas automaticamente e exporte em PDF.',
+  },
+  {
+    id: 'equipe',
+    label: 'Equipe',
+    Icon: UserGear,
+    description: 'Gerencie colaboradores com permissões por setor, controle de acesso granular e trilha de auditoria completa.',
+  },
+] as const
+
+function ModuleCard({ selectedModule }: { selectedModule: string }) {
+  const mod = MODULES.find(m => m.id === selectedModule)!
+  return (
+    <div style={{ width: '100%', height: 148, position: 'relative', overflow: 'hidden' }}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={selectedModule}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: 'easeInOut' }}
+          style={{
+            position: 'absolute', inset: 0,
+            borderRadius: 14,
+            background: 'rgba(230,194,132,0.07)',
+            border: '1px solid rgba(230,194,132,0.2)',
+            padding: '1rem 1.125rem',
+            display: 'flex', flexDirection: 'column', gap: '0.55rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+              background: 'rgba(230,194,132,0.14)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <mod.Icon size={18} weight="fill" style={{ color: 'var(--color-app-secondary)' }} />
+            </div>
+            <span style={{ color: 'var(--color-app-secondary)', fontSize: '0.9rem', fontWeight: 700 }}>
+              {mod.label}
+            </span>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.76rem', lineHeight: 1.65, margin: 0 }}>
+            {mod.description}
+          </p>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
 
 const DEPARTMENTS = ['Tecnologia', 'Marketing', 'Financeiro', 'Recursos Humanos', 'Comercial', 'Jurídico', 'Operações', 'Logística', 'Outros']
 
@@ -78,6 +153,8 @@ export function LoginPage() {
   const [state, setState] = useState('')
   const [registerLoading, setRegisterLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [selectedModule, setSelectedModule] = useState<string>('agenda')
+  const [cycleKey, setCycleKey] = useState(0)
 
   const { fetchAddress, isLoading: isLoadingCep } = useCepSearch()
   const navigate = useNavigate()
@@ -104,7 +181,19 @@ export function LoginPage() {
   function switchMode(to: Mode) {
     setMode(to)
     if (to === 'register') setRegStep('invite')
+    setSelectedModule('agenda')
   }
+
+  useEffect(() => {
+    if (isLogin) return
+    const timer = setInterval(() => {
+      setSelectedModule(prev => {
+        const idx = MODULES.findIndex(m => m.id === prev)
+        return MODULES[(idx + 1) % MODULES.length].id
+      })
+    }, 8000)
+    return () => clearInterval(timer)
+  }, [isLogin, cycleKey])
 
   async function handleValidateInvite(e: React.FormEvent) {
     e.preventDefault()
@@ -425,6 +514,12 @@ export function LoginPage() {
           </div>
         </div>
 
+        {/* BEETS footer mobile */}
+        <div style={{ position: 'absolute', bottom: '5.5rem', left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', zIndex: 2, pointerEvents: 'none' }}>
+          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.6rem', letterSpacing: '0.06em' }}>desenvolvido por</span>
+          <img src={logoBeets} alt="Beets" style={{ height: 13, objectFit: 'contain', opacity: 0.35 }} />
+        </div>
+
         {/* Bottom bar — expands to cover screen, then collapses */}
         <motion.div
           animate={mobileBarControls}
@@ -655,34 +750,150 @@ export function LoginPage() {
           <div className="absolute top-0 right-0 bottom-0" style={{ width: '1px', background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.6) 50%, transparent)' }} />
           <div className="absolute top-0 left-0 bottom-0" style={{ width: '1px', background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.6) 50%, transparent)' }} />
 
+          {/* BEETS footer */}
+          <div style={{ position: 'absolute', bottom: '1.5rem', left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', zIndex: 1 }}>
+            <span style={{ color: 'rgba(255,255,255,0.22)', fontSize: '0.65rem', letterSpacing: '0.06em' }}>desenvolvido por</span>
+            <img src={logoBeets} alt="Beets" style={{ height: 16, objectFit: 'contain', opacity: 0.4 }} />
+          </div>
+
           {/* Glow circle */}
           <div style={{
-            position: 'absolute', width: 320, height: 320, borderRadius: '50%',
-            background: 'var(--color-app-accent)', opacity: isLogin ? 0.3 : 0,
-            filter: 'blur(48px)', top: '50%', left: '50%',
+            position: 'absolute', width: 380, height: 380, borderRadius: '50%',
+            background: 'var(--color-app-accent)', opacity: isLogin ? 0.28 : 0.1,
+            filter: 'blur(64px)', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
             transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
             pointerEvents: 'none', zIndex: 0,
           }} />
 
+          {/*
+            Tudo em um único flex column para que o layout animate o ícone/logo
+            suavemente na transição login ↔ cadastro.
+            O container do detalhe usa height fixa (148px) para que o total de
+            conteúdo nunca mude de tamanho — o justify-center do painel não
+            reposiciona o ícone/logo quando um módulo é aberto.
+          */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: isLogin ? 'flex-start' : 'center', gap: '1.5rem', position: 'relative', zIndex: 1 }}>
-            <motion.div
-              layout
-              animate={{ x: isLogin ? 0 : 115, y: isLogin ? 0 : 20 }}
-              initial={{ x: 0, y: 0 }}
-              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-              style={{ position: 'relative', flexShrink: 0, width: isLogin ? 256 : 64, height: isLogin ? 256 : 64 }}
-            >
-              <img src={iconeEsquerdo} alt="Aura" style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'relative' }} />
-            </motion.div>
+            {/*
+              Container muda de flex-column (login) para flex-row (cadastro).
+              Os dois elementos são os MESMOS no DOM — layout anima a transição
+              de posição e tamanho sem flying entre lados opostos.
+              Em flex-row: logo à esquerda (order 0), ícone à direita/topo (order 1).
+            */}
+            <div style={{
+              display: 'flex',
+              flexDirection: isLogin ? 'column' : 'row',
+              alignItems: 'flex-start',
+              gap: isLogin ? 24 : 10,
+            }}>
+              <motion.div
+                layout
+                transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+                style={{
+                  flexShrink: 0,
+                  width: isLogin ? 256 : 44,
+                  height: isLogin ? 256 : 44,
+                  order: isLogin ? 0 : 1,
+                }}
+              >
+                <img src={iconeEsquerdo} alt="Aura" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </motion.div>
 
-            <motion.img
-              layout
-              src={logoDesktop}
-              alt="Aura"
-              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-              style={{ height: isLogin ? 40 : 112, objectFit: 'contain', display: 'block', marginLeft: isLogin ? '20px' : 0 }}
-            />
+              <motion.img
+                layout
+                src={logoDesktop}
+                alt="Aura"
+                transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+                style={{
+                  height: isLogin ? 40 : 80,
+                  objectFit: 'contain',
+                  display: 'block',
+                  marginLeft: isLogin ? 20 : 0,
+                  order: isLogin ? 1 : 0,
+                }}
+              />
+            </div>
+
+            {!isLogin && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45, duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.875rem', width: '100%', maxWidth: 320 }}
+              >
+                {/* Headline */}
+                <div style={{ textAlign: 'center' }}>
+                  <h2 style={{ color: 'rgba(255,255,255,0.95)', fontSize: '1.45rem', fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 0.5rem' }}>
+                    CRM para equipes de venda
+                  </h2>
+                  <p style={{ color: 'rgba(255,255,255,0.42)', fontSize: '0.82rem', lineHeight: 1.7, maxWidth: 280, margin: '0 auto' }}>
+                    Plataforma SaaS multi-tenant para empresas com representantes de vendas. Gerencie agenda, clientes, propostas e equipe em um único lugar.
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div style={{ width: '100%', height: 1, background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.1) 50%, transparent)' }} />
+
+                {/* Modules label */}
+                <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
+                  Módulos disponíveis
+                </p>
+
+                {/* Pills */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
+                  {MODULES.map(({ id, label, Icon }) => {
+                    const active = selectedModule === id
+                    return (
+                      <motion.button
+                        key={id}
+                        type="button"
+                        onClick={() => { setSelectedModule(id); setCycleKey(k => k + 1) }}
+                        transition={{ duration: 1.2, ease: 'easeInOut' }}
+                        style={{
+                          position: 'relative',
+                          display: 'flex', alignItems: 'center', gap: '0.45rem',
+                          padding: '0.5rem 1rem', borderRadius: 999, cursor: 'pointer',
+                          background: 'transparent',
+                          border: `1px solid ${active ? 'rgba(230,194,132,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                          color: active ? 'var(--color-app-secondary)' : 'rgba(255,255,255,0.48)',
+                          fontSize: '0.78rem', fontWeight: active ? 600 : 400,
+                          transition: 'color 1.2s ease, border-color 1.2s ease',
+                        }}
+                      >
+                        {/* Highlight fades in/out per pill — sem sliding entre eles */}
+                        <motion.div
+                          animate={{ opacity: active ? 1 : 0 }}
+                          transition={{ duration: 1.2, ease: 'easeInOut' }}
+                          style={{
+                            position: 'absolute', inset: 0,
+                            borderRadius: 999,
+                            background: 'rgba(230,194,132,0.14)',
+                            pointerEvents: 'none',
+                          }}
+                        />
+                        <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <motion.span
+                            animate={{ opacity: active ? 1 : 0.48 }}
+                            transition={{ duration: 1.2, ease: 'easeInOut' }}
+                            style={{ display: 'flex', alignItems: 'center' }}
+                          >
+                            <Icon size={14} weight={active ? 'fill' : 'regular'} />
+                          </motion.span>
+                          {label}
+                        </span>
+                      </motion.button>
+                    )
+                  })}
+                </div>
+
+                {/*
+                  height FIXO de 148px → o total do flex column nunca cresce
+                  quando um módulo abre, então justify-center não reposiciona
+                  o ícone/logo acima.
+                */}
+                <ModuleCard selectedModule={selectedModule} />
+              </motion.div>
+            )}
           </div>
         </motion.div>
 

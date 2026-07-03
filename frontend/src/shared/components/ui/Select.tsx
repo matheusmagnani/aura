@@ -7,6 +7,8 @@ export interface SelectOption {
   value: string
   label: string
   badge?: string
+  /** Optional font-family used to render this option's label (e.g. font pickers). */
+  font?: string
 }
 
 interface SelectProps {
@@ -178,7 +180,7 @@ export function Select({
                           : 'text-white/80 hover:bg-white/5'
                   )}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2" style={option.font ? { fontFamily: option.font } : undefined}>
                     {option.label}
                     {option.badge && (
                       <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(230,194,132,0.2)', color: 'var(--color-app-secondary)', flexShrink: 0, lineHeight: 1 }}>
@@ -228,6 +230,7 @@ export function Select({
                 ? isAccent ? 'text-app-accent/50' : 'text-app-gray'
                 : isAccent ? 'text-app-accent' : 'text-white'
             )}
+            style={selectedOption?.font ? { fontFamily: selectedOption.font } : undefined}
           >
             {selectedOption ? selectedOption.label : placeholder}
             {selectedOption?.badge && (

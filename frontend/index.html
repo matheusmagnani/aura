@@ -6,9 +6,12 @@
     <meta name="theme-color" content="#171514" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- All fonts (app UI Maven Pro + every Contract Studio family/alias) are SELF-HOSTED
+         via @font-face in src/styles/contract-fonts.css (files in /public/contract-fonts).
+         No Google Fonts link: the on-screen editor/preview AND the puppeteer-rendered PDF
+         must load the exact same woff2 files so text metrics — and thus page distribution —
+         are identical. Google Fonts also don't load reliably inside puppeteer. -->
+
     <link rel="icon" type="image/png" href="/src/assets/icone_fundo_preto.png" />
     <title>Aura</title>
   </head>

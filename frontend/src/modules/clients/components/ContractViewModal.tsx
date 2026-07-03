@@ -1,67 +1,62 @@
-import { useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import { TextStyle } from '@tiptap/extension-text-style'
-import FontFamily from '@tiptap/extension-font-family'
-import { Color } from '@tiptap/extension-color'
-import Underline from '@tiptap/extension-underline'
-import TextAlign from '@tiptap/extension-text-align'
-import { X, DownloadSimple } from '@phosphor-icons/react'
-import { ResizableImage } from '../../../shared/components/contract-studio/ResizableImageExtension'
-import { VariableChipNode } from '../../../shared/components/contract-studio/VariableChipNode'
-import { FontSizeExtension } from '../../../shared/components/contract-studio/FontSizeExtension'
-import { PageBreakExtension, PAGE_H, PAGE_PAD_V, PAGE_PAD_H, PAGE_GAP } from '../../../shared/components/contract-studio/PageBreakExtension'
+import { useEffect, useState } from 'react'
+import { useToast } from '../../../shared/hooks/useToast'
+import { X, DownloadSimple, SpinnerGap } from '@phosphor-icons/react'
 import { contractService } from '../../../shared/services/contractService'
 import type { Contract } from '../../../shared/services/contractService'
 import { triggerDownload } from '../../../shared/utils/downloadFile'
-
 
 interface ContractViewModalProps {
   contract: Contract | null
   onClose: () => void
 }
 
+/**
+ * Contract preview. Shows the EXACT generated PDF (the same file the user downloads),
+ * not a client-side re-render — a browser-side TipTap render never matches the
+ * server-side puppeteer PDF pixel-for-pixel (different Chromium engines shift the
+ * per-page content distribution). Displaying the real PDF guarantees the preview and
+ * the download are identical.
+ */
 export function ContractViewModal({ contract, onClose }: ContractViewModalProps) {
-  const [pageCount, setPageCount] = useState(1)
-  const editorWrapperRef = useRef<HTMLDivElement>(null)
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TextStyle,
-      FontFamily,
-      FontSizeExtension,
-      Color,
-      Underline,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      ResizableImage.configure({ inline: false, allowBase64: false }),
-      VariableChipNode,
-      PageBreakExtension,
-    ],
-    content: contract?.content ?? { type: 'doc', content: [] },
-    editable: false,
-    immediatelyRender: false,
-  })
-
-  useEffect(() => {
-    if (editor && contract?.content) {
-      queueMicrotask(() => editor.commands.setContent(contract.content))
-    }
-  }, [editor, contract])
-
-  useEffect(() => {
-    const el = editorWrapperRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => {
-      setPageCount(Math.max(1, Math.ceil((el.scrollHeight + PAGE_GAP) / (PAGE_H + PAGE_GAP))))
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [contract])
+  const toast = useToast()
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     if (contract) document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
+  }, [contract])
+
+  // Fetch the generated PDF as a blob and show it via an object URL, so it renders
+  // inline regardless of how S3 serves the file, and reuses the authenticated route.
+  useEffect(() => {
+    if (!contract) return
+    let objectUrl: string | null = null
+    let cancelled = false
+    setLoading(true)
+    setFailed(false)
+    setPdfUrl(null)
+
+    contractService
+      .downloadBlob(contract.id)
+      .then((blob) => {
+        if (cancelled) return
+        objectUrl = URL.createObjectURL(blob)
+        setPdfUrl(objectUrl)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setFailed(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
   }, [contract])
 
   if (!contract) return null
@@ -99,37 +94,42 @@ export function ContractViewModal({ contract, onClose }: ContractViewModalProps)
         </button>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', background: '#e5e7eb', padding: '32px 16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 794, height: pageCount * PAGE_H + (pageCount - 1) * PAGE_GAP }}>
-            {Array.from({ length: pageCount }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  position: 'absolute',
-                  top: i * (PAGE_H + PAGE_GAP),
-                  left: 0, right: 0,
-                  height: PAGE_H,
-                  background: '#ffffff',
-                  borderRadius: 4,
-                  boxShadow: '0 2px 16px rgba(0,0,0,0.15)',
-                }}
-              />
-            ))}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, color: '#111', zIndex: 1 }}>
-              <div ref={editorWrapperRef} style={{ padding: `${PAGE_PAD_V}px ${PAGE_PAD_H}px` }}>
-                {editor && <EditorContent editor={editor} />}
-              </div>
-            </div>
+      {/* PDF viewer */}
+      <div style={{ flex: 1, minHeight: 0, background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {loading && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, color: 'var(--color-app-gray)' }}>
+            <SpinnerGap size={32} className="animate-spin" />
+            <span style={{ fontSize: '0.85rem' }}>Carregando contrato…</span>
           </div>
-        </div>
+        )}
+
+        {!loading && failed && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--color-app-gray)', padding: 24, textAlign: 'center' }}>
+            <span style={{ fontSize: '0.9rem' }}>Não foi possível carregar o contrato.</span>
+            <span style={{ fontSize: '0.8rem' }}>Use o botão “Baixar PDF” abaixo.</span>
+          </div>
+        )}
+
+        {!loading && !failed && pdfUrl && (
+          <iframe
+            src={pdfUrl}
+            title={contract.name}
+            style={{ width: '100%', height: '100%', border: 'none' }}
+          />
+        )}
       </div>
 
       {/* Floating download button */}
       <button
         type="button"
-        onClick={async () => { const blob = await contractService.downloadBlob(contract.id); await triggerDownload(blob, contract.name) }}
+        onClick={async () => {
+          try {
+            const blob = await contractService.downloadBlob(contract.id)
+            await triggerDownload(blob, contract.name)
+          } catch {
+            toast.addToast('Erro ao baixar o contrato. Tente novamente.', 'danger')
+          }
+        }}
         style={{
           position: 'fixed',
           bottom: 28,
@@ -155,16 +155,6 @@ export function ContractViewModal({ contract, onClose }: ContractViewModalProps)
         <DownloadSimple size={18} weight="bold" />
         Baixar PDF
       </button>
-
-      <style>{`
-        .tiptap { outline: none; }
-        .tiptap p { margin-bottom: 0.5em; }
-        .tiptap h1, .tiptap h2, .tiptap h3 { margin-bottom: 0.4em; font-weight: 700; }
-        .tiptap ul { list-style-type: disc; padding-left: 1.5em; margin: 0.4em 0; }
-        .tiptap ol { list-style-type: decimal; padding-left: 1.5em; margin: 0.4em 0; }
-        .tiptap li { margin-bottom: 0.2em; list-style: inherit; }
-        .tiptap img { max-width: 100%; height: auto; }
-      `}</style>
     </div>
   )
 }

@@ -6,6 +6,7 @@ import {
   getContractService,
   createContractService,
   deleteContractService,
+  regeneratePdfService,
 } from './contract.service'
 
 export async function listContractsController(request: FastifyRequest, reply: FastifyReply) {
@@ -87,6 +88,20 @@ export async function downloadContractController(request: FastifyRequest, reply:
     return reply.send(s3Response.Body)
   } catch (error: any) {
     if (error.statusCode) return reply.status(error.statusCode).send({ message: error.message })
+    throw error
+  }
+}
+
+export async function regeneratePdfController(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = z.object({ id: z.coerce.number() }).parse(request.params)
+  const { companyId } = request.user as { companyId: number }
+
+  try {
+    const result = await regeneratePdfService(id, companyId)
+    return reply.send(result)
+  } catch (error: any) {
+    if (error.statusCode) return reply.status(error.statusCode).send({ message: error.message })
+    console.error('[regeneratePdf] Unhandled error:', error?.message, error?.stack)
     throw error
   }
 }

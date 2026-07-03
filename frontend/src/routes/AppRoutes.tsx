@@ -9,6 +9,7 @@ import { SettingsPage } from '../modules/settings/pages/SettingsPage'
 import { HistoryPage } from '../modules/history/pages/HistoryPage'
 import { SchedulePage } from '../modules/schedule/pages/SchedulePage'
 import { ProposalsPage } from '../modules/proposals/pages/ProposalsPage'
+import { PdfRenderPage } from '../modules/contract-pdf/PdfRenderPage'
 import { Layout } from '../shared/components/Layout'
 import { useAuthStore } from '../shared/stores/useAuthStore'
 import { useMyPermissions } from '../shared/hooks/useMyPermissions'
@@ -37,6 +38,9 @@ function PermissionRoute({ children, module }: { children: React.ReactNode; modu
 export function AppRoutes() {
   return (
     <Routes>
+      {/* Headless surface used by the backend (puppeteer) to render a contract
+          for PDF generation with the real editor. Public, no chrome. */}
+      <Route path="/__pdf-render" element={<PdfRenderPage />} />
       <Route
         path="/login"
         element={
