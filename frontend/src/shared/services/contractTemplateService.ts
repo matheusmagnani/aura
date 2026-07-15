@@ -22,12 +22,12 @@ export const contractTemplateService = {
   },
 
   async create(data: { name: string; content: Record<string, unknown> }): Promise<ContractTemplate> {
-    const res = await api.post('/contract-templates', data)
+    const res = await api.post('/contract-templates', data, { meta: { blockingLoader: true } })
     return res.data
   },
 
   async update(id: number, data: { name?: string; content?: Record<string, unknown> }): Promise<ContractTemplate> {
-    const res = await api.put(`/contract-templates/${id}`, data)
+    const res = await api.put(`/contract-templates/${id}`, data, { meta: { blockingLoader: true } })
     return res.data
   },
 

@@ -40,7 +40,7 @@ export const settingsService = {
   },
 
   async updateCompanyInfo(data: UpdateCompanyInfoDTO): Promise<CompanyInfo> {
-    const response = await api.put<CompanyInfo>('/settings/company', data)
+    const response = await api.put<CompanyInfo>('/settings/company', data, { meta: { blockingLoader: true } })
     return response.data
   },
 }

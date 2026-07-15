@@ -61,12 +61,12 @@ export const scheduleService = {
   },
 
   async create(data: AppointmentPayload): Promise<Appointment> {
-    const response = await api.post('/schedule', data)
+    const response = await api.post('/schedule', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async update(id: number, data: Partial<AppointmentPayload>): Promise<Appointment> {
-    const response = await api.put(`/schedule/${id}`, data)
+    const response = await api.put(`/schedule/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 

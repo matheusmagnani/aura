@@ -77,12 +77,12 @@ export const proposalService = {
   },
 
   async create(data: ProposalPayload): Promise<Proposal> {
-    const response = await api.post('/proposals', data)
+    const response = await api.post('/proposals', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async update(id: number, data: Partial<ProposalPayload>): Promise<Proposal> {
-    const response = await api.put(`/proposals/${id}`, data)
+    const response = await api.put(`/proposals/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 
