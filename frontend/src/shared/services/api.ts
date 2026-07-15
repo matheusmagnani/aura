@@ -1,6 +1,16 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useLoadingStore } from '../stores/useLoadingStore'
+import { markServerSeen } from './serverWarmup'
 import { queryClient } from '../../main'
+
+// Permite marcar requisições de cadastro/edição com { meta: { blockingLoader: true } }
+// pra exibir o overlay de loading global que trava a tela.
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    meta?: { blockingLoader?: boolean }
+  }
+}
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333'
 
@@ -47,6 +57,7 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`
       }
     }
+    if (config.meta?.blockingLoader) useLoadingStore.getState().start()
     return config
   },
   (error) => Promise.reject(error),
@@ -54,8 +65,15 @@ api.interceptors.request.use(
 
 // Response interceptor — redireciona para /login em 401 e normaliza mensagens de erro
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    markServerSeen()
+    if (response.config.meta?.blockingLoader) useLoadingStore.getState().stop()
+    return response
+  },
   (error) => {
+    // Se veio uma resposta (mesmo de erro), o servidor está acordado.
+    if (error.response) markServerSeen()
+    if (error.config?.meta?.blockingLoader) useLoadingStore.getState().stop()
     if (error.response?.status === 401) {
       useAuthStore.getState().logout()
       queryClient.clear()

@@ -82,12 +82,12 @@ export const clientService = {
   },
 
   async create(data: ClientPayload): Promise<Client> {
-    const response = await api.post('/clients', data)
+    const response = await api.post('/clients', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async update(id: number, data: Partial<ClientPayload>): Promise<Client> {
-    const response = await api.put(`/clients/${id}`, data)
+    const response = await api.put(`/clients/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 

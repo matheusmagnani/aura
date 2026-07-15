@@ -6,6 +6,7 @@ import multipart from '@fastify/multipart'
 import rateLimit from '@fastify/rate-limit'
 import { ZodError } from 'zod'
 import { env } from './env'
+import { prisma } from './lib/prisma'
 import './lib/zodErrorMap'
 import { authRoutes } from './modules/auth/auth.routes'
 import { roleRoutes } from './modules/roles/role.routes'
@@ -80,6 +81,18 @@ app.register(multipart, {
 })
 
 app.register(rateLimit, { global: false })
+
+// Health check para o proxy da Fly — NÃO toca no banco de propósito:
+// se o Neon estiver fora, a máquina não deve ser considerada unhealthy e derrubada.
+app.get('/health', async () => ({ ok: true }))
+
+// Warmup silencioso — chamado pelo frontend ao detectar atividade do usuário.
+// Acorda tanto a máquina da Fly (auto_start) quanto o compute do Neon (SELECT 1),
+// pra que a próxima requisição real (ex: cadastro) já pegue tudo quente.
+app.get('/warmup', async () => {
+  await prisma.$queryRaw`SELECT 1`
+  return { ok: true }
+})
 
 app.register(authRoutes, { prefix: '/api/auth' })
 app.register(roleRoutes, { prefix: '/api/roles' })

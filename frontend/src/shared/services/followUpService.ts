@@ -21,7 +21,7 @@ export const followUpService = {
   },
 
   async create(content: string, clientId: number): Promise<FollowUp> {
-    const response = await api.post('/follow-ups', { content, clientId })
+    const response = await api.post('/follow-ups', { content, clientId }, { meta: { blockingLoader: true } })
     return response.data
   },
 

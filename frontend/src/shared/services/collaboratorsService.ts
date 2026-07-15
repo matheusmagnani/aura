@@ -62,12 +62,12 @@ export const collaboratorsService = {
   },
 
   async create(data: CollaboratorPayload): Promise<Collaborator> {
-    const response = await api.post('/collaborators', data)
+    const response = await api.post('/collaborators', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async update(id: number, data: UpdateCollaboratorPayload): Promise<Collaborator> {
-    const response = await api.put(`/collaborators/${id}`, data)
+    const response = await api.put(`/collaborators/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 

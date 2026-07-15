@@ -21,6 +21,7 @@ export const permissionService = {
     const response = await api.put<Permission[]>(
       `/permissions/${roleId}`,
       permissions,
+      { meta: { blockingLoader: true } },
     )
     return response.data
   },

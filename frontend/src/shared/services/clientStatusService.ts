@@ -21,12 +21,12 @@ export const clientStatusService = {
   },
 
   async create(data: { name: string; color: string }): Promise<ClientStatus> {
-    const response = await api.post('/client-statuses', data)
+    const response = await api.post('/client-statuses', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async update(id: number, data: { name?: string; color?: string }): Promise<ClientStatus> {
-    const response = await api.put(`/client-statuses/${id}`, data)
+    const response = await api.put(`/client-statuses/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 

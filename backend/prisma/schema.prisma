@@ -3,8 +3,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // DATABASE_URL: em produção usa o endpoint POOLED do Neon (-pooler + pgbouncer=true)
+  // com connect_timeout alto pra esperar o compute resumir em vez de dar erro.
+  url       = env("DATABASE_URL")
+  // DIRECT_URL: endpoint DIRETO (sem -pooler) — usado por migrate/introspection,
+  // que não funcionam bem através do PgBouncer. Em dev, aponta pro mesmo banco local.
+  directUrl = env("DIRECT_URL")
 }
 
 model Company {

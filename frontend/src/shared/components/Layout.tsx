@@ -1,8 +1,11 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar, MobileNav } from './Sidebar'
 import { Header } from './Header'
+import { useServerWarmup } from '../hooks/useServerWarmup'
 
 export function Layout() {
+  useServerWarmup()
+
   return (
     <div className="flex overflow-hidden bg-app-bg" style={{ height: '100dvh' }}>
       <Sidebar />

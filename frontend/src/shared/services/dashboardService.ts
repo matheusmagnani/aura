@@ -42,12 +42,12 @@ export const dashboardService = {
   },
 
   async createAppointment(data: AppointmentPayload): Promise<Appointment> {
-    const response = await api.post('/dashboard/appointments', data)
+    const response = await api.post('/dashboard/appointments', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async updateAppointment(id: number, data: Partial<AppointmentPayload>): Promise<Appointment> {
-    const response = await api.put(`/dashboard/appointments/${id}`, data)
+    const response = await api.put(`/dashboard/appointments/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 
@@ -94,12 +94,12 @@ export const dashboardService = {
   },
 
   async createClient(data: ClientPayload): Promise<Client> {
-    const response = await api.post('/dashboard/clients', data)
+    const response = await api.post('/dashboard/clients', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async updateClient(id: number, data: Partial<ClientPayload>): Promise<Client> {
-    const response = await api.put(`/dashboard/clients/${id}`, data)
+    const response = await api.put(`/dashboard/clients/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 
@@ -142,12 +142,12 @@ export const dashboardService = {
   },
 
   async createProposal(data: ProposalPayload): Promise<Proposal> {
-    const response = await api.post('/dashboard/proposals', data)
+    const response = await api.post('/dashboard/proposals', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async updateProposal(id: number, data: Partial<Omit<ProposalPayload, 'clientId'>>): Promise<Proposal> {
-    const response = await api.put(`/dashboard/proposals/${id}`, data)
+    const response = await api.put(`/dashboard/proposals/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 

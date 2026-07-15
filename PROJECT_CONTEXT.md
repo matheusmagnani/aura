@@ -283,6 +283,7 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 
 - `useAuthStore` — token, user (com roleId/role), setAuth, logout, isAuthenticated (persist localStorage)
 - `useToast` — message, type, visible, show, hide
+- `useLoadingStore` — contador de requisições de bloqueio (cadastro/edição); dirige o `GlobalLoading`. Ver "Cold Start / Warmup"
 
 ### Hooks Compartilhados (shared/hooks/)
 
@@ -291,6 +292,7 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - Se `roleId` é `null` → acesso total (admin)
 - Se `roleId` existe → busca permissões via GET /api/permissions/:roleId
 - `useToast()` — exibir toasts de feedback (success, danger, warning)
+- `useServerWarmup()` — gatilhos de warmup por atividade do usuário (montado no `Layout`). Ver "Cold Start / Warmup"
 
 ### Mapeamento path→module (`PATH_TO_MODULE`)
 
@@ -314,6 +316,8 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - **Sidebar** — menu lateral com NavLink e ícones Phosphor
 - **Header** — avatar com iniciais, nome do usuário, botão logout
 - **Toast** — feedback visual (success, danger, warning)
+- **GlobalLoading** — overlay de bloqueio global (usa `FullScreenLoading` sem texto) exibido durante cadastros/edições; dirigido pelo `useLoadingStore`. Montado no `App`. Ver "Cold Start / Warmup"
+- **FullScreenLoading** — spinner full-screen com gradiente (props `visible`, `label?`, `sublabel?`); usado no `GlobalLoading` (sem texto) e na geração de contrato (com label)
 - **Modal** — modal genérico reutilizável (background app-primary, border/title app-accent)
 - **CopyText** — botão inline que copia texto para clipboard e exibe feedback (ícone Copy → Check + "Copiado")
 - **PageHeader** — cabeçalho de página reutilizável com título, ícone, busca, filtro dropdown e botão de adicionar. Props: `title`, `icon?`, `searchPlaceholder?`, `filterOptions?` (`FilterOption[]`), `filterValue?`, `onSearch?`, `onFilterChange?`, `canCreate?`, `onAdd?`, `actions?` (ReactNode extra)
@@ -351,6 +355,7 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 
 ### Services Compartilhados (shared/services/)
 
+- **serverWarmup.ts** — `maybeWarmup()` (acorda Fly+Neon só se dormindo) e `markServerSeen()` (chamado pelo interceptor do axios). Ver "Cold Start / Warmup"
 - **logService.ts** — `list(params)`, `listByEntity(module, entityId, page?)`. Interface `Log` com todos os campos.
 - **contractTemplateService.ts** — `list()`, `create({name, content})`, `update(id, {name?, content?})`, `delete(id)`, `uploadImage(file)` → URL S3. Interface `ContractTemplate`
 - **contractService.ts** — `listByClient(clientId)`, `getById(id)`, `create({templateId, clientId, proposalId})`, `delete(id)`. Interface `Contract`
@@ -404,6 +409,24 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 
 - `PDF_RENDERER_URL` — origem do frontend onde vive a rota `/__pdf-render` (default `http://localhost:5173`). Em produção, apontar pro frontend deployado (o puppeteer do backend precisa alcançá-lo)
 - `PUPPETEER_EXECUTABLE_PATH` — caminho do Chromium (opcional; usado em produção/Alpine)
+- `DATABASE_URL` — conexão Prisma. Em produção (Neon) usar o endpoint **POOLED** (`-pooler` + `pgbouncer=true&connection_limit=1&connect_timeout=15`); o `connect_timeout` alto faz o Prisma **esperar** o compute do Neon resumir em vez de dar erro no cold start
+- `DIRECT_URL` — endpoint **DIRETO** do Neon (sem `-pooler`), usado por `migrate`/introspection (não funcionam bem via PgBouncer). Em dev = `DATABASE_URL`. Declarado como `directUrl` no `datasource` do `schema.prisma`
+
+### Cold Start / Warmup (Fly auto-stop + Neon) — Arquitetura
+
+O backend roda na Fly com `auto_stop_machines = 'stop'` + `min_machines_running = 0` (economia), e o Neon suspende o compute após ~5 min ocioso. Isso causava lentidão e **erro quando a primeira requisição era um insert** (Prisma conectando num Neon dormindo, estourando timeout). Solução em camadas:
+
+- **Backend:**
+  - `GET /health` (em `app.ts`) — **não** toca no banco; usado pelo health check da Fly (`[[http_service.checks]]` no `fly.toml`) pra só rotear tráfego quando o server está de pé (evita 502 durante boot)
+  - `GET /warmup` (em `app.ts`) — roda `SELECT 1`; acorda a máquina (Fly `auto_start`) **e** o compute do Neon. Chamado silenciosamente pelo frontend
+  - `prisma.$connect()` no boot (`server.ts`) — tira o custo de conexão do caminho da primeira query
+- **Frontend (warmup por atividade):**
+  - `shared/services/serverWarmup.ts` — `maybeWarmup()` dispara o `/warmup` **só se o servidor provavelmente estiver dormindo** (sem resposta do backend há > 4 min) e sem outro warmup em andamento (`inFlight`). `markServerSeen()` é chamado pelo interceptor do axios em toda resposta → durante uso ativo os gatilhos viram no-op (zero warmup redundante)
+  - `shared/hooks/useServerWarmup.ts` — montado no `Layout` (shell autenticado). Escuta `mousemove`/`keydown`/`click`/`scroll`/`visibilitychange` (throttle de 30s) e chama `maybeWarmup()`. Acorda o servidor **antecipadamente** enquanto o usuário navega/preenche formulário, pra que o insert já pegue tudo quente
+- **Loading de bloqueio nos cadastros/edições:**
+  - `shared/stores/useLoadingStore.ts` — contador de requisições de bloqueio em andamento
+  - `shared/components/GlobalLoading.tsx` — renderiza o `FullScreenLoading` (sem texto) quando `count > 0`; montado no `App`. Trava a tela pra o usuário não empilhar requisições enquanto o servidor termina de acordar (o cliente vê só o loading padrão, sem saber que estamos "conectando")
+  - Padrão `meta: { blockingLoader: true }` — passado no config das chamadas de **create/edit de todos os módulos** (o interceptor do axios em `api.ts` incrementa/decrementa o `useLoadingStore`). **Não** aplicado em: delete, buscas/listagens (têm loading próprio), auth (login/register têm loading próprio) e geração de contrato (tem `FullScreenLoading` com label próprio)
 
 ### Novas Dependências (Módulo de Contratos)
 

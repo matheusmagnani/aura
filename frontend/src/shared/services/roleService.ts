@@ -30,12 +30,12 @@ export const roleService = {
   },
 
   async create(data: { name: string; idStatus?: number }): Promise<Role> {
-    const response = await api.post<Role>('/roles', data)
+    const response = await api.post<Role>('/roles', data, { meta: { blockingLoader: true } })
     return response.data
   },
 
   async update(id: number, data: { name?: string; idStatus?: number }): Promise<Role> {
-    const response = await api.put<Role>(`/roles/${id}`, data)
+    const response = await api.put<Role>(`/roles/${id}`, data, { meta: { blockingLoader: true } })
     return response.data
   },
 
