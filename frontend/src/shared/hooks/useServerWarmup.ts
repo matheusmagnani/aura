@@ -26,14 +26,22 @@ export function useServerWarmup() {
       if (document.visibilityState === 'visible') maybeWarmup()
     }
 
+    // Desktop
     window.addEventListener('mousemove', onActivity, { passive: true })
+    // Mobile — equivalentes de toque ao mousemove (não há cursor no celular)
+    window.addEventListener('touchstart', onActivity, { passive: true })
+    window.addEventListener('touchmove', onActivity, { passive: true })
+    // Comuns aos dois
     window.addEventListener('keydown', onActivity)
     window.addEventListener('click', onActivity)
     window.addEventListener('scroll', onActivity, { passive: true })
+    // Especialmente forte no mobile: dispara ao reabrir/voltar pro app
     document.addEventListener('visibilitychange', onVisible)
 
     return () => {
       window.removeEventListener('mousemove', onActivity)
+      window.removeEventListener('touchstart', onActivity)
+      window.removeEventListener('touchmove', onActivity)
       window.removeEventListener('keydown', onActivity)
       window.removeEventListener('click', onActivity)
       window.removeEventListener('scroll', onActivity)
