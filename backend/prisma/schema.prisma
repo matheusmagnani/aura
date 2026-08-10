@@ -241,3 +241,19 @@ model InviteCode {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 }
+
+// Evento de funil da landing page (pública, pré-cadastro). Append-only:
+// SEM deletedAt (não é entidade de negócio, é log de evento) e SEM companyId
+// (visitante ainda não pertence a nenhuma empresa). O sistema interno futuro
+// consome esses eventos crus e agrega as métricas por representante.
+model LandingEvent {
+  id        Int      @id @default(autoincrement())
+  repSlug   String?  // slug do representante comercial; null = landing raiz
+  type      String   // 'visit' | 'cta_click'
+  userAgent String?
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  @@index([repSlug, type])
+  @@index([createdAt])
+}
