@@ -41,11 +41,11 @@
 - **contract-templates** — CRUD de modelos de contrato por empresa; conteúdo armazenado como JSON TipTap; soft delete com restore; logs de auditoria; permissão `settings`
 - **follow-ups** — Notas de acompanhamento por cliente; GET `?clientId=X`, POST, DELETE /:id; permissão `clients`
 - **contracts** — Contratos gerados para clientes; vinculados a cliente + proposta aceita (idStatus=3) + template; variáveis substituídas no backend; PDF gerado rodando o editor real na rota `/__pdf-render` via puppeteer e fatiando em páginas A4 (ver "Geração de PDF — Arquitetura"), salvo no S3; hard delete (remove S3 + DB); logs de auditoria; permissão `clients`
-- **landing** — Ingest **público** de eventos de funil da landing page (repo separado `aura-lp`): `POST /api/landing/events` grava `visit` / `cta_click`, com `slug` do representante (ver links por rep na landing). **Sem auth, sem companyId, sem createLog** (dado público pré-cadastro, alto volume). Filtra bots por User-Agent, aceita `text/plain` (sendBeacon) e tem rate limit. As métricas por representante são derivadas por agregação sobre a tabela `LandingEvent`
+- **landing** — Funil **público** da landing page (repo separado `aura-lp`). **Sem auth, sem companyId, sem createLog** (dado público pré-cadastro, alto volume). Duas tabelas: `LandingRep` (representantes: slug/nome/whatsapp + contadores `visits`/`ctaClicks`) e `LandingEvent` (evento cru, FK `repId`). Endpoints: `POST /api/landing/events` grava o evento **e** incrementa o contador do rep (transação; resolve `slug`→`repId`); filtra bots por UA, aceita `text/plain` (sendBeacon), rate limit. `GET /api/landing/reps` lista os reps ativos — a landing consome daqui (fim do `reps.ts` hardcoded)
 
 ### Models (Prisma)
 
-- Company, User, Role, Permission, Client, Appointment, Proposal, ContractTemplate, Contract, LandingEvent
+- Company, User, Role, Permission, Client, Appointment, Proposal, ContractTemplate, Contract, LandingRep, LandingEvent
 - **Appointment** possui campos: `title` (obrigatório), `description?`, `startAt` (DateTime), `companyId`, `clientId?` (relação com Client), `collaboratorId?` (relação com User via "AppointmentCollaborator"), `deletedAt?`
 - **Proposal** possui campos: `value` (Decimal, obrigatório), `description?`, `clientObservation?`, `idStatus` (Int: 1=Pendente, 2=Enviada, 3=Aceita, 4=Recusada, default 1), `deadlineDays?` (Int — prazo em dias), `deadlineType?` (String: `"business"` | `"calendar"` — dias úteis ou corridos), `signalValue?` (Decimal — valor do sinal; null/0 = sem sinal), `signalPaymentMethod?` (String: `"money"` | `"pix"` | `"boleto"` | `"card"`), `remainingPaymentMethod?` (mesmos valores — forma de pagamento do restante), `companyId`, `clientId` (obrigatório, relação com Client), `collaboratorId?` (relação com User via "ProposalCollaborator"), `deletedAt?`
 - Client possui campos: `name` (obrigatório), `phone` (obrigatório), `email?`, `document?` (CPF ou CNPJ sem máscara), `documentType?` (String: `"CPF"` ou `"CNPJ"`), e campos de endereço: `address?`, `addressNumber?`, `addressComplement?`, `neighborhood?`, `city?`, `state?`, `zipCode?`. Também possui `userId?` (relação opcional com User — colaborador responsável).
@@ -59,8 +59,9 @@
 - **ContractTemplate** — `id`, `name`, `content` (Json TipTap), `companyId`, `deletedAt?` — @@unique([name, companyId])
 - **Contract** — `id`, `name`, `content` (Json TipTap com variáveis substituídas), `pdfUrl` (S3), `templateId`, `clientId`, `proposalId`, `companyId` — SEM `deletedAt` (hard delete)
 - **FollowUp** — `id`, `content`, `clientId`, `companyId`, `userId?`, `userName` (snapshot), `deletedAt?` — notas de acompanhamento por cliente; soft delete; permissão `clients`
-- **LandingEvent** — `id`, `repSlug?` (slug do representante; null = raiz), `type` (`visit` | `cta_click`), `userAgent?`, `referrer?`, `createdAt` — evento de funil da landing (público, pré-cadastro). **Append-only: SEM `deletedAt` e SEM `companyId`**. Índices em `[repSlug, type]` e `[createdAt]`
-- **Todas as tabelas exceto Contract e LandingEvent possuem `deletedAt DateTime?`** — soft delete
+- **LandingRep** — `id`, `slug` (único, usado na URL), `name`, `whatsapp`, `visits` (Int, contador), `ctaClicks` (Int, contador), `active` (Bool), `createdAt`, `updatedAt` — representante comercial da landing. Config (nome/whatsapp) que antes era hardcoded no `reps.ts`, agora consumida via `GET /api/landing/reps`. **SEM `deletedAt` (usa `active`) e SEM `companyId`** (público). Cadastro manual por enquanto (direto no banco)
+- **LandingEvent** — `id`, `repId?` (FK → `LandingRep`; null = raiz), `type` (`visit` | `cta_click`), `userAgent?`, `referrer?`, `createdAt` — evento cru de funil. **Append-only: SEM `deletedAt` e SEM `companyId`**. Índices em `[repId, type]` e `[createdAt]`. Os totais ficam denormalizados em `LandingRep` (incrementados na mesma transação do insert)
+- **Todas as tabelas exceto Contract, LandingRep e LandingEvent possuem `deletedAt DateTime?`** — soft delete
 
 ### Padrão de Soft Delete
 
@@ -233,9 +234,11 @@ A geração roda o **editor real** (TipTap + PageBreakExtension) dentro do Puppe
 
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
-| POST | /api/landing/events | **Não** (público) | Registra evento de funil (`type: visit\|cta_click`, `slug?`, `referrer?`). Responde **204** sempre (fire-and-forget). Ignora bots (User-Agent), aceita `text/plain` (sendBeacon), rate limit 60/min por IP |
+| POST | /api/landing/events | **Não** (público) | Registra evento (`type: visit\|cta_click`, `slug?`, `referrer?`) **e** incrementa `visits`/`ctaClicks` do rep (transação; resolve `slug`→`repId`). Responde **204** sempre (fire-and-forget). Ignora bots (User-Agent), aceita `text/plain` (sendBeacon), rate limit 60/min por IP |
+| GET | /api/landing/reps | **Não** (público) | Lista reps ativos (`slug`, `name`, `whatsapp`). Consumido pela landing no build/ISR |
 
-- A landing (`aura-lp`) dispara via `sendBeacon` (Blob `text/plain` → sem preflight CORS): `visit` ao carregar a página e `cta_click` ao clicar em qualquer link `wa.me`
+- A landing (`aura-lp`) dispara via `sendBeacon` (Blob `text/plain` → sem preflight CORS): `visit` ao carregar e `cta_click` ao clicar em qualquer link `wa.me`
+- A landing monta as páginas por representante (`/<slug>`) consumindo `GET /reps` com ISR (revalida ~5min; rep novo no banco aparece sem redeploy)
 - CORS: o backend precisa aceitar a origin `https://aura.beetsbr.com` (já está em `CORS_ORIGIN`)
 
 ### Upload de avatars

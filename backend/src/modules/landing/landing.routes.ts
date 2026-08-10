@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import { recordLandingEventController } from './landing.controller'
+import { recordLandingEventController, listRepsController } from './landing.controller'
 
 /**
  * Rotas PÚBLICAS da landing (sem authenticate). Ingest de eventos de funil.
@@ -25,4 +25,7 @@ export async function landingRoutes(app: FastifyInstance) {
     { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } },
     recordLandingEventController,
   )
+
+  // Lista de representantes ativos (consumida pela landing no build/ISR).
+  app.get('/reps', listRepsController)
 }
