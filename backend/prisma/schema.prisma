@@ -242,18 +242,35 @@ model InviteCode {
   createdAt DateTime  @default(now())
 }
 
-// Evento de funil da landing page (pública, pré-cadastro). Append-only:
-// SEM deletedAt (não é entidade de negócio, é log de evento) e SEM companyId
-// (visitante ainda não pertence a nenhuma empresa). O sistema interno futuro
-// consome esses eventos crus e agrega as métricas por representante.
+// Representante comercial da landing. Config (nome, WhatsApp) que ANTES vivia
+// hardcoded em `reps.ts` — agora é dado consumido pela landing. Guarda também
+// os contadores agregados (`visits`, `ctaClicks`), incrementados a cada evento.
+// Público/pré-cadastro: SEM companyId e SEM soft delete (usa flag `active`).
+model LandingRep {
+  id        Int            @id @default(autoincrement())
+  slug      String         @unique // usado na URL (ex.: aura.beetsbr.com/rafael-leony)
+  name      String
+  whatsapp  String // E.164 sem "+"
+  visits    Int            @default(0)
+  ctaClicks Int            @default(0)
+  active    Boolean        @default(true)
+  events    LandingEvent[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+// Evento de funil da landing (público, pré-cadastro). Append-only: SEM
+// deletedAt e SEM companyId. Referencia o representante por `repId` (null =
+// landing raiz). Guarda o dado cru do evento; os totais ficam em LandingRep.
 model LandingEvent {
-  id        Int      @id @default(autoincrement())
-  repSlug   String?  // slug do representante comercial; null = landing raiz
-  type      String   // 'visit' | 'cta_click'
+  id        Int         @id @default(autoincrement())
+  repId     Int? // FK -> LandingRep; null = landing raiz
+  rep       LandingRep? @relation(fields: [repId], references: [id])
+  type      String // 'visit' | 'cta_click'
   userAgent String?
   referrer  String?
-  createdAt DateTime @default(now())
+  createdAt DateTime    @default(now())
 
-  @@index([repSlug, type])
+  @@index([repId, type])
   @@index([createdAt])
 }

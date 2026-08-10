@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { recordLandingEventService } from './landing.service'
+import { recordLandingEventService, listActiveRepsService } from './landing.service'
 
 const bodySchema = z.object({
   type: z.enum(['visit', 'cta_click']),
@@ -35,10 +35,22 @@ export async function recordLandingEventController(
 
   await recordLandingEventService({
     type: parsed.data.type,
-    repSlug: parsed.data.slug ? parsed.data.slug.toLowerCase() : null,
+    slug: parsed.data.slug ?? null,
     userAgent: userAgent.slice(0, 512),
     referrer: parsed.data.referrer ?? null,
   })
 
   return reply.status(204).send()
+}
+
+/**
+ * Lista os representantes ativos (slug, name, whatsapp). Público — consumido
+ * pela landing (build/ISR) para montar as páginas por representante.
+ */
+export async function listRepsController(
+  _request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  const reps = await listActiveRepsService()
+  return reply.send(reps)
 }
