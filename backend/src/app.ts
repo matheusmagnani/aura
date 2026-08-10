@@ -22,6 +22,7 @@ import { dashboardRoutes } from './modules/dashboard/dashboard.routes'
 import { contractTemplateRoutes } from './modules/contract-templates/contract-template.routes'
 import { contractRoutes } from './modules/contracts/contract.routes'
 import { followUpRoutes } from './modules/follow-ups/follow-up.routes'
+import { landingRoutes } from './modules/landing/landing.routes'
 
 export const app = fastify()
 
@@ -108,3 +109,4 @@ app.register(dashboardRoutes, { prefix: '/api/dashboard' })
 app.register(contractTemplateRoutes, { prefix: '/api/contract-templates' })
 app.register(contractRoutes, { prefix: '/api/contracts' })
 app.register(followUpRoutes, { prefix: '/api/follow-ups' })
+app.register(landingRoutes, { prefix: '/api/landing' })
