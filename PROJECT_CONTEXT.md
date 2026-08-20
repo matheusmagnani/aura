@@ -41,11 +41,12 @@
 - **contract-templates** — CRUD de modelos de contrato por empresa; conteúdo armazenado como JSON TipTap; soft delete com restore; logs de auditoria; permissão `settings`
 - **follow-ups** — Notas de acompanhamento por cliente; GET `?clientId=X`, POST, DELETE /:id; permissão `clients`
 - **contracts** — Contratos gerados para clientes; vinculados a cliente + proposta aceita (idStatus=3) + template; variáveis substituídas no backend; PDF gerado rodando o editor real na rota `/__pdf-render` via puppeteer e fatiando em páginas A4 (ver "Geração de PDF — Arquitetura"), salvo no S3; hard delete (remove S3 + DB); logs de auditoria; permissão `clients`
+- **jobs** — Runner de **tarefas agendadas**. Registry de jobs nomeados + endpoint único `POST /api/jobs/:name/run`, autenticado pela **assinatura do QStash** (não usa JWT). Cada execução é gravada em `JobRun`. Ver "Jobs Agendados — Arquitetura"
 - **landing** — Funil **público** da landing page (repo separado `aura-lp`). **Sem auth, sem companyId, sem createLog** (dado público pré-cadastro, alto volume). Duas tabelas: `LandingRep` (representantes: slug/nome/whatsapp + contadores `visits`/`ctaClicks`) e `LandingEvent` (evento cru, FK `repId`). Endpoints: `POST /api/landing/events` grava o evento **e** incrementa o contador do rep (transação; resolve `slug`→`repId`); filtra bots por UA, aceita `text/plain` (sendBeacon), rate limit. `GET /api/landing/reps` lista os reps ativos — a landing consome daqui (fim do `reps.ts` hardcoded)
 
 ### Models (Prisma)
 
-- Company, User, Role, Permission, Client, Appointment, Proposal, ContractTemplate, Contract, LandingRep, LandingEvent
+- Company, User, Role, Permission, Client, Appointment, Proposal, ContractTemplate, Contract, LandingRep, LandingEvent, JobRun
 - **Appointment** possui campos: `title` (obrigatório), `description?`, `startAt` (DateTime), `companyId`, `clientId?` (relação com Client), `collaboratorId?` (relação com User via "AppointmentCollaborator"), `deletedAt?`
 - **Proposal** possui campos: `value` (Decimal, obrigatório), `description?`, `clientObservation?`, `idStatus` (Int: 1=Pendente, 2=Enviada, 3=Aceita, 4=Recusada, default 1), `deadlineDays?` (Int — prazo em dias), `deadlineType?` (String: `"business"` | `"calendar"` — dias úteis ou corridos), `signalValue?` (Decimal — valor do sinal; null/0 = sem sinal), `signalPaymentMethod?` (String: `"money"` | `"pix"` | `"boleto"` | `"card"`), `remainingPaymentMethod?` (mesmos valores — forma de pagamento do restante), `companyId`, `clientId` (obrigatório, relação com Client), `collaboratorId?` (relação com User via "ProposalCollaborator"), `deletedAt?`
 - Client possui campos: `name` (obrigatório), `phone` (obrigatório), `email?`, `document?` (CPF ou CNPJ sem máscara), `documentType?` (String: `"CPF"` ou `"CNPJ"`), e campos de endereço: `address?`, `addressNumber?`, `addressComplement?`, `neighborhood?`, `city?`, `state?`, `zipCode?`. Também possui `userId?` (relação opcional com User — colaborador responsável).
@@ -61,7 +62,10 @@
 - **FollowUp** — `id`, `content`, `clientId`, `companyId`, `userId?`, `userName` (snapshot), `deletedAt?` — notas de acompanhamento por cliente; soft delete; permissão `clients`
 - **LandingRep** — `id`, `slug` (único, usado na URL), `name`, `whatsapp`, `visits` (Int, contador), `ctaClicks` (Int, contador), `active` (Bool), `createdAt`, `updatedAt` — representante comercial da landing. Config (nome/whatsapp) que antes era hardcoded no `reps.ts`, agora consumida via `GET /api/landing/reps`. **SEM `deletedAt` (usa `active`) e SEM `companyId`** (público). Cadastro manual por enquanto (direto no banco)
 - **LandingEvent** — `id`, `repId?` (FK → `LandingRep`; null = raiz), `type` (`visit` | `cta_click`), `userAgent?`, `referrer?`, `createdAt` — evento cru de funil. **Append-only: SEM `deletedAt` e SEM `companyId`**. Índices em `[repId, type]` e `[createdAt]`. Os totais ficam denormalizados em `LandingRep` (incrementados na mesma transação do insert)
-- **Todas as tabelas exceto Contract, LandingRep e LandingEvent possuem `deletedAt DateTime?`** — soft delete
+- **Company** possui `sessionsValidFrom` (DateTime?) — corte de sessões. O `demo:reset` marca aqui, e o `GET /auth/me` recusa com **401** todo token cujo `iat` seja anterior (o interceptor do axios então desloga). Não invalida a assinatura do JWT; só é checado no `/me`, que já consulta o banco — custo zero nas demais rotas
+- **Company** possui `isDemo` (Boolean, default false) — marca a empresa de demonstração, única que o job `demo:reset` pode zerar com hard delete. Marcação manual via `scripts/mark-demo-company.ts`
+- **JobRun** — `id`, `name`, `status` (`running` | `success` | `error`), `dryRun`, `startedAt`, `finishedAt?`, `durationMs?`, `result?` (Json), `error?` — histórico de execuções dos jobs agendados. **Append-only: SEM `deletedAt` e SEM `companyId`** (dado de infraestrutura). Índice em `[name, startedAt]`
+- **Todas as tabelas exceto Contract, LandingRep, LandingEvent e JobRun possuem `deletedAt DateTime?`** — soft delete
 
 ### Padrão de Soft Delete
 
@@ -230,6 +234,44 @@ A geração roda o **editor real** (TipTap + PageBreakExtension) dentro do Puppe
 | GET | /api/permissions/:roleId | Sim | Buscar permissões de um setor |
 | PUT | /api/permissions/:roleId | Sim | Atualizar permissões de um setor |
 
+### Aviso de Conta de Demonstração (frontend)
+
+Quando `company.isDemo`, o usuário é avisado em dois momentos:
+
+1. **No login** — o `LoginPage` exibe o `Modal` padrão ("Acesso de teste", com Ok/Cancelar) **antes** de entrar. O `authService.login` aceita `{ persist: false }` justamente para isso: o token fica retido em memória (`pendingAuth`) e só vai para o store no "Ok". Sem isso a `PublicRoute` (`AppRoutes.tsx`) redirecionaria para `/dashboard` assim que o token entrasse no store, e o modal nunca apareceria. "Cancelar" simplesmente descarta — nada chegou a ser persistido
+2. **Durante o uso** — o `DemoBanner` fica fixo no topo com a contagem regressiva
+
+O backend expõe `isDemo` e `demoResetAt` (ISO/UTC) no **login** e no **`GET /auth/me`**. O instante vem de `lib/demoReset.ts`, que espelha o cron do QStash (`0 3 * * 0` UTC = domingo 00:00 em Brasília). **Se mudar o cron no QStash, mude lá também** — a divergência apareceria como contagem errada na tela.
+
+### Jobs Agendados — Arquitetura (módulo `jobs`)
+
+**Por que não é cron no processo:** a Fly roda com `auto_stop_machines = 'stop'` + `min_machines_running = 0` — a máquina dorme, e qualquer `setInterval`/`node-cron` in-process morre junto. O agendamento **precisa** vir de fora, por HTTP (o que de quebra acorda a máquina via `auto_start`).
+
+**Agendador: Upstash QStash.** Chama o endpoint no horário do schedule, com **retry automático** e **DLQ** (3 dias no free tier) — importante porque a primeira chamada pode bater numa Fly fria com o Neon suspenso e falhar. Free tier: 1.000 msgs/dia, **10 schedules ativos**, timeout de resposta de 15 min.
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| POST | /api/jobs/:name/run | **Assinatura QStash** | Executa o job `:name` do registry. Rate limit 10/min. `dryRun` aceito por query (`?dryRun=true`) **ou** por corpo (`{"dryRun": true}`) — pelo corpo é o caminho confiável ao publicar via QStash, que exige encodar a query dentro da URL da API deles. Default: execução real |
+
+- **`job.registry.ts`** — `JOB_REGISTRY: Record<string, JobHandler>`. **Adicionar um job novo:** criar o handler em `jobs/handlers/`, registrar com nome `dominio:acao`, e criar o schedule no painel do QStash. Nenhum código de rota/infra muda
+- **`job.service.ts`** — grava `JobRun` (running → success/error) com duração e resultado. Um `JobRun` `running` com menos de 15 min bloqueia execução paralela (retry do QStash chegando durante a execução anterior) e responde `skipped` com 200 — 200 é intencional: impede o QStash de insistir
+- **`job.controller.ts`** — valida o header `upstash-signature` via `Receiver` do `@upstash/qstash`. Usa o **corpo cru** (`rawBody`, capturado por um `addContentTypeParser` escopado ao plugin) porque o hash da assinatura é do corpo original, não do JSON re-serializado. Sem as signing keys configuradas responde **503** (melhor não rodar do que expor gatilho de hard delete sem auth)
+- Erro no job **propaga como 500 de propósito** — é o não-2xx que dispara o retry do QStash
+
+#### Job `demo:reset` — limpeza da empresa de demonstração
+
+Devolve a empresa demo ao estado de recém-cadastrada (Company + usuário dono + role "Administrativo" com as 24 permissões). **HARD DELETE** — exceção consciente ao soft delete do resto do sistema, pra não acumular espaço no Postgres nem no S3.
+
+- **Guard-rails:** aborta se `DEMO_COMPANY_ID` não estiver setado, se a empresa não existir, ou se `company.isDemo !== true`. A flag no banco é o que impede um env errado de apagar um cliente real
+- **Conflito de e-mail:** `User.email` é `@unique` **global** (não por empresa). Se algum usuário de outra empresa estiver com o `DEMO_USER_EMAIL`, o update do dono estouraria P2002 e faria rollback de tudo — então o job checa isso **antes** de apagar qualquer coisa e aborta com mensagem acionável
+- **Ordem topológica obrigatória** (nenhuma FK do schema tem `onDelete: Cascade`): solta `owner.roleId` → Contract → FollowUp → Proposal → Appointment → Log → ContractTemplate → Client → ClientStatus → Permission (via roleIds) → User (exceto o dono) → Role
+- **Usuários:** sobrevive **exatamente um** — o de menor `id` da empresa (o criado no registro). Todos os demais são hard-deleted, estejam ativos, inativos ou soft-deleted. Identificado por `id` e não por e-mail porque quem testa pode ter trocado o e-mail no perfil; se o dono estiver soft-deleted, é ressuscitado (`deletedAt: null`, `active: true`). Se a empresa não tiver usuário nenhum, o job aborta
+- O resultado do job (inclusive no `dryRun`) traz `ownerPreserved` com id/nome/e-mail de quem será mantido — é a conferência que evita apontar para a empresa errada
+- **Sessões abertas são derrubadas:** o job grava `company.sessionsValidFrom`, e o `/auth/me` passa a recusar (401) os tokens anteriores — sem isso o prospect continuaria navegando num sistema recém-esvaziado (o JWT segue válido: o middleware só faz `jwtVerify`, e os colaboradores apagados nem chegavam a tomar 401). No frontend o `DemoBanner` revalida o `/me` ao passar do horário, para a reação ser em ~1 min em vez do `staleTime` de 5. **Nota sobre o `iat`:** ele tem resolução de 1 segundo, então tokens emitidos no mesmo segundo do reset escapam do corte — é deliberado, pois arredondar o corte para cima criaria uma janela de até 1s em que ninguém consegue logar
+- **Cadastro da empresa é RESTAURADO, não apagado** — `handlers/demo.profile.ts` guarda nome, tradeName, CNPJ, e-mail, telefone, endereço e departamento da demo, reaplicados a cada rodada. Dois motivos: uma empresa recém-registrada tem esses campos preenchidos (o formulário de registro pede todos), e os contratos usam `{{empresa.cnpj}}`, `{{empresa.email}}`, `{{empresa.telefone}}` e `{{empresa.endereco}}` — nulos, o contrato da demo sai furado. Restaurar (em vez de não mexer) desfaz as edições de quem testou. `DEMO_COMPANY_NAME` tem precedência sobre o `name` do perfil
+- **S3** (executado **após** o commit): PDFs de contrato (via `pdfUrl`), avatars (via `user.avatar`) e as imagens do editor em `contracts/models-images/{companyId}-*`, que **não têm registro no banco** e só saem varrendo o prefixo com `listS3Keys`
+- Transação com `timeout: 60s` (o default de 5s não cobre cold start da Fly + Neon)
+
 ### Endpoints da Landing (funil público)
 
 | Método | Rota | Auth | Descrição |
@@ -326,7 +368,8 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 
 ### Componentes Compartilhados (shared/components/)
 
-- **Layout** — Sidebar + Header + Outlet
+- **Layout** — DemoBanner + Sidebar + Header + Outlet
+- **DemoBanner** — faixa `app-secondary` no topo (acima da sidebar) quando `company.isDemo`, com ícone `Flask` e contagem regressiva até o próximo reset. Em conta normal renderiza `null`. O instante vem do backend (`demoResetAt`, UTC) — nunca calculado no cliente, para a conta ficar certa em qualquer fuso. Formatação em `shared/utils/demoReset.ts` (adaptativa: dias+horas, horas+minutos, ou minutos)
 - **Sidebar** — menu lateral com NavLink e ícones Phosphor
 - **Header** — avatar com iniciais, nome do usuário, botão logout
 - **Toast** — feedback visual (success, danger, warning)
@@ -339,6 +382,7 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - **EntityHistoryModal** — modal reutilizável que exibe o histórico de uma entidade específica. Props: `isOpen`, `onClose`, `module`, `entityId`, `entityName?`. Usa `logService.listByEntity()` com paginação
 - **ui/Checkbox** — checkbox acessível via @radix-ui/react-checkbox com animação de check, suporte a sizes `sm|md|lg`, e cores do projeto
 - **ui/Input** — input com label, ícone, X de limpar, toggle de visibilidade (password), error state (`border-red-500/50`). Em inputs de **senha**: apenas o olhinho (sem X)
+- **contract-studio/pendingImages** — imagens do editor ficam como **data URL** (só no navegador) enquanto o modelo é editado e **só sobem para o S3 no save** (`uploadPendingImages` no `handleSave`). Antes subiam no instante da inserção, então fechar o Studio sem salvar — ou trocar a imagem antes de salvar — deixava o arquivo no bucket sem nenhuma referência no banco, órfão para sempre. Data URLs iguais sobem uma única vez; se algum upload falhar, o save é **abortado** (nunca grava base64 no `content`). Vale também para as imagens extraídas na importação de PDF. A validação de tipo/tamanho passou a ser feita no cliente, já que o backend só vê o arquivo no fim
 - **contract-studio/ContractStudio** — overlay full-screen para criação/edição de templates de contrato. Props: `template`, `isOpen`, `onClose`, `onSave`. Usa TipTap com extensões + VariableChipNode + ContractToolbar + VariablePickerPanel. CSS inclui `word-break: break-word` em `p`, `h1`, `h2`, `h3`
 - **contract-studio/ContractPreview** — preview read-only de conteúdo TipTap em miniatura (prop `content`). Usado em cards de templates e contratos
 - **contract-studio/ContractToolbar** — toolbar TipTap com fonte, tamanho, formatação, cor, alinhamento, listas, upload de imagem e **importação de PDF** (botão FilePdf → `readFileAsHtml` → `setContent`, substitui o modelo após confirmação)
@@ -425,6 +469,15 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - `PUPPETEER_EXECUTABLE_PATH` — caminho do Chromium (opcional; usado em produção/Alpine)
 - `DATABASE_URL` — conexão Prisma. Em produção (Neon) usar o endpoint **POOLED** (`-pooler` + `pgbouncer=true&connection_limit=1&connect_timeout=15`); o `connect_timeout` alto faz o Prisma **esperar** o compute do Neon resumir em vez de dar erro no cold start
 - `DIRECT_URL` — endpoint **DIRETO** do Neon (sem `-pooler`), usado por `migrate`/introspection (não funcionam bem via PgBouncer). Em dev = `DATABASE_URL`. Declarado como `directUrl` no `datasource` do `schema.prisma`
+
+**Jobs agendados** (todas opcionais — sem elas o servidor sobe normal e a rota de jobs responde 503):
+- `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` — chaves de assinatura do QStash. São duas por causa da rotação de chaves do Upstash
+- `JOBS_PUBLIC_URL` — URL pública do backend. Se definida, a assinatura também é validada contra a URL de destino (anti-replay). Opcional porque atrás do proxy da Fly a URL reconstruída pode divergir e reprovar assinatura legítima
+
+**Empresa de demonstração** (job `demo:reset`):
+- `DEMO_COMPANY_ID` — id da empresa demo. **Precisa ter `isDemo = true` no banco** ou o job aborta
+- `DEMO_COMPANY_NAME` — nome restaurado na empresa após o reset (default: mantém o atual)
+- `DEMO_USER_NAME` / `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` — credenciais restauradas no usuário dono a cada reset, pra que o acesso divulgado nunca mude
 
 ### Cold Start / Warmup (Fly auto-stop + Neon) — Arquitetura
 

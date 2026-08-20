@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { uploadToS3 } from '../../lib/s3'
+import { nextDemoResetAt } from '../../lib/demoReset'
 import { registerService, validateInviteService, loginService, getMeService, updateProfileService, uploadAvatarService, removeAvatarService, changePasswordService } from './auth.service'
 
 export async function validateInviteController(
@@ -104,6 +105,10 @@ export async function loginController(
         companyName: user.company.name,
         roleId: user.roleId,
         role: user.role,
+        // Conta de demonstração: o frontend avisa o usuário logo no login que
+        // os dados são temporários, e até quando.
+        isDemo: user.company.isDemo,
+        demoResetAt: user.company.isDemo ? nextDemoResetAt().toISOString() : null,
       },
     })
   } catch (error: any) {
@@ -135,10 +140,12 @@ export async function meController(
   request: FastifyRequest,
   reply: FastifyReply,
 ) {
-  const { userId } = request.user as { userId: number }
+  // `iat` (issued at) vem do próprio JWT — usado para derrubar sessões abertas
+  // antes do último reset da demo.
+  const { userId, iat } = request.user as { userId: number; iat?: number }
 
   try {
-    const user = await getMeService(userId)
+    const user = await getMeService(userId, iat)
     return reply.send(user)
   } catch (error: any) {
     if (error.statusCode) {

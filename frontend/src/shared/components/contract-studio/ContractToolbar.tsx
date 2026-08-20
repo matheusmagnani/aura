@@ -17,8 +17,8 @@ import {
   ArrowsHorizontal,
   PushPin,
 } from '@phosphor-icons/react'
-import { contractTemplateService } from '../../services/contractTemplateService'
 import { readFileAsHtml, IMPORT_ACCEPT } from '../../services/fileParser'
+import { fileToDataUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from './pendingImages'
 import { useToast } from '../../hooks/useToast'
 import { Select } from '../ui/Select'
 
@@ -140,13 +140,27 @@ export function ContractToolbar({ editor, pagePadV, pagePadH, onPadVChange, onPa
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    try {
-      const url = await contractTemplateService.uploadImage(file)
-      editor.chain().focus().setImage({ src: url, width: null, align: 'left' } as any).run()
-    } catch {
-      addToast('Erro ao enviar imagem.', 'danger')
-    }
     e.target.value = ''
+
+    // Validações que antes vinham do backend no momento do upload. Como agora a
+    // imagem só sobe ao salvar, precisam acontecer aqui — senão o usuário só
+    // descobriria o problema no fim, ao salvar o modelo.
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      addToast('Formato inválido. Use JPEG, PNG, WebP, GIF ou SVG.', 'danger')
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      addToast('A imagem é muito grande. O tamanho máximo permitido é 5 MB.', 'danger')
+      return
+    }
+
+    try {
+      // Só data URL: o arquivo vai para o S3 quando o modelo for salvo.
+      const dataUrl = await fileToDataUrl(file)
+      editor.chain().focus().setImage({ src: dataUrl, width: null, align: 'left' } as any).run()
+    } catch {
+      addToast('Erro ao carregar a imagem.', 'danger')
+    }
   }
 
   async function handlePdfImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -158,7 +172,9 @@ export function ContractToolbar({ editor, pagePadV, pagePadH, onPadVChange, onPa
     }
     setImporting(true)
     try {
-      const html = await readFileAsHtml(file, { uploadImage: contractTemplateService.uploadImage })
+      // As imagens extraídas do PDF também ficam como data URL até o save —
+      // importar e desistir sem salvar não pode deixar arquivo no bucket.
+      const html = await readFileAsHtml(file, { uploadImage: fileToDataUrl })
       editor.commands.setContent(html)
       addToast('PDF importado. Revise e ajuste o conteúdo conforme necessário.', 'success')
     } catch (err) {

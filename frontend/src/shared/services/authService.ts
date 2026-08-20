@@ -26,7 +26,7 @@ interface RegisterPayload {
   state?: string
 }
 
-interface AuthResponse {
+export interface AuthResponse {
   token: string
   user: {
     id: number
@@ -37,6 +37,10 @@ interface AuthResponse {
     companyName: string
     roleId: number | null
     role: { id: number; name: string } | null
+    /** Conta de demonstração — dados zerados periodicamente */
+    isDemo?: boolean
+    /** ISO do próximo reset (só quando isDemo) */
+    demoResetAt?: string | null
   }
 }
 
@@ -49,9 +53,11 @@ export interface MeResponse {
   companyId: number
   roleId: number | null
   role: { id: number; name: string } | null
+  demoResetAt: string | null
   company: {
     id: number
     name: string
+    isDemo: boolean
     tradeName: string | null
     cnpj: string | null
     email: string | null
@@ -69,10 +75,17 @@ export interface MeResponse {
 }
 
 export const authService = {
-  async login(data: LoginPayload): Promise<AuthResponse> {
+  /**
+   * `persist: false` faz o login NÃO gravar no store — quem chamou fica
+   * responsável por chamar `setAuth`. É o que permite exibir o aviso de conta
+   * de demonstração antes de entrar: assim que o token entra no store, a
+   * `PublicRoute` redireciona para /dashboard sozinha (AppRoutes.tsx), e não
+   * haveria como segurar o usuário na tela de login para confirmar.
+   */
+  async login(data: LoginPayload, options?: { persist?: boolean }): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>('/auth/login', data)
     const { token, user } = response.data
-    useAuthStore.getState().setAuth(token, user)
+    if (options?.persist !== false) useAuthStore.getState().setAuth(token, user)
     return response.data
   },
 
