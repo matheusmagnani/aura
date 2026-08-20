@@ -15,6 +15,8 @@ import { VariablePickerPanel } from './VariablePickerPanel'
 import { PageBreakExtension, PAGE_H, PAGE_PAD_V, PAGE_PAD_H, PAGE_GAP, forcePageBreakMeasure } from './PageBreakExtension'
 import { FontSizeExtension } from './FontSizeExtension'
 import { PinnedBlockExtension } from './PinnedBlockExtension'
+import { uploadPendingImages } from './pendingImages'
+import { useToast } from '../../hooks/useToast'
 
 const PAGE_BG = '#ffffff'
 
@@ -62,6 +64,9 @@ interface ContractStudioProps {
 export function ContractStudio({ template, isOpen, onClose, onSave }: ContractStudioProps) {
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
+  // Progresso do envio das imagens pendentes durante o save (ver pendingImages.ts)
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
+  const addToast = useToast((s) => s.addToast)
   const [pageCount, setPageCount] = useState(1)
   const [pagePadV, setPagePadV] = useState(PAGE_PAD_V)
   const [pagePadH, setPagePadH] = useState(PAGE_PAD_H)
@@ -209,9 +214,29 @@ export function ContractStudio({ template, isOpen, onClose, onSave }: ContractSt
     if (!name.trim()) return
     setSaving(true)
     try {
+      // As imagens vivem como data URL enquanto o modelo é editado e só sobem
+      // para o S3 aqui — assim nenhum arquivo é criado no bucket se o usuário
+      // fechar sem salvar. Ver pendingImages.ts.
+      let doc = editor!.getJSON() as Record<string, unknown>
+
+      try {
+        const result = await uploadPendingImages(
+          doc,
+          contractTemplateService.uploadImage,
+          (done, total) => setUploadProgress({ done, total }),
+        )
+        doc = result.content
+      } catch {
+        // Aborta o save: melhor não salvar do que gravar base64 no conteúdo.
+        addToast('Erro ao enviar as imagens. O modelo não foi salvo.', 'danger')
+        return
+      } finally {
+        setUploadProgress(null)
+      }
+
       const content: WrappedContent = {
         pageMargins: { v: pagePadV, h: pagePadH },
-        doc: editor!.getJSON() as Record<string, unknown>,
+        doc,
       }
       await onSave(name.trim(), content as unknown as Record<string, unknown>)
       onClose()
@@ -404,7 +429,11 @@ export function ContractStudio({ template, isOpen, onClose, onSave }: ContractSt
         onMouseEnter={e => { if (!saving && name.trim()) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.04)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
       >
-        {saving ? 'Salvando...' : 'Salvar'}
+        {uploadProgress
+          ? `Enviando imagens... ${uploadProgress.done}/${uploadProgress.total}`
+          : saving
+            ? 'Salvando...'
+            : 'Salvar'}
       </button>
 
       <style>{`

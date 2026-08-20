@@ -27,6 +27,16 @@ model Company {
   state             String?
   zipCode           String?
   department        String?
+  // Empresa de demonstração: pode ser zerada (HARD DELETE) pelo job `demo:reset`.
+  // É o guard-rail do purge — o job recusa rodar em company com isDemo = false,
+  // pra que um DEMO_COMPANY_ID errado no env não apague um cliente real.
+  isDemo       Boolean   @default(false)
+  // Corte de sessões: tokens emitidos ANTES deste instante são recusados no
+  // /auth/me. O `demo:reset` marca aqui, e assim quem estava com a demo aberta
+  // é deslogado em vez de continuar navegando num sistema que acabou de ser
+  // esvaziado. Não invalida a assinatura do JWT (ele segue válido até expirar),
+  // só é checado onde já se consulta o banco.
+  sessionsValidFrom DateTime?
   users        User[]
   roles        Role[]
   clients      Client[]
@@ -233,6 +243,24 @@ model FollowUp {
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+// Histórico de execuções dos jobs agendados (ver módulo `jobs`). Serve de
+// observabilidade própria (independente do dashboard do QStash) e de lock:
+// um job com status 'running' recente impede que um retry rode em paralelo.
+// Append-only: SEM deletedAt e SEM companyId (é dado de infraestrutura).
+model JobRun {
+  id         Int       @id @default(autoincrement())
+  name       String // nome registrado no registry (ex.: 'demo:reset')
+  status     String // 'running' | 'success' | 'error'
+  dryRun     Boolean   @default(false)
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  durationMs Int?
+  result     Json? // resumo do que o job fez (ex.: contagens deletadas)
+  error      String?
+
+  @@index([name, startedAt])
 }
 
 model InviteCode {

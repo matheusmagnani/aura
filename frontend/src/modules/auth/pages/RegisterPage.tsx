@@ -77,7 +77,7 @@ export function RegisterPage() {
             <form onSubmit={handleValidateCode} className="space-y-4 w-full">
               <div>
                 <label className="block text-sm text-app-gray mb-1">
-                  Código de acesso
+                  Código de cadastro
                 </label>
                 <div className="relative">
                   <Key

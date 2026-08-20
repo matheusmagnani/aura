@@ -1,4 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
+import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { uploadToS3, getStreamFromS3, deleteFromS3 } from '../../lib/s3'
 import {
@@ -118,7 +119,11 @@ export async function uploadContractImageController(request: FastifyRequest, rep
   }
 
   const ext = data.mimetype.split('/')[1].replace('jpeg', 'jpg').replace('svg+xml', 'svg')
-  const key = `contracts/models-images/${companyId}-${Date.now()}.${ext}`
+  // Sufixo aleatório além do timestamp: ao salvar um modelo, as imagens pendentes
+  // sobem em rajada e várias caem no mesmo milissegundo — só o Date.now() faria
+  // uma sobrescrever a outra. O prefixo `{companyId}-` é mantido porque o job
+  // `demo:reset` varre o bucket por ele.
+  const key = `contracts/models-images/${companyId}-${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`
   const buffer = await data.toBuffer()
 
   try {

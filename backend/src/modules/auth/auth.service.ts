@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma'
 import bcrypt from 'bcryptjs'
 import { deleteFromS3 } from '../../lib/s3'
+import { nextDemoResetAt, isProtectedDemoAvatar } from '../../lib/demoReset'
 
 const MODULES = ['schedule', 'clients', 'collaborators', 'settings', 'history', 'proposals'] as const
 const ACTIONS = ['read', 'create', 'edit', 'delete'] as const
@@ -135,7 +136,7 @@ export async function loginService({ email, password }: LoginInput) {
   return user
 }
 
-export async function getMeService(userId: number) {
+export async function getMeService(userId: number, tokenIssuedAt?: number) {
   const user = await prisma.user.findUnique({
     where: { id: userId, deletedAt: null },
     select: {
@@ -151,6 +152,8 @@ export async function getMeService(userId: number) {
         select: {
           id: true,
           name: true,
+          isDemo: true,
+          sessionsValidFrom: true,
           tradeName: true,
           cnpj: true,
           email: true,
@@ -173,7 +176,27 @@ export async function getMeService(userId: number) {
     throw { statusCode: 404, message: 'Usuário não encontrado.' }
   }
 
-  return user
+  // Sessão anterior ao último reset: derruba. Responder 401 (e não 404) é o que
+  // faz o interceptor do axios no frontend deslogar e mandar para o /login —
+  // sem isso a pessoa continuaria navegando num sistema recém-esvaziado.
+  const validFrom = user.company.sessionsValidFrom
+  if (validFrom && tokenIssuedAt) {
+    // Compara em SEGUNDOS: o `iat` do JWT é truncado para o segundo, então um
+    // token emitido logo depois do corte teria `iat * 1000` até 999ms antes do
+    // instante real e seria recusado — deslogando justamente quem acabou de
+    // entrar, sem conseguir mais logar. A tolerância de <1s é irrelevante aqui.
+    const validFromSeconds = Math.floor(validFrom.getTime() / 1000)
+    if (tokenIssuedAt < validFromSeconds) {
+      throw { statusCode: 401, message: 'Sessão encerrada: os dados de demonstração foram reiniciados.' }
+    }
+  }
+
+  // Em conta de demonstração o frontend mostra a faixa de aviso com contagem
+  // regressiva — precisa saber quando os dados serão zerados.
+  return {
+    ...user,
+    demoResetAt: user.company.isDemo ? nextDemoResetAt().toISOString() : null,
+  }
 }
 
 interface UpdateProfileInput {
@@ -220,7 +243,9 @@ export async function uploadAvatarService(userId: number, avatar: string) {
     select: { avatar: true },
   })
 
-  if (current?.avatar) {
+  // A foto padrão da demo é um arquivo fixo e compartilhado — apagá-la aqui a
+  // destruiria para sempre (ver isProtectedDemoAvatar).
+  if (current?.avatar && !isProtectedDemoAvatar(current.avatar)) {
     await deleteFromS3(current.avatar)
   }
 
@@ -238,7 +263,9 @@ export async function removeAvatarService(userId: number) {
     select: { avatar: true },
   })
 
-  if (user?.avatar) {
+  // Idem: remover a foto do perfil desvincula, mas não pode destruir o arquivo
+  // padrão da demo, que é restaurado a cada reset.
+  if (user?.avatar && !isProtectedDemoAvatar(user.avatar)) {
     await deleteFromS3(user.avatar)
   }
 

@@ -2,12 +2,15 @@ import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useAnimationControls, AnimatePresence } from 'framer-motion'
 import { CircleNotch, CalendarBlank, UsersThree, FileText, Scroll, UserGear } from '@phosphor-icons/react'
-import { authService } from '../../../shared/services/authService'
+import { authService, type AuthResponse } from '../../../shared/services/authService'
 import { useAuthStore } from '../../../shared/stores/useAuthStore'
 import { useToast } from '../../../shared/hooks/useToast'
 import { useCepSearch } from '../../../shared/hooks/useCepSearch'
 import { validateCNPJ } from '../../../shared/utils/validateDocuments'
 import { getApiError } from '../../../shared/utils/getApiError'
+import { Modal } from '../../../shared/components/Modal'
+import { tempoAteReset } from '../../../shared/utils/demoReset'
+import { Flask } from '@phosphor-icons/react'
 import { Input } from '../../../shared/components/ui/Input'
 import { Select } from '../../../shared/components/ui/Select'
 import { Button } from '../../../shared/components/ui/Button'
@@ -126,6 +129,11 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
+  // Aviso de conta de demonstração, exibido entre o login e a entrada no app
+  const [showDemoConfirm, setShowDemoConfirm] = useState(false)
+  const [demoResetAt, setDemoResetAt] = useState<string | null>(null)
+  // Credenciais retidas em memória até o usuário aceitar o aviso da demo
+  const [pendingAuth, setPendingAuth] = useState<AuthResponse | null>(null)
 
   // Register — step 0 (invite)
   const [inviteCode, setInviteCode] = useState('')
@@ -243,7 +251,18 @@ export function LoginPage() {
     e.preventDefault()
     setLoginLoading(true)
     try {
-      const { token, user } = await authService.login({ email, password })
+      // persist: false — em conta de demonstração precisamos mostrar o aviso
+      // ANTES de autenticar. Com o token no store, a PublicRoute redirecionaria
+      // para /dashboard na hora e o modal nem chegaria a aparecer.
+      const { token, user } = await authService.login({ email, password }, { persist: false })
+
+      if (user.isDemo) {
+        setPendingAuth({ token, user })
+        setDemoResetAt(user.demoResetAt ?? null)
+        setShowDemoConfirm(true)
+        return
+      }
+
       setAuth(token, user)
       navigate('/dashboard')
     } catch (error: any) {
@@ -251,6 +270,21 @@ export function LoginPage() {
     } finally {
       setLoginLoading(false)
     }
+  }
+
+  function handleDemoConfirm() {
+    if (!pendingAuth) return
+    setShowDemoConfirm(false)
+    // Só agora autentica de fato — a PublicRoute cuida do redirecionamento.
+    setAuth(pendingAuth.token, pendingAuth.user)
+    setPendingAuth(null)
+    navigate('/dashboard')
+  }
+
+  function handleDemoCancel() {
+    // Nada foi persistido: basta descartar as credenciais em memória.
+    setShowDemoConfirm(false)
+    setPendingAuth(null)
   }
 
   function clearError(field: string) {
@@ -394,7 +428,7 @@ export function LoginPage() {
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 0, paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
               <div style={{ width: '100%', maxWidth: 420 }}>
                 <form onSubmit={handleValidateInvite} className="flex flex-col gap-5">
-                  <Input label="Código de acesso" type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="" required />
+                  <Input label="Código de cadastro" type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="" required />
                   <div className="flex flex-col gap-4 mt-2">
                     <Button type="submit" disabled={inviteLoading} size="lg" className="w-full" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', height: 'auto' }}>
                       {inviteLoading && <CircleNotch size={18} className="animate-spin" />}
@@ -590,7 +624,7 @@ export function LoginPage() {
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 0, paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
               <div style={{ width: '100%', maxWidth: 420 }}>
                 <form onSubmit={handleValidateInvite} className="flex flex-col gap-5">
-                  <Input label="Código de acesso" type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="" required />
+                  <Input label="Código de cadastro" type="text" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="" required />
                   <div className="flex flex-col gap-4 mt-2">
                     <Button type="submit" disabled={inviteLoading} size="lg" className="w-full" style={{ paddingTop: '0.75rem', paddingBottom: '0.75rem', height: 'auto' }}>
                       {inviteLoading && <CircleNotch size={18} className="animate-spin" />}
@@ -898,6 +932,62 @@ export function LoginPage() {
         </motion.div>
 
       </div>
+
+      {/* Aviso de conta de demonstração — o "Cancelar" desfaz a autenticação */}
+      <Modal
+        isOpen={showDemoConfirm}
+        onClose={handleDemoCancel}
+        title={
+          <span className="flex items-center gap-2">
+            <Flask size={22} weight="fill" style={{ color: 'var(--color-app-secondary)' }} />
+            Acesso de teste
+          </span>
+        }
+      >
+        <div style={{ padding: '1.5rem' }}>
+          <p className="text-sm md:text-base" style={{ color: 'var(--color-app-gray)', lineHeight: 1.6, margin: 0 }}>
+            Você está entrando em um <strong>acesso de demonstração</strong>.
+            Fique à vontade para cadastrar, editar e excluir o que quiser — nada aqui é permanente.
+          </p>
+          <p className="text-sm md:text-base" style={{ color: 'var(--color-app-gray)', lineHeight: 1.6, marginTop: '0.75rem', marginBottom: 0 }}>
+            {/* Só o tempo em si fica destacado — a preposição acompanha o texto */}
+            Todos os dados serão reiniciados {tempoAteReset(demoResetAt).prefixo}{' '}
+            <strong style={{ color: 'var(--color-app-secondary)' }}>{tempoAteReset(demoResetAt).valor}</strong>.
+          </p>
+
+          <div className="flex flex-col-reverse md:flex-row gap-3 md:justify-end" style={{ marginTop: '1.75rem' }}>
+            <button
+              type="button"
+              onClick={handleDemoCancel}
+              className="rounded-xl font-semibold text-sm transition-opacity hover:opacity-80"
+              style={{
+                padding: '0.7rem 1.4rem',
+                background: 'transparent',
+                border: '1px solid rgb(var(--color-app-gray-rgb) / 0.4)',
+                color: 'var(--color-app-gray)',
+                cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleDemoConfirm}
+              autoFocus
+              className="rounded-xl font-bold text-sm transition-transform hover:scale-[1.03]"
+              style={{
+                padding: '0.7rem 2rem',
+                background: 'var(--color-app-secondary)',
+                border: 'none',
+                color: 'var(--color-app-primary)',
+                cursor: 'pointer',
+              }}
+            >
+              Ok
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

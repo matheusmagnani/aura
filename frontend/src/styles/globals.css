@@ -194,6 +194,19 @@ body {
   }
 }
 
+/* Faixa de aviso da conta de demonstração (DemoBanner).
+   O padding vem daqui, e não de classes `py-*` do Tailwind, porque o reset
+   `* { padding: 0 }` acima está FORA de cascade layer e por isso vence as
+   utilities do Tailwind v4, que ficam dentro de `@layer`. */
+.demo-banner {
+  padding: 0.4rem 1rem;
+}
+@media (min-width: 768px) {
+  .demo-banner {
+    padding: 0.5rem 1rem;
+  }
+}
+
 /* Page content padding */
 .page-content {
   padding: 0 1rem 1.5rem;
