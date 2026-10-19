@@ -37,6 +37,12 @@ model Company {
   // esvaziado. Não invalida a assinatura do JWT (ele segue válido até expirar),
   // só é checado onde já se consulta o banco.
   sessionsValidFrom DateTime?
+  // Acesso da empresa (controlado pelo Beets App via integração): inativa = não loga e
+  // as sessões abertas caem. Nasce ativa; o Beets inativa quando o cancelamento vale
+  active        Boolean   @default(true)
+  deactivatedAt DateTime?
+  // Código de cadastro que originou a empresa (liga a empresa ao cliente no Beets App)
+  inviteCodes  InviteCode[]
   users        User[]
   roles        Role[]
   clients      Client[]
@@ -267,7 +273,16 @@ model InviteCode {
   id        Int       @id @default(autoincrement())
   code      String    @unique
   usedAt    DateTime?
+  // Quem pediu o código: referência do cliente no Beets App (ex.: "beets:client:12").
+  // null = código criado à mão no banco (fluxo antigo)
+  reference String?
+  // Empresa criada com este código (preenchida no cadastro) — é por ela que o Beets
+  // inativa/reativa o acesso
+  companyId Int?
+  company   Company?  @relation(fields: [companyId], references: [id])
   createdAt DateTime  @default(now())
+
+  @@index([reference])
 }
 
 // Representante comercial da landing. Config (nome, WhatsApp) que ANTES vivia

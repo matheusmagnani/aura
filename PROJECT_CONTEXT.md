@@ -42,6 +42,7 @@
 - **follow-ups** — Notas de acompanhamento por cliente; GET `?clientId=X`, POST, DELETE /:id; permissão `clients`
 - **contracts** — Contratos gerados para clientes; vinculados a cliente + proposta aceita (idStatus=3) + template; variáveis substituídas no backend; PDF gerado rodando o editor real na rota `/__pdf-render` via puppeteer e fatiando em páginas A4 (ver "Geração de PDF — Arquitetura"), salvo no S3; hard delete (remove S3 + DB); logs de auditoria; permissão `clients`
 - **jobs** — Runner de **tarefas agendadas**. Registry de jobs nomeados + endpoint único `POST /api/jobs/:name/run`, autenticado pela **assinatura do QStash** (não usa JWT). Cada execução é gravada em `JobRun`. Ver "Jobs Agendados — Arquitetura"
+- **beets** — Integração com o **Beets App** (sistema interno da Beets), que libera e corta o acesso das empresas. Rotas em `/api/integrations/beets`, **sem JWT**: autenticadas pela chave `BEETS_API_KEY` no header `x-beets-api-key` (tempo constante; sem a chave → 503). A "conta" é a **referência do cliente no Beets** (`beets:client:N`). Ver "Integração com o Beets App"
 - **landing** — Funil **público** da landing page (repo separado `aura-lp`). **Sem auth, sem companyId, sem createLog** (dado público pré-cadastro, alto volume). Duas tabelas: `LandingRep` (representantes: slug/nome/whatsapp + contadores `visits`/`ctaClicks`) e `LandingEvent` (evento cru, FK `repId`). Endpoints: `POST /api/landing/events` grava o evento **e** incrementa o contador do rep (transação; resolve `slug`→`repId`); filtra bots por UA, aceita `text/plain` (sendBeacon), rate limit. `GET /api/landing/reps` lista os reps ativos — a landing consome daqui (fim do `reps.ts` hardcoded)
 
 ### Models (Prisma)
@@ -272,6 +273,20 @@ Devolve a empresa demo ao estado de recém-cadastrada (Company + usuário dono +
 - **S3** (executado **após** o commit): PDFs de contrato (via `pdfUrl`), avatars (via `user.avatar`) e as imagens do editor em `contracts/models-images/{companyId}-*`, que **não têm registro no banco** e só saem varrendo o prefixo com `listS3Keys`
 - Transação com `timeout: 60s` (o default de 5s não cobre cold start da Fly + Neon)
 
+### Integração com o Beets App (módulo `beets`)
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | /api/integrations/beets/ping | Teste da conexão |
+| GET | /api/integrations/beets/accounts/:reference | Situação: `none` · `invited` (código gerado, sem cadastro) · `active` · `inactive` + código e empresa |
+| POST | /api/integrations/beets/accounts/:reference/provision | Libera: sem empresa → gera **código de cadastro** (`AURA-XXXX-XXXX`, reaproveita o pendente); empresa inativa → reativa. Idempotente, inclusive em chamadas simultâneas (advisory lock por referência) |
+| POST | /api/integrations/beets/accounts/:reference/deactivate | Inativa a empresa (`active = false`, `deactivatedAt`, `sessionsValidFrom = agora`) |
+| POST | /api/integrations/beets/accounts/:reference/activate | Reativa a empresa |
+
+- **InviteCode** ganhou `reference` (cliente no Beets) e `companyId` (empresa criada com o código — preenchido no `/auth/register`). Códigos antigos (criados à mão) ficam com os dois nulos
+- **Company** ganhou `active` (default true) e `deactivatedAt`. Empresa inativa: **login recusado (403)** e **toda rota autenticada responde 401** (o `authenticate` confere a empresa, com cache de 15s em memória por máquina: zerado na hora na máquina que recebeu a chamada; nas demais vale em até 15s) — o front volta para o login
+- Migration `20261015120000_beets_integration`
+
 ### Endpoints da Landing (funil público)
 
 | Método | Rota | Auth | Descrição |
@@ -479,6 +494,9 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 **Jobs agendados** (todas opcionais — sem elas o servidor sobe normal e a rota de jobs responde 503):
 - `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` — chaves de assinatura do QStash. São duas por causa da rotação de chaves do Upstash
 - `JOBS_PUBLIC_URL` — URL pública do backend. Se definida, a assinatura também é validada contra a URL de destino (anti-replay). Opcional porque atrás do proxy da Fly a URL reconstruída pode divergir e reprovar assinatura legítima
+
+**Integração com o Beets App** (opcional):
+- `BEETS_API_KEY` — chave (mín. 32 caracteres) que o Beets App manda no header `x-beets-api-key`. Sem ela, `/api/integrations/beets` responde 503
 
 **Empresa de demonstração** (job `demo:reset`):
 - `DEMO_COMPANY_ID` — id da empresa demo. **Precisa ter `isDemo = true` no banco** ou o job aborta
