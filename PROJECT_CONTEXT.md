@@ -247,7 +247,7 @@ O backend expõe `isDemo` e `demoResetAt` (ISO/UTC) no **login** e no **`GET /au
 
 **Por que não é cron no processo:** a Fly roda com `auto_stop_machines = 'stop'` + `min_machines_running = 0` — a máquina dorme, e qualquer `setInterval`/`node-cron` in-process morre junto. O agendamento **precisa** vir de fora, por HTTP (o que de quebra acorda a máquina via `auto_start`).
 
-**Agendador: Upstash QStash.** Chama o endpoint no horário do schedule, com **retry automático** e **DLQ** (3 dias no free tier) — importante porque a primeira chamada pode bater numa Fly fria com o Neon suspenso e falhar. Free tier: 1.000 msgs/dia, **10 schedules ativos**, timeout de resposta de 15 min.
+**Agendador: Upstash QStash** — conta na região **us-east-1**, então a API é `https://qstash-us-east-1.upstash.io` (o `https://qstash.upstash.io` genérico aponta para eu-central-1 e responde *"user not found in this region"*). Agendamento ativo: `scd_6tz1vT4QQBq5o9Pg3jRbRqRE1sZ5`, cron `0 3 * * 0`. Chama o endpoint no horário do schedule, com **retry automático** e **DLQ** (3 dias no free tier) — importante porque a primeira chamada pode bater numa Fly fria com o Neon suspenso e falhar. Free tier: 1.000 msgs/dia, **10 schedules ativos**, timeout de resposta de 15 min.
 
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
@@ -313,6 +313,12 @@ Devolve a empresa demo ao estado de recém-cadastrada (Company + usuário dono +
 
 - `getByRoleId(roleId)` — GET /api/permissions/:roleId
 - `updateByRoleId(roleId, permissions)` — PUT /api/permissions/:roleId
+
+### ⚠️ Classes de padding/margin do Tailwind NÃO funcionam
+
+O `globals.css` tem `* { margin: 0; padding: 0; box-sizing: border-box; }` **fora** de cascade layer. No Tailwind v4 as utilities ficam dentro de `@layer`, e **CSS fora de layer sempre vence CSS em layer**, independente de especificidade. Resultado: `p-4`, `px-6`, `py-2`, `mt-2`, `m-auto` etc. são **silenciosamente ignorados** — não dão erro, só não aplicam.
+
+É por isso que o projeto usa `style={{ padding: ... }}` inline (Modal, ContractStudio, LoginPage) ou classes próprias no `globals.css` (`.page-content`, `.settings-header`, `.demo-banner`). Use uma dessas duas formas para espaçamento. As demais utilities (flex, gap, text-*, hidden/md:*, cores) funcionam normalmente.
 
 ### Design Tokens (globals.css)
 
