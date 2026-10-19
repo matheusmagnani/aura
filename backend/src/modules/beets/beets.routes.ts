@@ -3,6 +3,7 @@ import {
   activateAccountController,
   deactivateAccountController,
   getAccountController,
+  linkAccountController,
   pingController,
   provisionAccountController,
   requireBeetsKey,
@@ -20,4 +21,6 @@ export async function beetsRoutes(app: FastifyInstance) {
   app.post('/accounts/:reference/provision', provisionAccountController)
   app.post('/accounts/:reference/deactivate', deactivateAccountController)
   app.post('/accounts/:reference/activate', activateAccountController)
+  // Vincula empresa que já existia no Aura (antes da integração) ao cliente, pelo CNPJ
+  app.post('/accounts/:reference/link', linkAccountController)
 }
