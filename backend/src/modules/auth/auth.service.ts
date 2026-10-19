@@ -60,8 +60,6 @@ export async function registerService({ inviteCode, companyName, name, email, pa
     if (!invite || invite.usedAt) {
       throw { statusCode: 400, message: 'Código inválido ou já utilizado.' }
     }
-    await tx.inviteCode.update({ where: { code: inviteCode }, data: { usedAt: new Date() } })
-
     const company = await tx.company.create({
       data: {
         name: companyName,
@@ -79,6 +77,9 @@ export async function registerService({ inviteCode, companyName, name, email, pa
         state: state || null,
       },
     })
+
+    // Código gasto e ligado à empresa: é por ela que o Beets App inativa/reativa o acesso
+    await tx.inviteCode.update({ where: { code: inviteCode }, data: { usedAt: new Date(), companyId: company.id } })
 
     const defaultRole = await tx.role.create({
       data: {
@@ -115,6 +116,9 @@ export async function registerService({ inviteCode, companyName, name, email, pa
   return result
 }
 
+/** Mensagem única de empresa inativa (login, /me e demais rotas) */
+export const COMPANY_INACTIVE_MESSAGE = 'O acesso da sua empresa está suspenso. Fale com a Beets para reativar.'
+
 export async function loginService({ email, password }: LoginInput) {
   const user = await prisma.user.findUnique({
     where: { email, deletedAt: null },
@@ -131,6 +135,11 @@ export async function loginService({ email, password }: LoginInput) {
   const validPassword = await bcrypt.compare(password, user.password)
   if (!validPassword) {
     throw { statusCode: 401, message: 'Email ou senha incorretos.' }
+  }
+
+  // Empresa inativada pelo Beets App (assinatura cancelada): não entra
+  if (!user.company.active) {
+    throw { statusCode: 403, message: COMPANY_INACTIVE_MESSAGE }
   }
 
   return user

@@ -24,6 +24,7 @@ import { contractRoutes } from './modules/contracts/contract.routes'
 import { followUpRoutes } from './modules/follow-ups/follow-up.routes'
 import { landingRoutes } from './modules/landing/landing.routes'
 import { jobRoutes } from './modules/jobs/job.routes'
+import { beetsRoutes } from './modules/beets/beets.routes'
 
 export const app = fastify()
 
@@ -112,3 +113,4 @@ app.register(contractRoutes, { prefix: '/api/contracts' })
 app.register(followUpRoutes, { prefix: '/api/follow-ups' })
 app.register(landingRoutes, { prefix: '/api/landing' })
 app.register(jobRoutes, { prefix: '/api/jobs' })
+app.register(beetsRoutes, { prefix: '/api/integrations/beets' })

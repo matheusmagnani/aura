@@ -35,6 +35,11 @@ const envSchema = z.object({
   // do proxy da Fly a URL reconstruída pode divergir e gerar falso negativo.
   JOBS_PUBLIC_URL: optional(z.string()),
 
+  // --- Integração com o Beets App (módulo `beets`) ---
+  // Chave que o Beets App manda no header `x-beets-api-key` para liberar/cortar o acesso das
+  // empresas. Opcional: sem ela o servidor sobe, mas as rotas /api/integrations/beets respondem 503
+  BEETS_API_KEY: optional(z.string().min(32)),
+
   // --- Empresa de demonstração (job `demo:reset`) ---
   DEMO_COMPANY_ID: optional(z.coerce.number().int().positive()),
   DEMO_COMPANY_NAME: optional(z.string()),

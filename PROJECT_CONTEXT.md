@@ -42,6 +42,7 @@
 - **follow-ups** — Notas de acompanhamento por cliente; GET `?clientId=X`, POST, DELETE /:id; permissão `clients`
 - **contracts** — Contratos gerados para clientes; vinculados a cliente + proposta aceita (idStatus=3) + template; variáveis substituídas no backend; PDF gerado rodando o editor real na rota `/__pdf-render` via puppeteer e fatiando em páginas A4 (ver "Geração de PDF — Arquitetura"), salvo no S3; hard delete (remove S3 + DB); logs de auditoria; permissão `clients`
 - **jobs** — Runner de **tarefas agendadas**. Registry de jobs nomeados + endpoint único `POST /api/jobs/:name/run`, autenticado pela **assinatura do QStash** (não usa JWT). Cada execução é gravada em `JobRun`. Ver "Jobs Agendados — Arquitetura"
+- **beets** — Integração com o **Beets App** (sistema interno da Beets), que libera e corta o acesso das empresas. Rotas em `/api/integrations/beets`, **sem JWT**: autenticadas pela chave `BEETS_API_KEY` no header `x-beets-api-key` (tempo constante; sem a chave → 503). A "conta" é a **referência do cliente no Beets** (`beets:client:N`). Ver "Integração com o Beets App"
 - **landing** — Funil **público** da landing page (repo separado `aura-lp`). **Sem auth, sem companyId, sem createLog** (dado público pré-cadastro, alto volume). Duas tabelas: `LandingRep` (representantes: slug/nome/whatsapp + contadores `visits`/`ctaClicks`) e `LandingEvent` (evento cru, FK `repId`). Endpoints: `POST /api/landing/events` grava o evento **e** incrementa o contador do rep (transação; resolve `slug`→`repId`); filtra bots por UA, aceita `text/plain` (sendBeacon), rate limit. `GET /api/landing/reps` lista os reps ativos — a landing consome daqui (fim do `reps.ts` hardcoded)
 
 ### Models (Prisma)
@@ -247,7 +248,7 @@ O backend expõe `isDemo` e `demoResetAt` (ISO/UTC) no **login** e no **`GET /au
 
 **Por que não é cron no processo:** a Fly roda com `auto_stop_machines = 'stop'` + `min_machines_running = 0` — a máquina dorme, e qualquer `setInterval`/`node-cron` in-process morre junto. O agendamento **precisa** vir de fora, por HTTP (o que de quebra acorda a máquina via `auto_start`).
 
-**Agendador: Upstash QStash.** Chama o endpoint no horário do schedule, com **retry automático** e **DLQ** (3 dias no free tier) — importante porque a primeira chamada pode bater numa Fly fria com o Neon suspenso e falhar. Free tier: 1.000 msgs/dia, **10 schedules ativos**, timeout de resposta de 15 min.
+**Agendador: Upstash QStash** — conta na região **us-east-1**, então a API é `https://qstash-us-east-1.upstash.io` (o `https://qstash.upstash.io` genérico aponta para eu-central-1 e responde *"user not found in this region"*). Agendamento ativo: `scd_6tz1vT4QQBq5o9Pg3jRbRqRE1sZ5`, cron `0 3 * * 0`. Chama o endpoint no horário do schedule, com **retry automático** e **DLQ** (3 dias no free tier) — importante porque a primeira chamada pode bater numa Fly fria com o Neon suspenso e falhar. Free tier: 1.000 msgs/dia, **10 schedules ativos**, timeout de resposta de 15 min.
 
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
@@ -271,6 +272,20 @@ Devolve a empresa demo ao estado de recém-cadastrada (Company + usuário dono +
 - **Cadastro da empresa é RESTAURADO, não apagado** — `handlers/demo.profile.ts` guarda nome, tradeName, CNPJ, e-mail, telefone, endereço e departamento da demo, reaplicados a cada rodada. Dois motivos: uma empresa recém-registrada tem esses campos preenchidos (o formulário de registro pede todos), e os contratos usam `{{empresa.cnpj}}`, `{{empresa.email}}`, `{{empresa.telefone}}` e `{{empresa.endereco}}` — nulos, o contrato da demo sai furado. Restaurar (em vez de não mexer) desfaz as edições de quem testou. `DEMO_COMPANY_NAME` tem precedência sobre o `name` do perfil
 - **S3** (executado **após** o commit): PDFs de contrato (via `pdfUrl`), avatars (via `user.avatar`) e as imagens do editor em `contracts/models-images/{companyId}-*`, que **não têm registro no banco** e só saem varrendo o prefixo com `listS3Keys`
 - Transação com `timeout: 60s` (o default de 5s não cobre cold start da Fly + Neon)
+
+### Integração com o Beets App (módulo `beets`)
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | /api/integrations/beets/ping | Teste da conexão |
+| GET | /api/integrations/beets/accounts/:reference | Situação: `none` · `invited` (código gerado, sem cadastro) · `active` · `inactive` + código e empresa |
+| POST | /api/integrations/beets/accounts/:reference/provision | Libera: sem empresa → gera **código de cadastro** (`AURA-XXXX-XXXX`, reaproveita o pendente); empresa inativa → reativa. Idempotente, inclusive em chamadas simultâneas (advisory lock por referência) |
+| POST | /api/integrations/beets/accounts/:reference/deactivate | Inativa a empresa (`active = false`, `deactivatedAt`, `sessionsValidFrom = agora`) |
+| POST | /api/integrations/beets/accounts/:reference/activate | Reativa a empresa |
+
+- **InviteCode** ganhou `reference` (cliente no Beets) e `companyId` (empresa criada com o código — preenchido no `/auth/register`). Códigos antigos (criados à mão) ficam com os dois nulos
+- **Company** ganhou `active` (default true) e `deactivatedAt`. Empresa inativa: **login recusado (403)** e **toda rota autenticada responde 401** (o `authenticate` confere a empresa, com cache de 15s em memória por máquina: zerado na hora na máquina que recebeu a chamada; nas demais vale em até 15s) — o front volta para o login
+- Migration `20261015120000_beets_integration`
 
 ### Endpoints da Landing (funil público)
 
@@ -313,6 +328,12 @@ Devolve a empresa demo ao estado de recém-cadastrada (Company + usuário dono +
 
 - `getByRoleId(roleId)` — GET /api/permissions/:roleId
 - `updateByRoleId(roleId, permissions)` — PUT /api/permissions/:roleId
+
+### ⚠️ Classes de padding/margin do Tailwind NÃO funcionam
+
+O `globals.css` tem `* { margin: 0; padding: 0; box-sizing: border-box; }` **fora** de cascade layer. No Tailwind v4 as utilities ficam dentro de `@layer`, e **CSS fora de layer sempre vence CSS em layer**, independente de especificidade. Resultado: `p-4`, `px-6`, `py-2`, `mt-2`, `m-auto` etc. são **silenciosamente ignorados** — não dão erro, só não aplicam.
+
+É por isso que o projeto usa `style={{ padding: ... }}` inline (Modal, ContractStudio, LoginPage) ou classes próprias no `globals.css` (`.page-content`, `.settings-header`, `.demo-banner`). Use uma dessas duas formas para espaçamento. As demais utilities (flex, gap, text-*, hidden/md:*, cores) funcionam normalmente.
 
 ### Design Tokens (globals.css)
 
@@ -473,6 +494,9 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 **Jobs agendados** (todas opcionais — sem elas o servidor sobe normal e a rota de jobs responde 503):
 - `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` — chaves de assinatura do QStash. São duas por causa da rotação de chaves do Upstash
 - `JOBS_PUBLIC_URL` — URL pública do backend. Se definida, a assinatura também é validada contra a URL de destino (anti-replay). Opcional porque atrás do proxy da Fly a URL reconstruída pode divergir e reprovar assinatura legítima
+
+**Integração com o Beets App** (opcional):
+- `BEETS_API_KEY` — chave (mín. 32 caracteres) que o Beets App manda no header `x-beets-api-key`. Sem ela, `/api/integrations/beets` responde 503
 
 **Empresa de demonstração** (job `demo:reset`):
 - `DEMO_COMPANY_ID` — id da empresa demo. **Precisa ter `isDemo = true` no banco** ou o job aborta
