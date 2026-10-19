@@ -31,6 +31,10 @@
   --color-app-bg-rgb: 29, 37, 41;
   --color-app-primary-rgb: 23, 21, 20;
   --color-app-secondary-rgb: 230, 194, 132;
+  /* Abelha da Beets (login): mantém o dourado da marca Beets, não a paleta do Aura */
+  --bee-light: #FFD700;
+  --bee-dark: #B8860B;
+  --bee-light-rgb: 255, 215, 0;
   --color-app-accent-rgb: 106, 166, 193;
   --color-app-gray-rgb: 138, 145, 156;
   --sat: env(safe-area-inset-top);
