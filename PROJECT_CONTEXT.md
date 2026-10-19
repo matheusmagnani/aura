@@ -363,6 +363,13 @@ Variáveis RGB disponíveis para uso com `rgba()`: `--color-app-*-rgb`
 - `useToast` — message, type, visible, show, hide
 - `useLoadingStore` — contador de requisições de bloqueio (cadastro/edição); dirige o `GlobalLoading`. Ver "Cold Start / Warmup"
 
+### Abelha da Beets no login (shared/components/FlyingBee.tsx + bee/)
+
+- **Copiada do Beets App** (lá é a fonte: `beets-app/frontend/src/shared/components/FlyingBee.tsx` + `bee/`; `bee-parts.generated.ts` é gerado lá). Mudança na abelha → fazer no Beets e copiar os arquivos para cá
+- No `LoginPage`, só no modo "entrar": explora o formulário de login (`explore`) e pousa na quina superior direita do **ícone do Aura** acima dele (`perchOn`), virada para a esquerda; decola quando o mouse passa por cima e volta a pousar. Celular e desktop ficam os dois no DOM: `visibleOf()` devolve a versão visível (ícone/form)
+- Cores: o Aura tem outra paleta, então `globals.css` define `--bee-light` / `--bee-dark` / `--bee-light-rgb` com o dourado da Beets (`#FFD700` / `#B8860B`); sem essas variáveis ela usaria `--color-app-secondary/accent`
+- Decorativa: não bloqueia cliques, some com "reduzir movimento" (`prefers-reduced-motion`)
+
 ### Hooks Compartilhados (shared/hooks/)
 
 - `useMyPermissions()` — retorna `{ permissions, isLoading, isAdmin }`

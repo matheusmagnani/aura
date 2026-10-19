@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, type RefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useAnimationControls, AnimatePresence } from 'framer-motion'
 import { CircleNotch, CalendarBlank, UsersThree, FileText, Scroll, UserGear } from '@phosphor-icons/react'
@@ -14,6 +14,7 @@ import { Flask } from '@phosphor-icons/react'
 import { Input } from '../../../shared/components/ui/Input'
 import { Select } from '../../../shared/components/ui/Select'
 import { Button } from '../../../shared/components/ui/Button'
+import { FlyingBee } from '../../../shared/components/FlyingBee'
 
 import iconeDireito from '../../../assets/icone_fundo_azul.png'
 import iconeEsquerdo from '../../../assets/icone_fundo_preto.png'
@@ -120,10 +121,28 @@ function formatZipCode(value: string) {
   return value.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2')
 }
 
+/** Ref que aponta para a versão visível (desktop ou celular) do mesmo elemento */
+function visibleOf<T extends HTMLElement>(desktop: RefObject<T | null>, mobile: RefObject<T | null>): RefObject<T | null> {
+  return {
+    get current() {
+      return desktop.current?.offsetParent ? desktop.current : mobile.current
+    },
+  }
+}
+
 export function LoginPage() {
   const [mode, setMode] = useState<Mode>('login')
   const [regStep, setRegStep] = useState<RegStep>('user')
   const isLogin = mode === 'login'
+
+  // Abelha da Beets: explora o formulário de login e pousa no ícone do Aura acima dele.
+  // Celular e desktop ficam os dois no DOM (um com display:none): ela usa o que está visível
+  const mobileIconRef = useRef<HTMLImageElement>(null)
+  const desktopIconRef = useRef<HTMLImageElement>(null)
+  const mobileFormRef = useRef<HTMLFormElement>(null)
+  const desktopFormRef = useRef<HTMLFormElement>(null)
+  const beePerch = useMemo(() => visibleOf(desktopIconRef, mobileIconRef), [])
+  const beeExplore = useMemo(() => visibleOf(desktopFormRef, mobileFormRef), [])
 
   // Login
   const [email, setEmail] = useState('')
@@ -524,13 +543,13 @@ export function LoginPage() {
         <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ zIndex: 2, pointerEvents: isLogin ? 'auto' : 'none', opacity: isLogin ? 1 : 0, paddingTop: '1rem', paddingBottom: '6rem', paddingLeft: '2rem', paddingRight: '2rem' }}>
           <div className="w-full max-w-xs flex flex-col gap-4">
             <div className="flex justify-start">
-              <img src={iconeDireito} alt="Aura" className="w-12 h-12 object-contain" />
+              <img ref={mobileIconRef} src={iconeDireito} alt="Aura" className="w-12 h-12 object-contain" />
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-bold text-app-secondary">Bem vindo de volta!</h1>
               <p className="text-white/70 mt-1 text-sm">Faça login pra continuar</p>
             </div>
-            <form onSubmit={handleLogin} className="flex flex-col gap-8 w-full">
+            <form ref={mobileFormRef} onSubmit={handleLogin} className="flex flex-col gap-8 w-full">
               <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seuemail@email.com" required />
               <Input label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="*******" required />
               <div className="flex flex-col gap-5">
@@ -748,13 +767,13 @@ export function LoginPage() {
           </div>
           <div className="relative w-full max-w-xs flex flex-col gap-8 px-8" style={{ zIndex: 1 }}>
             <div className="flex justify-center">
-              <img src={iconeDireito} alt="Aura" className="w-12 h-12 object-contain" />
+              <img ref={desktopIconRef} src={iconeDireito} alt="Aura" className="w-12 h-12 object-contain" />
             </div>
             <div className="text-center">
               <h1 className="text-3xl font-bold text-app-secondary">Bem vindo de volta!</h1>
               <p className="text-white/70 mt-1 text-sm">Faça login pra continuar</p>
             </div>
-            <form onSubmit={handleLogin} className="flex flex-col gap-8 w-full">
+            <form ref={desktopFormRef} onSubmit={handleLogin} className="flex flex-col gap-8 w-full">
               <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seuemail@email.com" required />
               <Input label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="*******" required />
               <div className="flex flex-col gap-5">
@@ -988,6 +1007,9 @@ export function LoginPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Só no "entrar": no "criar conta" o ícone muda de lugar */}
+      {isLogin && <FlyingBee perchOn={beePerch} explore={beeExplore} size={40} />}
     </div>
   )
 }
