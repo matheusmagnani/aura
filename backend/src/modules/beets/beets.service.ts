@@ -74,3 +74,37 @@ export async function setCompanyActive(reference: string, active: boolean) {
   forgetCompanyActive(account.company.id)
   return getAccount(reference)
 }
+
+/**
+ * Vincula uma empresa que JÁ EXISTE no Aura (cadastrada antes da integração, sem código do
+ * Beets) ao cliente do Beets, pelo CNPJ (compara só os dígitos: há CNPJ salvo com e sem máscara).
+ * Idempotente: já vinculada a esta referência → devolve a conta. Nunca toma o vínculo de outro
+ * cliente do Beets (409). O vínculo é um código de cadastro marcado como usado pela empresa —
+ * o mesmo registro que o cadastro normal cria, então getAccount/inativar/reativar já funcionam
+ */
+export async function linkAccount(reference: string, document: string) {
+  const digits = document.replace(/\D/g, '')
+  if (digits.length !== 14) throw { statusCode: 422, message: 'Informe o CNPJ do cliente (14 dígitos) para encontrar a empresa no Aura.' }
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${reference}))`
+    const current = await getAccount(reference, tx)
+    if (current.company) return current
+
+    const [company] = await tx.$queryRaw<{ id: number; createdAt: Date }[]>`
+      SELECT id, "createdAt" FROM "Company" WHERE regexp_replace(coalesce(cnpj, ''), '[^0-9]', '', 'g') = ${digits} LIMIT 1`
+    if (!company) throw { statusCode: 422, message: 'Nenhuma empresa no Aura com este CNPJ.' }
+
+    const codes = await tx.inviteCode.findMany({ where: { companyId: company.id } })
+    const other = codes.find((c) => c.reference && c.reference !== reference)
+    if (other) throw { statusCode: 409, message: 'Esta empresa do Aura já está vinculada a outro cliente do Beets.' }
+
+    // Código antigo (sem referência) que criou a empresa: passa a apontar para o cliente.
+    // Empresa criada sem código nenhum: registra um código já usado só para o vínculo
+    const legacy = codes.find((c) => !c.reference)
+    if (legacy) await tx.inviteCode.update({ where: { id: legacy.id }, data: { reference } })
+    else await tx.inviteCode.create({ data: { code: await uniqueCode(tx), reference, companyId: company.id, usedAt: company.createdAt } })
+    return getAccount(reference, tx)
+  }, { timeout: 15_000 })
+}
+

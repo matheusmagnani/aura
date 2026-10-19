@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { env } from '../../env'
-import { getAccount, provisionAccount, setCompanyActive } from './beets.service'
+import { getAccount, linkAccount, provisionAccount, setCompanyActive } from './beets.service'
 
 const referenceParams = z.object({ reference: z.string().min(1).max(100) })
 
@@ -39,3 +39,9 @@ export const deactivateAccountController = (request: FastifyRequest, reply: Fast
 
 export const activateAccountController = (request: FastifyRequest, reply: FastifyReply) =>
   handle(reply, () => setCompanyActive(referenceParams.parse(request.params).reference, true))
+
+const linkBody = z.object({ document: z.string().min(1).max(30) })
+
+export const linkAccountController = (request: FastifyRequest, reply: FastifyReply) =>
+  handle(reply, () => linkAccount(referenceParams.parse(request.params).reference, linkBody.parse(request.body ?? {}).document))
+
